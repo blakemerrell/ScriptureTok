@@ -1,0 +1,45 @@
+# Publishes the app to GitHub Pages.
+#
+# The `enablement: true` below is the important part: it switches Pages on
+# via the API from inside the run, so nobody has to find the toggle in the
+# repository Settings UI. After this merges, every push to main redeploys
+# the site automatically.
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:        # lets you re-run it by hand from the Actions tab
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Let a running deploy finish rather than cancelling it midway.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Turn Pages on if it isn't already
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      # The app is a single self-contained index.html at the repo root,
+      # so the whole repo is the site. No build step.
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
