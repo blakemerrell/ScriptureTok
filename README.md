@@ -34,9 +34,16 @@ XP: **+10** reading a reel · **+20** first like · **+15** first deep dive ·
 
 ## Hosting it on GitHub Pages
 
-1. Push this repo to GitHub.
-2. **Settings → Pages → Source: Deploy from a branch → `main` / `(root)`**.
-3. Wait ~60 seconds. It's live at `https://<you>.github.io/<repo>/`.
+Live at **https://blakemerrell.github.io/ScriptureTok/**. Every push to
+`main` redeploys it through `.github/workflows/pages.yml` (~1 minute).
+
+Setting it up on a new repo:
+
+1. The repo must be **public** (Pages on a private repo needs a paid plan,
+   and the site itself is public either way).
+2. **Settings → Pages → Source: GitHub Actions**. The workflow cannot switch
+   this on by itself.
+3. Push to `main`, or re-run the workflow from the Actions tab.
 
 ### Putting it on his phone
 

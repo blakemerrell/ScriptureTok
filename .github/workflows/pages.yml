@@ -1,9 +1,8 @@
-# Publishes the app to GitHub Pages.
+# Publishes the app to GitHub Pages. Every push to main redeploys it.
 #
-# The `enablement: true` below is the important part: it switches Pages on
-# via the API from inside the run, so nobody has to find the toggle in the
-# repository Settings UI. After this merges, every push to main redeploys
-# the site automatically.
+# Pages must already be switched on with source "GitHub Actions"
+# (Settings → Pages). The run's token cannot switch it on itself:
+# `enablement: true` fails with "Resource not accessible by integration".
 name: Deploy to GitHub Pages
 
 on:
@@ -30,10 +29,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Turn Pages on if it isn't already
-        uses: actions/configure-pages@v5
-        with:
-          enablement: true
+      - uses: actions/configure-pages@v5
 
       # The app is a single self-contained index.html at the repo root,
       # so the whole repo is the site. No build step.
