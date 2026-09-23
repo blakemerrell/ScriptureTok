@@ -20,6 +20,8 @@ verse itself, and **one question** answerable from what's on the screen.
 | **XP only for understanding** | Scrolling, tapping and opening the app earn nothing. A right answer on the first try earns 20 XP. |
 | **One try** | A wrong answer shows the right one and the words in the verse that settle it. |
 | **Daily warm-up** | On a new day, up to 3 earlier questions come back before the feed, missed ones first, with no verse to look at. Remembering one earns 15 XP. |
+| **Reading bonus** | After a reel's question, a bonus question whose answer is only in the chapter (or the lesson page), never in the app. One try, 25 XP. The link opens the chapter at the top, not at the answer. |
+| **Pictures and clips** | At most 4 a week, only where they show something the words can't. Clips load nothing until tapped, then play just the chosen stretch in YouTube's privacy-mode player. |
 | **Streak** | Days in a row with at least one question answered. |
 | **Week report** | The last card lists every reel with ✓ / ✕, and points to the real reading for the week. |
 | **Sections match church** | Reels are grouped under the lesson's own section headings, so what he reads lines up with class on Sunday. |
@@ -80,6 +82,15 @@ Rules the check script enforces:
 - Every reference named anywhere must exist.
 - Every lesson section needs at least one reel.
 - Bodies stay under 75 words and hooks under 60 characters.
+- A bonus's `find` words must be in its source verse (or on the lesson page,
+  checked with `--lesson`) and must not appear anywhere in the app.
+- Pictures live in `media/`, under 150 KB, with alt text, a credit, and a
+  link to their Media Library or Wikimedia Commons page.
+- Clips: under 3 minutes, from a channel on the approved list in
+  `tools/verify.mjs` (checked against YouTube's record of who owns the
+  video), and `previewed: true` only after a parent has watched it. The
+  deploy refuses an unwatched clip; `--allow-unpreviewed` is for private
+  previews only.
 
 Then run:
 
