@@ -1,4 +1,4 @@
-# QuestLearn
+# ScriptureTok
 
 Scripture study that feels like a feed.
 

@@ -3,18 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>QuestLearn</title>
+<title>ScriptureTok</title>
 <meta name="description" content="Scripture study that feels like a feed. Come, Follow Me, one reel at a time.">
 <meta name="theme-color" content="#0a0a14">
 
 <!-- Add-to-home-screen: iOS runs this full-screen with no browser chrome. -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="QuestLearn">
+<meta name="apple-mobile-web-app-title" content="ScriptureTok">
 <meta name="mobile-web-app-capable" content="yes">
 
 <!-- Inline SVG favicon so the whole app stays one file. -->
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%230a0a14'/%3E%3Cpath d='M50 16 L50 84' stroke='%23fbbf24' stroke-width='9' stroke-linecap='round'/%3E%3Cpath d='M32 30 L68 30' stroke='%23a78bfa' stroke-width='9' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%230a0a14'/%3E%3Cpath d='M40 30 L72 50 L40 70 Z' fill='%23fbbf24'/%3E%3Cpath d='M28 28 L28 72' stroke='%23a78bfa' stroke-width='8' stroke-linecap='round'/%3E%3C/svg%3E">
 
 <!-- ==================================================================
      Tailwind CSS, compiled ahead of time and inlined.
@@ -345,12 +345,12 @@
      bottom of this file for that.
      ================================================================== -->
 <script>
-const QuestLearn = (function () {
+const ScriptureTok = (function () {
   'use strict';
 
   /* ---------------- tuning knobs ---------------- */
 
-  const STORE_KEY = 'questlearn.v1';
+  const STORE_KEY = 'scripturetok.v1';
 
   // XP awarded the first time he does each thing to a given reel.
   const XP = { view: 10, like: 20, dig: 15 };
@@ -372,7 +372,7 @@ const QuestLearn = (function () {
   // Daily quests. `counter` points at a tally in state.daily; `goal` of 0
   // means "all the reels this week" and gets filled in at boot.
   const QUESTS = [
-    { id: 'open',   icon: '☀️', label: 'Open QuestLearn today',      counter: 'opened', goal: 1, xp: 20 },
+    { id: 'open',   icon: '☀️', label: 'Open ScriptureTok today',      counter: 'opened', goal: 1, xp: 20 },
     { id: 'view3',  icon: '📜', label: 'Swipe through 3 reels',      counter: 'views',  goal: 3, xp: 30 },
     { id: 'like1',  icon: '❤️', label: 'Like a post',                counter: 'likes',  goal: 1, xp: 25 },
     { id: 'dig2',   icon: '🔎', label: 'Dig deeper on 2 reels',      counter: 'digs',   goal: 2, xp: 35 },
@@ -956,7 +956,7 @@ const QuestLearn = (function () {
       return Object.assign({}, week, { reels });
     } catch (err) {
       // Never leave him staring at an empty feed because a sheet was down.
-      console.warn('[QuestLearn] Sheet load failed, using built-in content:', err);
+      console.warn('[ScriptureTok] Sheet load failed, using built-in content:', err);
       return week;
     }
   }
@@ -1265,7 +1265,7 @@ const WEEK_CONTENT = {
 
     {
       id: "isa-week-complete",
-      handle: "@questlearn",
+      handle: "@scripturetok",
       avatar: "✅",
       role: "Week complete",
       hook: "You just finished Isaiah 13–35.",
@@ -1285,7 +1285,7 @@ const WEEK_CONTENT = {
   ]
 };
 
-QuestLearn.boot(WEEK_CONTENT);
+ScriptureTok.boot(WEEK_CONTENT);
 </script>
 
 </body>
