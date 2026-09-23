@@ -18,6 +18,7 @@ Isaiah 13–14; 24–30; 35 — 13 reels.
 |---|---|
 | **Feed** | Full-screen vertical reels with scroll-snap, one lesson idea each |
 | **Double-tap to like** | Floating hearts from the tap point, exactly like Reels |
+| **No fake engagement** | No invented like or comment counts. XP is the only number, and it is earned |
 | **Creator accounts** | `@isaiah_prophecies`, `@the_sealed_book`, `@babylon_falls`… |
 | **Audio titles** | Scrolling fake track credits (`SEALED BOOK 🔒 (sped up)`) |
 | **XP & levels** | 8 levels, Seeker → Marvelous Worker |
@@ -65,8 +66,7 @@ and the position rail all read from this automatically.
   audio: "a marvellous work ✦ main theme",
   chapter: "29",                        // builds the "open scriptures" link
   gradient: "linear-gradient(150deg,#4c1d95 0%,#a21caf 50%,#fbbf24 112%)",
-  tags: ["#Isaiah29", "#Restoration"],
-  likes: 74100, comments: 2890          // cosmetic social proof
+  tags: ["#Isaiah29", "#Restoration"]
 }
 ```
 
@@ -89,7 +89,7 @@ Weekly edits without touching code. The CSV loader is already built and tested.
 
 1. Build a sheet whose header row uses these column names (order doesn't
    matter, extras are ignored):
-   `id, handle, avatar, role, hook, body, verse, ref, deepdive, audio, chapter, gradient, tags, likes, comments`
+   `id, handle, avatar, role, hook, body, verse, ref, deepdive, audio, chapter, gradient, tags`
 2. **File → Share → Publish to web → the sheet → Comma-separated values (.csv)**.
 3. Near the top of the engine in `index.html`:
 
