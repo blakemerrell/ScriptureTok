@@ -5,8 +5,9 @@ so the lesson is understood, not just scrolled past.
 
 Live at **https://blakemerrell.github.io/ScriptureTok/**
 
-**Currently loaded:** September 21–27, 2026 · *A Marvellous Work and a Wonder* ·
-Isaiah 13–14; 22; 24–30; 35 · 10 reels.
+**Loaded:** September 21–27, 2026 · *A Marvellous Work and a Wonder* ·
+Isaiah 13–14; 22; 24–30; 35 · 10 reels, then from Monday September 28 ·
+*Comfort Ye My People* · Isaiah 40–49 · 11 reels.
 
 ---
 
@@ -65,7 +66,11 @@ blocked (private browsing); it just won't remember.
 ## Changing the weekly lesson
 
 Everything you edit is the **`CONTENT` block at the bottom of `index.html`**.
-The comment above it describes every field. The short version:
+Each week is one `WEEKS.push({ … })`. **Add next week any time before its
+Monday**: the app opens on the week whose dates include today, so it switches
+by itself (and last week turns green on the year trail). Keep weeks in date
+order and drop ones older than last week. The comment above the block
+describes every field. One reel, the short version:
 
 ```js
 {
@@ -104,9 +109,9 @@ Rules the check script enforces:
   link to their Media Library or Wikimedia Commons page.
 - Clips: under 3 minutes, from a channel on the approved list in
   `tools/verify.mjs` (checked against YouTube's record of who owns the
-  video), and `previewed: true` only after a parent has watched it. The
-  deploy refuses an unwatched clip; `--allow-unpreviewed` is for private
-  previews only.
+  video). A clip stays **hidden in the app until a parent watches it** and
+  sets `previewed: true`; the private preview shows it, marked "not approved
+  yet", so it can be reviewed.
 
 Two more blocks at the top of `WEEK_CONTENT` feed the games:
 

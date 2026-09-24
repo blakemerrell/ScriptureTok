@@ -798,7 +798,7 @@ const ScriptureTok = (function () {
         <span class="clip-play">▶</span>
         <span>
           <span class="clip-title block">${esc(v.title)}</span>
-          <span class="clip-meta block">${fmtTime(v.end - v.start)} clip · ${esc(v.channel)}${window.STOK_NO_EMBED ? ' · opens YouTube' : ''}</span>
+          <span class="clip-meta block">${fmtTime(v.end - v.start)} clip · ${esc(v.channel)}${window.STOK_NO_EMBED ? ' · opens YouTube' : ''}${v.previewed === true ? '' : ' · not approved yet, hidden in the app'}</span>
         </span>`;
     return window.STOK_NO_EMBED
       ? `<a class="clip" href="https://www.youtube.com/watch?v=${encodeURIComponent(v.youtube)}&t=${v.start}s" target="_blank" rel="noopener noreferrer">${inner}</a>`
@@ -895,7 +895,7 @@ const ScriptureTok = (function () {
         ${credit}
         <h2 class="reel-hook">${esc(r.hook)}</h2>
         <p class="reel-body">${esc(r.body)}</p>
-        ${media.video ? clipHtml(media.video) : ''}
+        ${media.video && (media.video.previewed === true || window.STOK_NO_EMBED) ? clipHtml(media.video) : ''}
 
         <div class="mt-4 rounded-2xl bg-black/35 backdrop-blur-sm ring-1 ring-white/15 px-4 py-3">
           <p class="verse-text font-medium text-white/95">“${esc(r.verse.text)}”</p>
@@ -2784,12 +2784,35 @@ const ScriptureTok = (function () {
     else if (/^#join(-\d{4})?$/.test(location.hash)) joinForm(location.hash.slice(6));
   }
 
-  return { boot: boot };
+  // The app holds several weeks and opens on the one whose dates include
+  // today, so next week can be added ahead of time and turns on by itself.
+  // "September 21–27, 2026" or "September 28–October 4, 2026" -> "2026-09-21".
+  // (A week that crosses into a new year will need its own format here.)
+  const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July',
+                  'August', 'September', 'October', 'November', 'December'];
+  function weekStart(dates) {
+    const m = /^([A-Z][a-z]+) (\d{1,2})–(?:[A-Z][a-z]+ )?\d{1,2}, (\d{4})$/.exec(dates || '');
+    if (!m || MONTHS.indexOf(m[1]) < 0) return null;
+    return m[3] + '-' + String(MONTHS.indexOf(m[1]) + 1).padStart(2, '0') + '-' + m[2].padStart(2, '0');
+  }
+  function pickWeek(weeks) {
+    const today = dayKey();
+    const sorted = weeks.slice().sort((a, b) => (weekStart(a.dates) < weekStart(b.dates) ? -1 : 1));
+    const started = sorted.filter(w => weekStart(w.dates) <= today);
+    return started.length ? started[started.length - 1] : sorted[0];
+  }
+
+  return { boot: boot, pickWeek: pickWeek, weekStart: weekStart };
 })();
 </script>
 
 <!-- ==================================================================
      CONTENT: the only block you edit each week.
+
+     Each week is one WEEKS.push({ ... }). Add next week below the last
+     one any time before its Monday; the app opens on the week whose dates
+     include today, so it switches by itself. Weeks stay in date order.
+     Drop weeks older than last week to keep the file small.
 
      Run  node tools/verify.mjs  after every edit. It checks every quote
      word for word against the scripture text, checks every reference
@@ -2833,7 +2856,10 @@ const ScriptureTok = (function () {
        gradient, blobA, blobB   colours
      ================================================================== -->
 <script>
-const WEEK_CONTENT = {
+// Every week the app knows. It opens on the week whose dates include today.
+const WEEKS = [];
+
+WEEKS.push({
   dates: "September 21–27, 2026",
   title: "A Marvellous Work and a Wonder",
   reference: "Isaiah 13–14; 22; 24–30; 35",
@@ -3220,8 +3246,385 @@ const WEEK_CONTENT = {
     }
 
   ]
-};
+});
 
+WEEKS.push({
+  dates: "September 28–October 4, 2026",
+  title: "Comfort Ye My People",
+  reference: "Isaiah 40–49",
+  lesson: "https://www.churchofjesuschrist.org/study/manual/come-follow-me-for-home-and-church-old-testament-2026/40?lang=eng",
+  sections: [
+    "Jesus Christ can comfort me and give me hope",
+    "“Thou art my servant.”",
+    "God’s power is greater than worldly power",
+    "The Lord can refine me through my afflictions"
+  ],
+
+  // Weekly puzzle: four groups of four, one per lesson section. Each tile
+  // names an idea from the reels and the verse it comes from.
+  puzzle: {
+    groups: [
+      { section: 0, tiles: [
+        { text: "Comfort ye", ref: "Isaiah 40:1" },
+        { text: "Fear not", ref: "Isaiah 43:1" },
+        { text: "Wings as eagles", ref: "Isaiah 40:31" },
+        { text: "Peace as a river", ref: "Isaiah 48:18" } ] },
+      { section: 1, tiles: [
+        { text: "Bruised reed", ref: "Isaiah 42:3" },
+        { text: "Smoking flax", ref: "Isaiah 42:3" },
+        { text: "My witnesses", ref: "Isaiah 43:10" },
+        { text: "Cyrus my shepherd", ref: "Isaiah 44:28" } ] },
+      { section: 2, tiles: [
+        { text: "Drop of a bucket", ref: "Isaiah 40:15" },
+        { text: "Carved idol", ref: "Isaiah 44:17" },
+        { text: "Babylon in the dust", ref: "Isaiah 47:1" },
+        { text: "Stars called by name", ref: "Isaiah 40:26" } ] },
+      { section: 3, tiles: [
+        { text: "Furnace of affliction", ref: "Isaiah 48:10" },
+        { text: "Refined, not with silver", ref: "Isaiah 48:10" },
+        { text: "Palms of His hands", ref: "Isaiah 49:16" },
+        { text: "Mercy on the afflicted", ref: "Isaiah 49:13" } ] }
+    ]
+  },
+
+  // Who said it? Each `text` is quoted exactly from `ref`.
+  sayings: [
+    { id: "say-comfort", text: "Comfort ye, comfort ye my people", ref: "Isaiah 40:1",
+      speaker: "The Lord", wrong: ["The king of Babylon", "Cyrus"],
+      why: "The verse ends “saith your God”: the Lord's first words in chapter 40." },
+    { id: "say-forget-child", text: "Can a woman forget her sucking child", ref: "Isaiah 49:15",
+      speaker: "The Lord", wrong: ["Zion", "Isaiah's mother"],
+      why: "The Lord asks it, then answers, “yet will I not forget thee.”" },
+    { id: "say-none-else", text: "I am, and none else beside me", ref: "Isaiah 47:8",
+      speaker: "Proud Babylon", wrong: ["The Lord", "Isaiah"],
+      why: "Babylon said it in its heart. Only the Lord can truly say “I am God, and there is none else” (Isaiah 46:9)." },
+    { id: "say-deliver-me", text: "Deliver me; for thou art my god", ref: "Isaiah 44:17",
+      speaker: "A man praying to his carved idol", wrong: ["Nephi", "King Cyrus"],
+      why: "He carved the idol himself, then prayed to it." },
+    { id: "say-forsaken", text: "The LORD hath forsaken me", ref: "Isaiah 49:14",
+      speaker: "Zion, the Lord's people", wrong: ["Babylon", "The Lord"],
+      why: "Zion felt forgotten. The Lord answered, “yet will I not forget thee” (Isaiah 49:15)." },
+    { id: "say-witnesses", text: "Ye are my witnesses", ref: "Isaiah 43:10",
+      speaker: "The Lord", wrong: ["Cyrus", "The king of Babylon"],
+      why: "“Ye are my witnesses, saith the LORD.” He calls His people to tell what they know of Him." },
+    { id: "say-shepherd", text: "He is my shepherd", ref: "Isaiah 44:28",
+      speaker: "The Lord, about Cyrus", wrong: ["David, about the Lord", "Cyrus, about the Lord"],
+      why: "The Lord said it of Cyrus, king of Persia. David's psalm is the one that says “The LORD is my shepherd” (Psalms 23:1)." },
+    { id: "say-refined", text: "I have refined thee, I have chosen thee in the furnace of affliction", ref: "1 Nephi 20:10",
+      speaker: "The Lord, in the Isaiah that Nephi read", wrong: ["Laman", "King Cyrus"],
+      why: "Nephi read Isaiah 48 to his brothers. In his copy it's 1 Nephi 20:10." }
+  ],
+
+  // Verse Word: one word a day, hidden in its verse. `clue` is the verse's
+  // own words with ____ where the word goes.
+  words: [
+    { word: "EAGLES", clue: "they shall mount up with wings as ____", ref: "Isaiah 40:31" },
+    { word: "PALMS", clue: "I have graven thee upon the ____ of my hands", ref: "Isaiah 49:16" },
+    { word: "BUCKET", clue: "the nations are as a drop of a ____", ref: "Isaiah 40:15" },
+    { word: "FURNACE", clue: "I have chosen thee in the ____ of affliction", ref: "Isaiah 48:10" },
+    { word: "RIVER", clue: "then had thy peace been as a ____", ref: "Isaiah 48:18" },
+    { word: "REED", clue: "A bruised ____ shall he not break", ref: "Isaiah 42:3" },
+    { word: "FORGET", clue: "yet will I not ____ thee", ref: "Isaiah 49:15" }
+  ],
+
+  reels: [
+
+    {
+      id: "isa40-comfort",
+      section: 0,
+      hook: "The first word is Comfort.",
+      body: "Isaiah's earlier chapters warned about destruction and captivity. Chapter 40 opens with a different word, said twice. These words were for people who would one day be captives in Babylon, far from home, and for anyone who feels lost now. Over and over, the Lord says, “Fear not” (Isaiah 43:1).",
+      verse: {
+        text: "Comfort ye, comfort ye my people, saith your God.",
+        ref: "Isaiah 40:1"
+      },
+      question: {
+        q: "Why does it matter that Isaiah 40 starts with “Comfort”?",
+        right: "The message turns from warnings to hope",
+        wrong: ["Isaiah stopped writing for a while", "The Babylonians asked for it"],
+        why: "The earlier chapters warned; now the Lord says “comfort ye my people” and “Fear not” (Isaiah 43:1)."
+      },
+      bonus: [
+      {
+        q: "The lesson says these comforting chapters were meant for the Jewish people how far in the future?",
+        right: "Over 150 years",
+        wrong: ["The very next day", "Only in our day"],
+        why: "The lesson says they were meant to comfort the Jewish people over 150 years in the future, after Jerusalem and the temple were destroyed.",
+        source: "lesson",
+        find: "comfort the Jewish people over 150 years in the future"
+      },
+      {
+        q: "Isaiah 40:3 describes a voice crying in the wilderness. In Luke 3, whose voice is it?",
+        right: "John the Baptist",
+        wrong: ["Isaiah", "Elijah"],
+        why: "The word of God came to “John the son of Zacharias in the wilderness” (Luke 3:2), the voice Isaiah described.",
+        source: "Luke 3:2",
+        find: "John the son of Zacharias"
+      }
+      ],
+      gradient: "linear-gradient(150deg,#0c4a6e 0%,#0369a1 50%,#7dd3fc 115%)",
+      blobA: "rgba(125,211,252,.45)", blobB: "rgba(0,0,0,.45)"
+    },
+
+    {
+      id: "isa40-eagles",
+      section: 0,
+      hook: "Tired? Isaiah promises wings.",
+      body: "Isaiah says even young people get worn out and fall (verse 30). The Lord never does: He “fainteth not, neither is weary” (verse 28). And He shares His strength. The people who “wait upon the LORD” get it. They run and are not weary. They walk and do not faint.",
+      verse: {
+        text: "But they that wait upon the LORD shall renew their strength; they shall mount up with wings as eagles; they shall run, and not be weary; and they shall walk, and not faint.",
+        ref: "Isaiah 40:31"
+      },
+      question: {
+        q: "Who does Isaiah 40:31 say will renew their strength?",
+        right: "Those who wait upon the Lord",
+        wrong: ["Those who never get tired", "Those who work the hardest"],
+        why: "“They that wait upon the LORD shall renew their strength.”"
+      },
+      bonus: {
+        q: "For the Strength of Youth explains what it means to wait upon the Lord. What does it say?",
+        right: "Patiently trusting Him while His blessings come",
+        wrong: ["Standing still and doing nothing", "Waiting in line at church"],
+        why: "It says these people patiently endure all things in faith, expecting the Lord's blessings to come as they trust Him.",
+        source: "https://www.churchofjesuschrist.org/study/ftsoy/2026/10/strength-training-with-isaiah?lang=eng",
+        find: "patiently endure all things in faith"
+      },
+      media: {
+        image: {
+          src: "media/eagle-flying.jpg",
+          alt: "A bald eagle flying with its wings spread against a gray sky",
+          credit: "Bald eagle in flight. Photo: U.S. Fish and Wildlife Service, public domain",
+          link: "https://commons.wikimedia.org/wiki/File:Bald_Eagle_Flying_(51021802108).jpg"
+        }
+      },
+      gradient: "linear-gradient(150deg,#1e293b 0%,#475569 50%,#cbd5e1 115%)",
+      blobA: "rgba(226,232,240,.35)", blobB: "rgba(0,0,0,.5)"
+    },
+
+    {
+      id: "isa48-river",
+      section: 0,
+      hook: "Peace like a river.",
+      body: "The Lord tells Israel what keeping His commandments would have brought: peace that keeps flowing like a river, and goodness that keeps rolling in like waves. The verse starts with a wish, “O that thou hadst hearkened.” He wants that peace for you. The verse before says He “leadeth thee by the way that thou shouldest go” (verse 17).",
+      verse: {
+        text: "O that thou hadst hearkened to my commandments! then had thy peace been as a river, and thy righteousness as the waves of the sea…",
+        ref: "Isaiah 48:18"
+      },
+      question: {
+        q: "What does Isaiah 48:18 say keeping the commandments brings?",
+        right: "Peace like a river",
+        wrong: ["A bigger house", "A life with no problems"],
+        why: "“Then had thy peace been as a river.”"
+      },
+      bonus: {
+        q: "The Friend's family idea for this week asks you to draw something. What?",
+        right: "A peaceful river or ocean waves",
+        wrong: ["A lion's den", "A burning furnace"],
+        why: "The Friend says to draw a peaceful river or waves, then write on the back a commandment you want to do better at following.",
+        source: "https://www.churchofjesuschrist.org/study/friend/2026/10/come-follow-me/23-weekly-scripture-fun?lang=eng",
+        find: "Draw a picture of a peaceful river"
+      },
+      gradient: "linear-gradient(150deg,#134e4a 0%,#0f766e 45%,#5eead4 115%)",
+      blobA: "rgba(94,234,212,.4)", blobB: "rgba(0,0,0,.45)"
+    },
+
+    {
+      id: "isa42-bruised-reed",
+      section: 1,
+      hook: "He won't snap a bent reed.",
+      body: "A bruised reed is a cracked, bent plant. Smoking flax is a lamp wick that is almost out. Most people would toss both. Matthew says this servant is Jesus (Matthew 12:18–20). He doesn't give up on people who feel cracked or almost out. He came “to open the blind eyes” (verse 7) and set prisoners free.",
+      verse: {
+        text: "A bruised reed shall he not break, and the smoking flax shall he not quench: he shall bring forth judgment unto truth.",
+        ref: "Isaiah 42:3"
+      },
+      question: {
+        q: "What do the bruised reed and smoking flax teach about Jesus?",
+        right: "He doesn't give up on people who feel weak",
+        wrong: ["He only helps strong people", "He throws away broken things"],
+        why: "“A bruised reed shall he not break”: He mends what others would throw away."
+      },
+      media: {
+        image: {
+          src: "media/healing-blind-man-bloch.jpg",
+          alt: "Painting of Jesus Christ reaching out to heal a blind man kneeling on a dusty road",
+          credit: "Healing the Blind Man, by Carl Bloch, public domain",
+          link: "https://commons.wikimedia.org/wiki/File:Healing_of_the_Blind_Man_by_Jesus_Christ.jpg"
+        }
+      },
+      gradient: "linear-gradient(150deg,#1c1917 0%,#57534e 45%,#d6d3d1 115%)",
+      blobA: "rgba(214,211,209,.35)", blobB: "rgba(0,0,0,.5)"
+    },
+
+    {
+      id: "isa43-witness",
+      section: 1,
+      hook: "You're a witness.",
+      body: "In a courtroom, a witness tells what they saw and know firsthand. The Lord tells His people, “Ye are my witnesses.” Then He tells them what to witness: “beside me there is no saviour” (Isaiah 43:11). What do you know about Him? A prayer He answered, a promise He kept. That's what a witness shares.",
+      verse: {
+        text: "Ye are my witnesses, saith the LORD, and my servant whom I have chosen: that ye may know and believe me, and understand that I am he…",
+        ref: "Isaiah 43:10"
+      },
+      question: {
+        q: "What does a witness of the Lord do?",
+        right: "Tells what they know about Him",
+        wrong: ["Keeps quiet about Him", "Only listens to other people"],
+        why: "“Ye are my witnesses”: a witness shares what they know firsthand."
+      },
+      gradient: "linear-gradient(155deg,#312e81 0%,#4f46e5 50%,#a5b4fc 115%)",
+      blobA: "rgba(165,180,252,.45)", blobB: "rgba(0,0,0,.45)"
+    },
+
+    {
+      id: "isa44-cyrus",
+      section: 1,
+      hook: "A Persian king called the Lord's shepherd.",
+      body: "Isaiah 44 and 45 name a king: Cyrus. The Lord calls him “my shepherd” and says Jerusalem will be built again (Isaiah 44:28). Cyrus ruled Persia, the empire that took Babylon. Ezra records his order: God's people could go up to Jerusalem and build the house of the Lord (Ezra 1:3).",
+      verse: {
+        text: "That saith of Cyrus, He is my shepherd, and shall perform all my pleasure: even saying to Jerusalem, Thou shalt be built; and to the temple, Thy foundation shall be laid.",
+        ref: "Isaiah 44:28"
+      },
+      question: {
+        q: "What did the Lord say Cyrus would do?",
+        right: "Let Jerusalem and the temple be built again",
+        wrong: ["Tear down the temple", "Make Babylon the new Jerusalem"],
+        why: "He calls Cyrus “my shepherd,” saying to the temple, “Thy foundation shall be laid.”"
+      },
+      bonus: {
+        q: "The lesson says the servant in these chapters can mean three different people or groups. Which list is right?",
+        right: "Jesus Christ, the house of Israel, and Cyrus",
+        wrong: ["Isaiah, Nephi, and Moses", "Babylon, Persia, and Egypt"],
+        why: "The lesson says these words can refer to Jesus Christ, to the house of Israel, and to King Cyrus.",
+        source: "lesson",
+        find: "These words can refer to Jesus Christ"
+      },
+      gradient: "linear-gradient(150deg,#422006 0%,#a16207 50%,#fde68a 115%)",
+      blobA: "rgba(253,230,138,.4)", blobB: "rgba(0,0,0,.5)"
+    },
+
+    {
+      id: "isa40-drop-bucket",
+      section: 2,
+      hook: "Whole nations are a drop in a bucket.",
+      body: "God's people in Babylon lived under the strongest empire around. Isaiah shows how it looks to God: a drop in a bucket, dust on a scale. He asks who “hath measured the waters in the hollow of his hand” (verse 12). Empires fade like flowers, “but the word of our God shall stand for ever” (verse 8).",
+      verse: {
+        text: "Behold, the nations are as a drop of a bucket, and are counted as the small dust of the balance…",
+        ref: "Isaiah 40:15"
+      },
+      question: {
+        q: "What does calling nations “a drop of a bucket” teach?",
+        right: "Even the biggest powers are small next to God",
+        wrong: ["Nations are made of water", "God doesn't care about people"],
+        why: "Next to God, the mightiest empire is “as a drop of a bucket”."
+      },
+      bonus: {
+        q: "In Isaiah 40:26, what does the Lord do with the stars?",
+        right: "Calls every one by name",
+        wrong: ["Hides them in the daytime", "Counts only the brightest"],
+        why: "“He calleth them all by names” (Isaiah 40:26). He knows every one of them.",
+        source: "Isaiah 40:26",
+        find: "he calleth them all by names"
+      },
+      gradient: "linear-gradient(165deg,#020617 0%,#1e3a8a 55%,#60a5fa 110%)",
+      blobA: "rgba(96,165,250,.4)", blobB: "rgba(0,0,0,.55)"
+    },
+
+    {
+      id: "isa44-idol",
+      section: 2,
+      hook: "He made a god from his leftover firewood.",
+      body: "Isaiah describes a man who cuts down a tree. He uses part of it to cook and keep warm. From the rest he carves an idol, bows down, and prays to it. Isaiah's point: a god you made yourself can't save you. The Lord made you, and He can.",
+      verse: {
+        text: "And the residue thereof he maketh a god, even his graven image: he falleth down unto it, and worshippeth it, and prayeth unto it, and saith, Deliver me; for thou art my god.",
+        ref: "Isaiah 44:17"
+      },
+      question: {
+        q: "What's Isaiah's point about the carved idol?",
+        right: "Something people made can't save them",
+        wrong: ["Wood is holy", "Idols just need better carvers"],
+        why: "He prays to his own carving, “Deliver me.” It can't."
+      },
+      gradient: "linear-gradient(150deg,#431407 0%,#9a3412 50%,#fdba74 115%)",
+      blobA: "rgba(253,186,116,.4)", blobB: "rgba(0,0,0,.5)"
+    },
+
+    {
+      id: "isa47-babylon",
+      section: 2,
+      hook: "Babylon said, “I am, and none else.”",
+      body: "Chapter 47 speaks to Babylon, the city holding God's people captive. Babylon bragged in its heart that no one was like it. But that is the Lord's own line: “I am God, and there is none else” (Isaiah 46:9). Isaiah tells proud Babylon to “sit in the dust” (verse 1). Its throne would be gone.",
+      verse: {
+        text: "…that sayest in thine heart, I am, and none else beside me…",
+        ref: "Isaiah 47:8"
+      },
+      question: {
+        q: "Why is it a problem that Babylon said “I am, and none else”?",
+        right: "Babylon was claiming the Lord's place",
+        wrong: ["Babylon was being humble", "Babylon was telling the truth"],
+        why: "Only the Lord can say “I am God, and there is none else” (Isaiah 46:9)."
+      },
+      gradient: "linear-gradient(150deg,#450a0a 0%,#7f1d1d 45%,#f87171 115%)",
+      blobA: "rgba(248,113,113,.4)", blobB: "rgba(0,0,0,.5)"
+    },
+
+    {
+      id: "isa48-furnace",
+      section: 3,
+      hook: "Chosen in the furnace.",
+      body: "A refiner heats metal until the junk rises to the top and can be skimmed off, leaving the pure metal. The Lord says He refines His people too, and hard times are part of it. Hard times are not a sign He gave up on you. Nephi's copy of this verse reads, “I have refined thee, I have chosen thee in the furnace of affliction” (1 Nephi 20:10).",
+      verse: {
+        text: "Behold, I have refined thee, but not with silver; I have chosen thee in the furnace of affliction.",
+        ref: "Isaiah 48:10"
+      },
+      question: {
+        q: "What does Isaiah 48:10 say the Lord does in the furnace of affliction?",
+        right: "Refines and chooses His people",
+        wrong: ["Gives up on them", "Punishes them forever"],
+        why: "“I have refined thee… I have chosen thee in the furnace of affliction.”"
+      },
+      gradient: "linear-gradient(150deg,#1c1917 0%,#b45309 55%,#fbbf24 115%)",
+      blobA: "rgba(251,191,36,.45)", blobB: "rgba(0,0,0,.5)"
+    },
+
+    {
+      id: "isa49-palms",
+      section: 3,
+      hook: "He can't forget you. He engraved you on His hands.",
+      body: "The people felt forgotten: “The LORD hath forsaken me” (verse 14). The Lord answers that a mother might forget her baby, “yet will I not forget thee” (verse 15). Then He says He has engraved them on the palms of His hands. Nephi read these same words to his brothers (1 Nephi 21:16).",
+      verse: {
+        text: "Behold, I have graven thee upon the palms of my hands; thy walls are continually before me.",
+        ref: "Isaiah 49:16"
+      },
+      question: {
+        q: "What do Isaiah 49:15–16 promise you?",
+        right: "The Lord will never forget you",
+        wrong: ["Only mothers will remember you", "The Lord remembers only perfect people"],
+        why: "Even if a mother could forget, “yet will I not forget thee” (Isaiah 49:15)."
+      },
+      bonus: {
+        q: "In Isaiah 49:13, what does the Lord promise His afflicted people?",
+        right: "He will have mercy on them",
+        wrong: ["He will make them rich", "He will send them home tomorrow"],
+        why: "“The LORD hath comforted his people, and will have mercy upon his afflicted” (Isaiah 49:13).",
+        source: "Isaiah 49:13",
+        find: "will have mercy upon his afflicted"
+      },
+      media: {
+        video: {
+          youtube: "YztZZSFLWic",
+          start: 2715, end: 2844,
+          title: "Engraved on the palms of His hands",
+          channel: "Don't Miss This",
+          previewed: false
+        }
+      },
+      gradient: "linear-gradient(150deg,#4c1d95 0%,#a21caf 50%,#f9a8d4 112%)",
+      blobA: "rgba(249,168,212,.45)", blobB: "rgba(0,0,0,.4)"
+    }
+
+  ]
+});
+
+const WEEK_CONTENT = ScriptureTok.pickWeek(WEEKS);
 ScriptureTok.boot(WEEK_CONTENT);
 </script>
 

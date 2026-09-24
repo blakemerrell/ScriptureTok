@@ -5,7 +5,8 @@
 //   node tools/verify.mjs --online              also checks against the live Gospel Library pages:
 //                                               the lesson page, and every magazine or manual page a
 //                                               bonus cites (CI runs this). --lesson means the same.
-//   node tools/verify.mjs --allow-unpreviewed   for a private preview: clips nobody has watched yet pass
+//   (every week in the WEEKS list is checked. A clip nobody has watched yet is a note, not a
+//   failure: the app hides it until previewed: true.)
 //
 // What it checks:
 //   - every verse box quotes the scripture text exactly (… marks left-out words)
@@ -62,7 +63,9 @@ const MEDIA = {
 const args = new Set(process.argv.slice(2));
 const failures = [];
 const notes = [];
-const fail = (where, msg) => failures.push(`${where}: ${msg}`);
+let weekLabel = '';   // "Week 40 · " when checking several weeks
+const fail = (where, msg) => failures.push(`${weekLabel}${where}: ${msg}`);
+const note = msg => notes.push(`${weekLabel}${msg}`);
 
 // ---------- scripture ----------
 
@@ -97,13 +100,23 @@ async function loadScripture() {
 
 // ---------- the week ----------
 
-function loadWeek() {
+// Every week in index.html, by running its content script with a stand-in
+// for the app (which would otherwise pick today's week and start up).
+function loadWeeks() {
   const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
-  const start = html.indexOf('const WEEK_CONTENT = ');
-  const end = html.indexOf('ScriptureTok.boot(WEEK_CONTENT)');
-  if (start < 0 || end < 0) throw new Error('Could not find the WEEK_CONTENT block in index.html');
-  const literal = html.slice(start + 'const WEEK_CONTENT = '.length, end).trim().replace(/;$/, '');
-  return new Function('return (' + literal + ')')();
+  const start = html.indexOf('const WEEKS = [];');
+  const end = html.indexOf('</script>', start);
+  if (start < 0 || end < 0) throw new Error('Could not find the WEEKS block in index.html');
+  const stub = { pickWeek: w => w[0], boot() {} };
+  return new Function('ScriptureTok', html.slice(start, end) + '\n;return WEEKS;')(stub);
+}
+
+// "September 28–October 4, 2026" -> "2026-09-28" (same rule as the app).
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+function weekStart(dates) {
+  const m = /^([A-Z][a-z]+) (\d{1,2})–(?:[A-Z][a-z]+ )?\d{1,2}, (\d{4})$/.exec(dates || '');
+  if (!m || MONTHS.indexOf(m[1]) < 0) return null;
+  return m[3] + '-' + String(MONTHS.indexOf(m[1]) + 1).padStart(2, '0') + '-' + m[2].padStart(2, '0');
 }
 
 // A Gospel Library page as plain text, or null if it won't load.
@@ -274,7 +287,7 @@ async function main(scripture, week, pages, online) {
       if (!b.source || !b.find) fail(where, `${label} needs source and find`);
       else if (url) {
         if (/[“”]/.test(b.why)) fail(where, `${label} from a web page: don't put its words in “quotes” (only scripture quotes get checked)`);
-        if (!online) notes.push(`${where}: ${label} answer from ${url.replace(/\?.*/, '')} not checked (run with --online)`);
+        if (!online) note(`${where}: ${label} answer from ${url.replace(/\?.*/, '')} not checked (run with --online)`);
         else if (pages.get(url) != null && !norm(pages.get(url)).includes(trimPunct(norm(b.find)))) {
           fail(where, `${label}: "${b.find}" is not on ${url} (check the link and the exact wording; a mistyped link still loads a page)`);
         }
@@ -320,10 +333,9 @@ async function main(scripture, week, pages, online) {
       else if (v.end - v.start > MEDIA.maxClipSeconds) fail(where, `clip is ${v.end - v.start}s (max ${MEDIA.maxClipSeconds})`);
       if (!v.title) fail(where, 'video needs a title');
       if (!MEDIA.channels.includes(v.channel)) fail(where, `channel "${v.channel}" isn't on the approved list in tools/verify.mjs`);
-      if (v.previewed !== true) {
-        if (args.has('--allow-unpreviewed')) notes.push(`${where}: clip not watched yet (allowed for this preview only)`);
-        else fail(where, 'clip has not been watched by a parent yet: watch it, then set previewed: true');
-      }
+      // An unwatched clip is never shown in the app (only in the private
+      // preview, marked, so a parent can review it). So it's a note, not a failure.
+      if (v.previewed !== true) note(`${where}: clip ${v.youtube} ${v.start}–${v.end}s is hidden until a parent watches it and sets previewed: true`);
       // Ask YouTube who actually owns the video, so a typo'd id can't slip in another channel's clip.
       if (/^[A-Za-z0-9_-]{11}$/.test(v.youtube || '')) {
         const res = await fetch('https://www.youtube.com/oembed?format=json&url=' + encodeURIComponent('https://www.youtube.com/watch?v=' + v.youtube));
@@ -415,14 +427,27 @@ async function main(scripture, week, pages, online) {
 }
 
 const scripture = await loadScripture();
-const week = loadWeek();
+const weeks = loadWeeks();
 const online = args.has('--online') || args.has('--lesson');
 const pages = new Map();
 if (online) {
-  const urls = new Set([week.lesson, ...week.reels.flatMap(r => bonusesOf(r).map(b => webSource(b, week)).filter(Boolean))]);
+  const urls = new Set(weeks.flatMap(week => [week.lesson, ...week.reels.flatMap(r => bonusesOf(r).map(b => webSource(b, week)).filter(Boolean))]));
   await Promise.all([...urls].map(async u => pages.set(u, await fetchPageText(u))));
 }
-await main(scripture, week, pages, online);
+
+// Weeks: parseable dates, in order, one week each, no reel id reused.
+const starts = weeks.map(w => weekStart(w.dates));
+starts.forEach((d, i) => { if (!d) failures.push(`${weeks[i].title || 'a week'}: dates "${weeks[i].dates}" must read like "September 28–October 4, 2026"`); });
+for (let i = 1; i < starts.length; i++) if (starts[i] && starts[i - 1] && starts[i] <= starts[i - 1]) failures.push(`weeks must be in date order: "${weeks[i].title}" comes before "${weeks[i - 1].title}"`);
+const seenIds = new Map();
+weeks.forEach(w => w.reels.forEach(r => { if (seenIds.has(r.id)) failures.push(`reel id "${r.id}" is used in both "${seenIds.get(r.id)}" and "${w.title}"`); seenIds.set(r.id, w.title); }));
+
+for (const week of weeks) {
+  const num = (/\/(\d+)\?/.exec(week.lesson || '') || [])[1];
+  weekLabel = weeks.length > 1 ? `Week ${num || '?'} · ` : '';
+  await main(scripture, week, pages, online);
+}
+weekLabel = '';
 
 for (const n of notes) console.log('  · ' + n);
 if (failures.length) {
@@ -430,10 +455,14 @@ if (failures.length) {
   for (const f of failures) console.error('  - ' + f);
   process.exit(1);
 }
-const quotes = week.reels.reduce((n, r) => n + 1 + [r.hook, r.body, r.question.q, r.question.why, ...bonusesOf(r).map(b => b.why)].join(' ').split('“').length - 1, 0);
-const bonuses = week.reels.reduce((n, r) => n + bonusesOf(r).length, 0);
-const extras = [week.puzzle && 'the weekly puzzle', week.sayings && `${week.sayings.length} Who-said-it lines`, week.words && `${week.words.length} Verse Words`].filter(Boolean);
-const loaded = [...pages.values()].filter(t => t != null).length;
-console.log(`✓ ${week.title} (${week.dates}): ${week.reels.length} reels, ${quotes} quotes and ${bonuses} bonus answers checked` +
-  (extras.length ? `, plus ${extras.join(' and ')}` : '') +
-  (online ? `, ${loaded} of ${pages.size} Gospel Library pages checked live` : ''));
+for (const week of weeks) {
+  const quotes = week.reels.reduce((n, r) => n + 1 + [r.hook, r.body, r.question.q, r.question.why, ...bonusesOf(r).map(b => b.why)].join(' ').split('“').length - 1, 0);
+  const bonuses = week.reels.reduce((n, r) => n + bonusesOf(r).length, 0);
+  const extras = [week.puzzle && 'the weekly puzzle', week.sayings && `${week.sayings.length} Who-said-it lines`, week.words && `${week.words.length} Verse Words`].filter(Boolean);
+  console.log(`✓ ${week.title} (${week.dates}): ${week.reels.length} reels, ${quotes} quotes and ${bonuses} bonus answers checked` +
+    (extras.length ? `, plus ${extras.join(' and ')}` : ''));
+}
+if (online) {
+  const loaded = [...pages.values()].filter(t => t != null).length;
+  console.log(`✓ ${loaded} of ${pages.size} Gospel Library pages checked live`);
+}
