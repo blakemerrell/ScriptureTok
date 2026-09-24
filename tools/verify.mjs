@@ -109,7 +109,7 @@ function loadWeeks() {
   const end = html.indexOf('</script>', start);
   if (start < 0 || end < 0) throw new Error('Could not find the WEEKS block in index.html');
   const stub = { pickWeek: w => w[0], boot() {} };
-  return new Function('ScriptureTok', html.slice(start, end) + '\n;return WEEKS;')(stub);
+  return new Function('TreasureUp', html.slice(start, end) + '\n;return WEEKS;')(stub);
 }
 
 // "September 28–October 4, 2026" -> "2026-09-28" (same rule as the app).

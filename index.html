@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>ScriptureTok</title>
+<title>Treasure Up</title>
 <meta name="description" content="Come, Follow Me, one idea at a time. Each reel ends with a question.">
 <meta name="theme-color" content="#0a0a14">
 
 <!-- Add-to-home-screen: iOS runs this full-screen with no browser chrome. -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="ScriptureTok">
+<meta name="apple-mobile-web-app-title" content="Treasure Up">
 <meta name="mobile-web-app-capable" content="yes">
 <!-- Android: installs full-screen from Chrome's "Add to Home screen". -->
 <link rel="manifest" href="manifest.webmanifest">
@@ -611,10 +611,10 @@
        - The streak counts days in a row with at least one answer.
      ================================================================== -->
 <script>
-const ScriptureTok = (function () {
+const TreasureUp = (function () {
   'use strict';
 
-  const STORE_KEY = 'scripturetok.v2';
+  const STORE_KEY = 'treasureup.v1';
 
   const XP = { firstTry: 20, recall: 15, bonus: 25 };
   const RECALL_PER_DAY = 3;
@@ -798,9 +798,9 @@ const ScriptureTok = (function () {
         <span class="clip-play">▶</span>
         <span>
           <span class="clip-title block">${esc(v.title)}</span>
-          <span class="clip-meta block">${fmtTime(v.end - v.start)} clip · ${esc(v.channel)}${window.STOK_NO_EMBED ? ' · opens YouTube' : ''}${v.previewed === true ? '' : ' · not approved yet, hidden in the app'}</span>
+          <span class="clip-meta block">${fmtTime(v.end - v.start)} clip · ${esc(v.channel)}${window.TU_NO_EMBED ? ' · opens YouTube' : ''}${v.previewed === true ? '' : ' · not approved yet, hidden in the app'}</span>
         </span>`;
-    return window.STOK_NO_EMBED
+    return window.TU_NO_EMBED
       ? `<a class="clip" href="https://www.youtube.com/watch?v=${encodeURIComponent(v.youtube)}&t=${v.start}s" target="_blank" rel="noopener noreferrer">${inner}</a>`
       : `<button class="clip" data-clip="${esc(v.youtube)}" data-start="${v.start}" data-end="${v.end}" aria-label="Play clip: ${esc(v.title)}">${inner}</button>`;
   }
@@ -895,7 +895,7 @@ const ScriptureTok = (function () {
         ${credit}
         <h2 class="reel-hook">${esc(r.hook)}</h2>
         <p class="reel-body">${esc(r.body)}</p>
-        ${media.video && (media.video.previewed === true || window.STOK_NO_EMBED) ? clipHtml(media.video) : ''}
+        ${media.video && (media.video.previewed === true || window.TU_NO_EMBED) ? clipHtml(media.video) : ''}
 
         <div class="mt-4 rounded-2xl bg-black/35 backdrop-blur-sm ring-1 ring-white/15 px-4 py-3">
           <p class="verse-text font-medium text-white/95">“${esc(r.verse.text)}”</p>
@@ -1207,7 +1207,7 @@ const ScriptureTok = (function () {
   // understanding. Kept apart from his progress so it survives a new week.
   // The PIN just keeps an 11-year-old from editing his own rewards; it is
   // not security.
-  const PARENT_KEY = 'scripturetok.parent';
+  const PARENT_KEY = 'treasureup.parent';
   let P = { pin: null, rewards: [] };
   let parentUnlocked = false;
   let draft = [];
@@ -1362,7 +1362,7 @@ const ScriptureTok = (function () {
   // values and the reading-only bonus questions the high ones, with one
   // bonus as a Daily Double. A parent hosts: reads each question out loud,
   // shows the answer, and taps who got it. Scores add up to a family total.
-  const BOARD_KEY = 'scripturetok.board';
+  const BOARD_KEY = 'treasureup.board';
   let G = null;           // { names, best, games: { [week title]: { players, done } } }
   let boardView = null;   // the open question: { tile, revealed }
 
@@ -2192,7 +2192,7 @@ const ScriptureTok = (function () {
   // project when live play goes there. Anywhere else (a file on disk, the
   // private preview, the tests) uses the Local version.
   const FIREBASE_PROJECTS = {
-    '/ScriptureTok-test/': {
+    '/TreasureUp-test/': {
       apiKey: 'AIzaSyB9X27jbNg4DOGcrZ8k1BGzR1veJXos3Tc',   // public by design; the rules protect the data
       authDomain: 'scripturetok-test.firebaseapp.com',
       projectId: 'scripturetok-test',
@@ -2208,9 +2208,9 @@ const ScriptureTok = (function () {
   function LocalLive() {
     // Each record is its own localStorage key, so two tabs never overwrite
     // each other's writes: live.<code>.game, .p.<uid>, .a.<qi>_<uid>.
-    const PRE = 'stok.live.';
+    const PRE = 'treasureup.live.';
     const subs = new Set();
-    const bc = 'BroadcastChannel' in window ? new BroadcastChannel('stok-live') : null;
+    const bc = 'BroadcastChannel' in window ? new BroadcastChannel('treasureup-live') : null;
     let uid = null;
     try { uid = sessionStorage.getItem(PRE + 'uid'); } catch (e) {}
     if (!uid) { uid = 'u' + Math.random().toString(36).slice(2, 10); try { sessionStorage.setItem(PRE + 'uid', uid); } catch (e) {} }
@@ -2503,7 +2503,7 @@ const ScriptureTok = (function () {
         <div class="clue">
           <div class="eyebrow">Join code</div>
           <div class="live-code">${esc(lv.code)}</div>
-          <p class="board-help">On each phone or tablet: open ScriptureTok, tap 🎮, choose <b>Live game</b>, then <b>Join with a code</b>.</p>
+          <p class="board-help">On each phone or tablet: open Treasure Up, tap 🎮, choose <b>Live game</b>, then <b>Join with a code</b>.</p>
           <div class="live-players">${players.map(p => `<span>${esc(p.name)}</span>`).join('') || '<span style="opacity:.5">Waiting for players…</span>'}</div>
           <div class="board-actions">
             <button class="btn" data-host="start"${players.length ? '' : ' disabled style="opacity:.4"'}>Start · ${g.qs.length} questions</button>
@@ -2557,7 +2557,7 @@ const ScriptureTok = (function () {
     stopLive();
     openLive();
     let name = '';
-    try { name = localStorage.getItem('stok.live.name') || ''; } catch (e) {}
+    try { name = localStorage.getItem('treasureup.live.name') || ''; } catch (e) {}
     liveBody(`
       <div class="clue" style="max-width:420px">
         <p class="clue-q">Join a live game</p>
@@ -2575,7 +2575,7 @@ const ScriptureTok = (function () {
     const code = $('liveCode').value.trim(), name = $('liveName').value.trim();
     if (!/^\d{4}$/.test(code)) return joinForm(code, 'The code is 4 numbers.');
     if (!name) return joinForm(code, 'Type your name.');
-    try { localStorage.setItem('stok.live.name', name); } catch (e) {}
+    try { localStorage.setItem('treasureup.live.name', name); } catch (e) {}
     const L = liveConn();
     try { await L.init(); } catch (e) { return joinForm(code, e.message); }
     const err = await L.join(code, name);
@@ -2597,7 +2597,7 @@ const ScriptureTok = (function () {
     if (!lv || lv.role !== 'player') return;
     const g = lv.game, L = liveConn();
     if (!g) { liveBody('<div class="live-big">The game has ended.</div><p class="live-sub">Thanks for playing!</p>'); return; }
-    if (g.week !== WEEK.title) { liveBody('<div class="live-big">This game is for a different week.</div><p class="live-sub">Refresh ScriptureTok and join again.</p>'); return; }
+    if (g.week !== WEEK.title) { liveBody('<div class="live-big">This game is for a different week.</div><p class="live-sub">Refresh Treasure Up and join again.</p>'); return; }
     const players = ranked(lv.players);
     const me = players.find(p => p.uid === L.uid()) || { score: 0 };
     const place = players.findIndex(p => p.uid === L.uid()) + 1;
@@ -2777,7 +2777,7 @@ const ScriptureTok = (function () {
     wire();
     save();
 
-    // …/ScriptureTok/#family opens straight to Scripture Showdown: bookmark it on the TV laptop.
+    // …/TreasureUp/#family opens straight to Scripture Showdown: bookmark it on the TV laptop.
     if (location.hash === '#family') openBoard();
     // …/#host on the TV, …/#join (or #join-1234 with the code) on a phone.
     else if (location.hash === '#host') hostLive();
@@ -3624,8 +3624,8 @@ WEEKS.push({
   ]
 });
 
-const WEEK_CONTENT = ScriptureTok.pickWeek(WEEKS);
-ScriptureTok.boot(WEEK_CONTENT);
+const WEEK_CONTENT = TreasureUp.pickWeek(WEEKS);
+TreasureUp.boot(WEEK_CONTENT);
 </script>
 
 </body>

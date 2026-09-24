@@ -1,9 +1,11 @@
-# ScriptureTok
+# Treasure Up
+
+*"Treasure up in your minds continually the words of life"* (D&C 84:85). Formerly ScriptureTok.
 
 The weekly **Come, Follow Me** lesson as a full-screen, swipeable feed, built
 so the lesson is understood, not just scrolled past.
 
-Live at **https://blakemerrell.github.io/ScriptureTok/**
+Live at **https://blakemerrell.github.io/TreasureUp/**
 
 **Loaded:** September 21–27, 2026 · *A Marvellous Work and a Wonder* ·
 Isaiah 13–14; 22; 24–30; 35 · 10 reels, then from Monday September 28 ·
@@ -28,7 +30,7 @@ verse itself, and **one question** answerable from what's on the screen.
 | **🎮 Games** | Next to the streak. **Weekly puzzle**: a Connections-style sort of 16 ideas into the lesson's 4 sections, unlocked once every reel is answered; 4 mistakes a day, repeat guesses are free, a lost try resets the next day; solving pays 40 XP and a streak freeze. **Who said it?**: match lines quoted exactly from scripture to their speaker, 5 XP each on the first try; one line also comes back in each day's warm-up. **Verse Word**: a Wordle-style daily word with its verse as the clue ("a ____ from the storm"), six tries, 10 XP. **Scripture Climb**: a Millionaire-style ladder of ten questions (reel questions, then reading-only bonuses) from 100 to 32,000, safe at 1,000, with 50:50, Read it, and Ask a parent lifelines; the first climb each day pays 2 XP per right answer. **Scripture Showdown**: below. |
 | **Live game** | Kahoot-style. A TV or laptop hosts (`…/#host`): it shows a 4-digit code, then each question, and keeps score. Phones and tablets join with the code (`…/#join`, or `…/#join-1234`) and answer on their own screens in real time; the same answers appear in the same colors everywhere. 500 points for a right answer plus up to 500 for speed, 20 seconds a question, a leaderboard after each, and a family total at the end. No accounts needed to play; it never changes XP. Runs through Firebase across devices (`FIREBASE_CONFIG` in `index.html`, rules in `firestore.rules`); until that's set, it runs between tabs of one browser, which is also how the tests play it. |
 | **Year trail** | The first card shows the 52 weeks of Come, Follow Me 2026 with this week marked; each finished week turns green. |
-| **Scripture Showdown** | A quiz-show board game for the whole family, built from the week's checked questions. Columns are the lesson's sections; reel questions are the low values, reading-only bonus questions the high ones, one of them a Daily Double. A parent hosts on a laptop hooked to the TV and taps who got each one; scores add up to a family total and a family best. Open it from the first or last card, or bookmark `…/ScriptureTok/#family`. It never changes his XP. |
+| **Scripture Showdown** | A quiz-show board game for the whole family, built from the week's checked questions. Columns are the lesson's sections; reel questions are the low values, reading-only bonus questions the high ones, one of them a Daily Double. A parent hosts on a laptop hooked to the TV and taps who got each one; scores add up to a family total and a family best. Open it from the first or last card, or bookmark `…/TreasureUp/#family`. It never changes his XP. |
 | **Family rewards** | A parent sets rewards at XP marks behind a 4-digit PIN ("Pick Friday's movie at 300 XP"). He sees his progress on the first and last cards and gets "Reward unlocked, show a parent" when he crosses one; only the parent can mark it given. The PIN keeps an 11-year-old from editing his own rewards; it isn't security. |
 | **Week report** | The last card lists every reel with ✓ / ✕, and points to the real reading for the week. |
 | **Sections match church** | Reels are grouped under the lesson's own section headings, so what he reads lines up with class on Sunday. |

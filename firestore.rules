@@ -1,6 +1,6 @@
 rules_version = '2';
 
-// ScriptureTok live game. Paste into Firebase console → Firestore → Rules.
+// Treasure Up live game. Paste into Firebase console → Firestore → Rules.
 //
 // A game lives at /live/{code}. The TV that made it is the host: only it
 // changes the game, keeps score, reads answers, and ends it. Anyone signed
