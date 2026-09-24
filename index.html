@@ -923,6 +923,7 @@ const TreasureUp = (function () {
         <h2 class="reel-hook">From earlier this week</h2>
         <p class="reel-body text-white/70">No peeking at the verse. See what you remember.</p>
         ${quizHtml(r, 'recall', done == null ? null : done.picked)}
+        ${done != null ? keepGoingHtml() : ''}
       </div>
     </article>`;
   }
@@ -990,17 +991,44 @@ const TreasureUp = (function () {
   }
 
   function renderFeed() {
-    const cards = [];
+    // The week cover sits at the very top, one swipe back from wherever
+    // the app opens (see landingCard).
+    const cards = [introHtml];
     const recall = S.daily.ids.map(reelById).filter(Boolean);
     recall.forEach((r, n) => cards.push(i => recallHtml(r, n + 1, recall.length, i)));
     if (S.daily.say && (WEEK.sayings || []).some(x => x.id === S.daily.say)) cards.push(sayRecallHtml);
-    cards.push(introHtml);
     WEEK.reels.forEach(r => cards.push(i => reelHtml(r, i)));
     if (WEEK.puzzle) cards.push(puzzleCardHtml);
     cards.push(endHtml);
 
     $('feed').innerHTML = cards.map((make, i) => make(i)).join('');
     $('rail').innerHTML = cards.map(() => '<div class="rail-dot"></div>').join('');
+  }
+
+  // Where the app opens: today's warm-up if any is left, otherwise the next
+  // reel he hasn't answered, so he never swipes past finished work. A fresh
+  // week opens on its cover; a finished week on the puzzle, then the report.
+  const warmupsLeft = () =>
+    S.daily.ids.filter(id => !S.daily.done[id]).map(id => 'recall-' + id)
+      .concat(S.daily.say && !S.daily.sayDone ? ['say-' + S.daily.say] : []);
+  function landingCard() {
+    const warm = warmupsLeft();
+    if (warm.length) return warm[0];
+    if (!WEEK.reels.some(r => S.answers[r.id])) return 'intro';
+    const next = WEEK.reels.find(r => !S.answers[r.id]);
+    if (next) return next.id;
+    return WEEK.puzzle && puzzleState().status !== 'won' ? 'puzzle' : 'end';
+  }
+  function goToCard(id, smooth) {
+    const el = document.querySelector('.reel[data-id="' + id + '"]');
+    if (el) $('feed').scrollTo({ top: el.offsetTop, behavior: smooth && !reduceMotion() ? 'smooth' : 'auto' });
+  }
+  // Shown on the warm-up card that finishes today's warm-up.
+  function keepGoingHtml() {
+    if (warmupsLeft().length) return '';
+    const next = landingCard();
+    const where = next === 'puzzle' ? 'the weekly puzzle' : next === 'end' ? 'your week' : 'your next reel';
+    return `<button class="board-link" data-jump>Keep going ↓<small>On to ${where}</small></button>`;
   }
 
   // Redraw one card in place after an answer, keeping its inner scroll.
@@ -2143,6 +2171,7 @@ const TreasureUp = (function () {
           <div class="quiz-choices" style="margin-top:8px">${buttons}</div>
           ${d ? `<p class="quiz-why">${d.right ? '<b class="ok">Right.</b> ' : '<b class="no">Not quite.</b> '}${esc(x.why)}<br><span class="text-white/55 text-[12px]">${esc(x.ref)}</span></p>` : ''}
         </div>
+        ${d ? keepGoingHtml() : ''}
       </div>
     </article>`;
   }
@@ -2671,6 +2700,7 @@ const TreasureUp = (function () {
       if (nc) { copyNote(nc.dataset.noteCopy); return; }     // the link still opens
       const clip = e.target.closest('button.clip');
       if (clip) { playClip(clip); return; }
+      if (e.target.closest('[data-jump]')) { goToCard(landingCard(), true); return; }
       if (e.target.closest('[data-board]')) { openBoard(); return; }
       const g = e.target.closest('[data-game]');
       if (g) { startGame(g.dataset.game); return; }
@@ -2747,7 +2777,7 @@ const TreasureUp = (function () {
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState !== 'visible') return;
       if (S.daily && S.daily.day !== dayKey()) {
-        rollDay(); save(); renderFeed(); renderHud();
+        rollDay(); save(); renderFeed(); renderHud(); goToCard(landingCard());
         document.querySelectorAll('.reel').forEach(r => observer.observe(r));
       }
     });
@@ -2784,6 +2814,7 @@ const TreasureUp = (function () {
     renderFeed();
     renderHud();
     wire();
+    goToCard(landingCard());
     save();
 
     // …/TreasureUp/#family opens straight to Scripture Showdown: bookmark it on the TV laptop.
