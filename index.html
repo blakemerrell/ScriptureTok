@@ -265,7 +265,7 @@
     padding: calc(var(--sat) + 16px) 16px calc(var(--sab) + 16px);
     background: rgba(3,3,10,.82); backdrop-filter: blur(4px);
   }
-  .overlay[hidden], #board[hidden], #play[hidden] { display: none; }
+  .overlay[hidden], #board[hidden], #play[hidden], #live[hidden] { display: none; }
   .overlay-card {
     width: 100%; max-width: 520px; max-height: 88dvh; overflow-y: auto;
     padding: 18px; border-radius: 22px; background: #12121f; border: 1px solid rgba(255,255,255,.12);
@@ -287,7 +287,7 @@
   .btn.ghost { background: rgba(255,255,255,.1); color: #fff; border: 1px solid rgba(255,255,255,.22); }
   .btn:focus-visible, .tile:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 
-  #board, #play {
+  #board, #play, #live {
     position: fixed; inset: 0; z-index: 110; overflow-y: auto;
     display: flex; flex-direction: column;
     padding: calc(var(--sat) + 14px) 16px calc(var(--sab) + 16px);
@@ -432,6 +432,27 @@
   .trail i.did { background: var(--right); }
   .trail i.now { background: var(--gold); box-shadow: 0 0 0 3px rgba(252,211,77,.3); }
 
+  /* ---- Live game (Kahoot-style): TV hosts, phones answer ---- */
+  .live-code { font-weight: 900; font-size: clamp(56px, 14vw, 150px); letter-spacing: .12em; line-height: 1; color: var(--gold); font-variant-numeric: tabular-nums; }
+  .live-players { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  .live-players span { padding: 8px 14px; border-radius: 999px; font-weight: 800; font-size: clamp(14px, 1.8vw, 22px); background: rgba(255,255,255,.1); }
+  .live-choices { display: grid; gap: 10px; margin-top: 14px; }
+  .live-choice {
+    display: flex; align-items: center; gap: 12px; width: 100%; min-height: clamp(60px, 10vh, 110px);
+    padding: 12px 16px; border-radius: 16px; border: 0; cursor: pointer; text-align: left;
+    font: inherit; font-weight: 800; font-size: clamp(16px, 2.4vw, 32px); color: #fff;
+  }
+  .live-choice .lt { flex: 0 0 auto; width: 1.6em; height: 1.6em; border-radius: 10px; display: grid; place-items: center; background: rgba(0,0,0,.25); }
+  .live-choice.dim { opacity: .3; }
+  .live-choice.right { outline: 4px solid #fff; outline-offset: 2px; }
+  .live-clock { font-weight: 900; font-size: clamp(28px, 5vw, 64px); font-variant-numeric: tabular-nums; color: var(--gold); }
+  .live-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .live-bar { height: 10px; border-radius: 99px; background: rgba(255,255,255,.12); overflow: hidden; margin-top: 4px; }
+  .live-bar div { height: 100%; }
+  .live-big { font-weight: 900; font-size: clamp(30px, 8vw, 64px); line-height: 1.1; text-align: center; margin-top: 18vh; }
+  .live-sub { text-align: center; font-size: clamp(16px, 4vw, 24px); color: rgba(255,255,255,.75); margin-top: 12px; }
+  .live-mode { font-size: 12px; color: rgba(255,255,255,.5); margin-top: 16px; }
+
   /* Week report on the last card. */
   .report-row { display: flex; gap: 10px; align-items: baseline; font-size: 13.5px; line-height: 1.35; }
   .report-row .st { flex: 0 0 16px; font-weight: 900; text-align: center; }
@@ -549,6 +570,18 @@
     <button id="playExit" class="btn ghost" style="margin-left:auto">Exit</button>
   </div>
   <div id="playBody"></div>
+</section>
+
+<!-- Live game: the TV hosts, phones and tablets join with a code. -->
+<section id="live" hidden aria-label="Live game">
+  <div class="board-top">
+    <div>
+      <div class="eyebrow">Live game</div>
+      <div id="liveTitle" class="board-title"></div>
+    </div>
+    <button id="liveExit" class="btn ghost" style="margin-left:auto">Exit</button>
+  </div>
+  <div id="liveBody"></div>
 </section>
 
 <!-- Parents: the PIN and the reward list. -->
@@ -1662,6 +1695,7 @@ const ScriptureTok = (function () {
       rows.push(gameRow('word', '🔤', 'Verse Word', "Today's word is hiding in a verse. Six tries.", wordStatus(), false));
     }
     rows.push(gameRow('climb', '🪜', 'Scripture Climb', 'Ten questions, each worth more. Three lifelines.', climbStatus(), false));
+    rows.push(gameRow('live', '📡', 'Live game', 'The TV shows the questions; everyone answers on their own phone or tablet.', 'Host or join with a code', false));
     rows.push(gameRow('board', '📺', 'Scripture Showdown', 'A quiz-show game for the whole family, best on the TV.', 'Play together', false));
     $('gamesBody').innerHTML = rows.join('');
   }
@@ -1676,6 +1710,7 @@ const ScriptureTok = (function () {
     else if (id === 'sayings') openSayings();
     else if (id === 'word') openWord();
     else if (id === 'climb') openClimb();
+    else if (id === 'live') liveStart();
   }
 
   let playing = null;   // 'puzzle' | 'sayings'
@@ -2140,6 +2175,437 @@ const ScriptureTok = (function () {
     return `<div class="mt-5"><div class="eyebrow">Your year · week ${now} of ${YEAR_WEEKS}</div><div class="trail">${dots}</div></div>`;
   }
 
+  /* ---------------- live game (Kahoot-style) ---------------- */
+
+  // The TV (or a laptop) hosts: it shows a join code, then each question,
+  // and keeps score. Phones and tablets join with the code and answer on
+  // their own screens in real time. Players don't need accounts.
+  //
+  // Everything goes through a small `Live` connection with two versions:
+  //   Firebase: across real devices. Needs FIREBASE_CONFIG (below).
+  //   Local:    between tabs of one browser. Used until Firebase is set up,
+  //             and by the tests.
+  // Scores: 500 for a right answer plus up to 500 more for speed. Nothing
+  // here changes anyone's XP.
+  const FIREBASE_CONFIG = null;   // the test project's web config goes here
+  const LIVE_SECONDS = 20, LIVE_QUESTIONS = 10;
+  const LIVE_COLORS = ['#e11d48', '#2563eb', '#ca8a04'];
+
+  function LocalLive() {
+    // Each record is its own localStorage key, so two tabs never overwrite
+    // each other's writes: live.<code>.game, .p.<uid>, .a.<qi>_<uid>.
+    const PRE = 'stok.live.';
+    const subs = new Set();
+    const bc = 'BroadcastChannel' in window ? new BroadcastChannel('stok-live') : null;
+    let uid = null;
+    try { uid = sessionStorage.getItem(PRE + 'uid'); } catch (e) {}
+    if (!uid) { uid = 'u' + Math.random().toString(36).slice(2, 10); try { sessionStorage.setItem(PRE + 'uid', uid); } catch (e) {} }
+    const get = k => { try { return JSON.parse(localStorage.getItem(PRE + k)); } catch (e) { return null; } };
+    const keys = pre => { const out = []; try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.startsWith(PRE + pre)) out.push(k.slice(PRE.length)); } } catch (e) {} return out; };
+    const notify = c => { subs.forEach(f => f(c)); if (bc) bc.postMessage(c); };
+    const put = (c, k, v) => { try { v == null ? localStorage.removeItem(PRE + k) : localStorage.setItem(PRE + k, JSON.stringify(v)); } catch (e) {} notify(c); };
+    if (bc) bc.onmessage = e => subs.forEach(f => f(e.data));
+    const watch = (c, read, cb) => { const f = x => { if (x === c) cb(read()); }; subs.add(f); cb(read()); return () => subs.delete(f); };
+    return {
+      kind: 'local',
+      uid: () => uid,
+      init: async () => uid,
+      async createGame(c, game) {
+        if (get(c + '.game')) return false;
+        put(c, c + '.game', Object.assign({}, game, { host: uid, qStart: null }));
+        return true;
+      },
+      watchGame: (c, cb) => watch(c, () => get(c + '.game'), cb),
+      watchPlayers: (c, cb) => watch(c, () => keys(c + '.p.').map(k => Object.assign({ uid: k.split('.p.')[1] }, get(k))), cb),
+      watchAnswers: (c, qi, cb) => watch(c, () => keys(c + '.a.' + qi + '_').map(get), cb),
+      async updateGame(c, patch) {
+        const g = get(c + '.game'); if (!g) return;
+        if (patch.qStart === 'now') patch.qStart = Date.now();
+        put(c, c + '.game', Object.assign(g, patch));
+      },
+      async join(c, name) {
+        if (!get(c + '.game')) return 'No game with that code.';
+        const me = get(c + '.p.' + uid);
+        put(c, c + '.p.' + uid, me ? Object.assign(me, { name }) : { name, score: 0, last: 0 });
+        return null;
+      },
+      async answer(c, qi, choice) {
+        const g = get(c + '.game');
+        if (!g || g.state !== 'question' || g.qi !== qi || get(c + '.a.' + qi + '_' + uid)) return;
+        put(c, c + '.a.' + qi + '_' + uid, { uid, qi, choice, at: Date.now() });
+      },
+      async setScores(c, scores) {
+        Object.entries(scores).forEach(([u, v]) => { const p = get(c + '.p.' + u); if (p) put(c, c + '.p.' + u, Object.assign(p, v)); });
+      },
+      async endGame(c) { keys(c + '.').forEach(k => { try { localStorage.removeItem(PRE + k); } catch (e) {} }); notify(c); }
+    };
+  }
+
+  function FirebaseLive(config) {
+    // Same SDK and pattern as Storehouse: compat scripts loaded on first
+    // use, anonymous sign-in, Firestore for the live updates. Firestore
+    // stamps the question start and every answer with the server's clock,
+    // so speed points are fair whatever each phone's clock says.
+    const SDK = 'https://www.gstatic.com/firebasejs/10.12.2/';
+    let db, FV, uid = null;
+    const load = src => new Promise((ok, no) => {
+      const s = document.createElement('script');
+      s.src = src; s.onload = ok; s.onerror = () => no(new Error("Couldn't load the live game (no internet?)"));
+      document.head.appendChild(s);
+    });
+    const ms = v => v && typeof v.toMillis === 'function' ? v.toMillis() : v;
+    const gameRef = c => db.collection('live').doc(c);
+    return {
+      kind: 'firebase',
+      uid: () => uid,
+      async init() {
+        if (uid) return uid;
+        if (!window.firebase || !window.firebase.firestore) {
+          await load(SDK + 'firebase-app-compat.js');
+          await load(SDK + 'firebase-auth-compat.js');
+          await load(SDK + 'firebase-firestore-compat.js');
+        }
+        if (!firebase.apps.length) firebase.initializeApp(config);
+        db = firebase.firestore();
+        FV = firebase.firestore.FieldValue;
+        const auth = firebase.auth();
+        uid = (auth.currentUser || (await auth.signInAnonymously()).user).uid;
+        return uid;
+      },
+      async createGame(c, game) {
+        try {
+          await db.runTransaction(async t => {
+            if ((await t.get(gameRef(c))).exists) throw new Error('taken');
+            t.set(gameRef(c), Object.assign({}, game, { host: uid, qStart: null, created: FV.serverTimestamp() }));
+          });
+          return true;
+        } catch (e) { if (e.message === 'taken') return false; throw e; }
+      },
+      watchGame: (c, cb) => gameRef(c).onSnapshot(s => {
+        if (!s.exists) return cb(null);
+        const g = s.data({ serverTimestamps: 'estimate' });
+        cb(Object.assign(g, { qStart: ms(g.qStart) }));
+      }, () => cb(null)),
+      watchPlayers: (c, cb) => gameRef(c).collection('players').onSnapshot(q => cb(q.docs.map(d => Object.assign({ uid: d.id }, d.data()))), () => cb([])),
+      watchAnswers: (c, qi, cb) => gameRef(c).collection('answers').where('qi', '==', qi).onSnapshot(q =>
+        cb(q.docs.map(d => { const a = d.data({ serverTimestamps: 'estimate' }); return Object.assign(a, { at: ms(a.at) }); })), () => cb([])),
+      async updateGame(c, patch) {
+        if (patch.qStart === 'now') patch.qStart = FV.serverTimestamp();
+        await gameRef(c).update(patch);
+      },
+      async join(c, name) {
+        if (!(await gameRef(c).get()).exists) return 'No game with that code.';
+        const me = gameRef(c).collection('players').doc(uid);
+        if ((await me.get()).exists) await me.update({ name });
+        else await me.set({ name, score: 0, last: 0 });
+        return null;
+      },
+      async answer(c, qi, choice) {
+        await gameRef(c).collection('answers').doc(qi + '_' + uid).set({ uid, qi, choice, at: FV.serverTimestamp() });
+      },
+      async setScores(c, scores) {
+        const b = db.batch();
+        Object.entries(scores).forEach(([u, v]) => b.update(gameRef(c).collection('players').doc(u), v));
+        await b.commit();
+      },
+      async endGame(c) {
+        const b = db.batch();
+        for (const sub of ['answers', 'players']) (await gameRef(c).collection(sub).get()).docs.forEach(d => b.delete(d.ref));
+        b.delete(gameRef(c));
+        await b.commit();
+      }
+    };
+  }
+
+  let LIVE = null;
+  const liveConn = () => LIVE || (LIVE = FIREBASE_CONFIG ? FirebaseLive(FIREBASE_CONFIG) : LocalLive());
+
+  // Questions are named by id ("isa13-babylon:q", "isa25-refuge:b1") so
+  // every device looks up the same checked question from its own copy.
+  function liveQuestion(id) {
+    const [rid, part] = String(id).split(':');
+    const r = reelById(rid);
+    if (!r) return null;
+    return part === 'q' ? r.question : bonusesOf(r)[Number((part || '').slice(1))] || null;
+  }
+  function liveQuestionIds(seed) {
+    const easy = shuffled(WEEK.reels.map(r => r.id + ':q'), seed + '|e');
+    const hard = shuffled(WEEK.reels.flatMap(r => bonusesOf(r).map((_, n) => r.id + ':b' + n)), seed + '|h');
+    const ids = easy.slice(0, 6).concat(hard.slice(0, 4));
+    for (const x of easy.slice(6)) if (ids.length < LIVE_QUESTIONS) ids.push(x);
+    return ids.slice(0, LIVE_QUESTIONS);
+  }
+  const liveChoices = id => { const q = liveQuestion(id); return shuffled([q.right].concat(q.wrong), 'live|' + id); };
+
+  let lv = null;   // this screen's part in a game
+
+  function openLive() {
+    $('liveTitle').textContent = WEEK.title;
+    $('live').hidden = false;
+  }
+  function liveBody(html) { $('liveBody').innerHTML = html; }
+  function stopLive() {
+    if (lv) { (lv.unsub || []).forEach(f => { try { f(); } catch (e) {} }); clearInterval(lv.tick); }
+    lv = null;
+  }
+  async function closeLive() {
+    const was = lv;
+    stopLive();
+    $('live').hidden = true;
+    if (was && was.role === 'host' && was.code) { try { await liveConn().endGame(was.code); } catch (e) {} }
+  }
+
+  const modeNote = () => liveConn().kind === 'local'
+    ? '<p class="live-mode">Test mode: players join from other tabs of this browser. Playing across phones turns on once the live-game server is set up.</p>'
+    : '';
+
+  function liveStart() {   // the chooser
+    stopLive();
+    openLive();
+    liveBody(`
+      <div class="clue">
+        <p class="clue-q">Play live</p>
+        <p class="board-help">The TV or laptop shows the questions. Everyone answers on their own phone or tablet, and the fastest right answers score the most.</p>
+        <div class="board-actions">
+          <button class="btn" data-live="host">Host on this screen</button>
+          <button class="btn ghost" data-live="join">Join with a code</button>
+        </div>
+        ${modeNote()}
+      </div>`);
+  }
+
+  /* ----- host (the TV) ----- */
+
+  async function hostLive() {
+    stopLive();
+    openLive();
+    liveBody('<p class="board-help">Starting a game…</p>');
+    const L = liveConn();
+    try { await L.init(); } catch (e) { liveBody(`<div class="clue"><p class="clue-q">Can't start the game</p><p class="board-help">${esc(e.message)}</p></div>`); return; }
+    let code = null;
+    for (let i = 0; i < 20 && !code; i++) {
+      const c = String(1000 + Math.floor(Math.random() * 9000));
+      if (await L.createGame(c, { week: WEEK.title, qs: liveQuestionIds(c), state: 'lobby', qi: -1, seconds: LIVE_SECONDS })) code = c;
+    }
+    if (!code) { liveBody('<div class="clue"><p class="clue-q">Couldn&rsquo;t get a game code. Try again.</p></div>'); return; }
+    lv = { role: 'host', code, game: null, players: [], answers: [], unsub: [] };
+    lv.unsub.push(L.watchGame(code, g => { if (!lv) return; lv.game = g; renderHost(); }));
+    lv.unsub.push(L.watchPlayers(code, ps => { if (!lv) return; lv.players = ps; renderHost(); checkAllAnswered(); }));
+  }
+
+  function watchAnswersFor(qi) {
+    if (lv.offAnswers) lv.offAnswers();
+    lv.answers = [];
+    lv.offAnswers = liveConn().watchAnswers(lv.code, qi, as => { if (!lv) return; lv.answers = as; renderHost(); checkAllAnswered(); });
+    lv.unsub.push(lv.offAnswers);
+  }
+
+  async function askQuestion(qi) {
+    lv.localStart = Date.now();
+    watchAnswersFor(qi);
+    await liveConn().updateGame(lv.code, { state: 'question', qi, qStart: 'now' });
+    clearInterval(lv.tick);
+    lv.tick = setInterval(() => {
+      if (!lv || !lv.game || lv.game.state !== 'question') return;
+      const left = LIVE_SECONDS - Math.floor((Date.now() - lv.localStart) / 1000);
+      const el = document.getElementById('liveClock');
+      if (el) el.textContent = Math.max(0, left);
+      if (left <= 0) reveal();
+    }, 250);
+  }
+
+  function checkAllAnswered() {
+    if (!lv || lv.role !== 'host' || !lv.game || lv.game.state !== 'question' || !lv.players.length) return;
+    if (lv.players.every(p => lv.answers.some(a => a.uid === p.uid))) reveal();
+  }
+
+  async function reveal() {
+    if (!lv || lv.revealing || !lv.game || lv.game.state !== 'question') return;
+    lv.revealing = true;
+    clearInterval(lv.tick);
+    const g = lv.game, q = liveQuestion(g.qs[g.qi]);
+    const scores = {};
+    lv.players.forEach(p => {
+      const a = lv.answers.find(x => x.uid === p.uid);
+      const right = !!a && a.choice === q.right;
+      let pts = 0;
+      if (right) {
+        const secs = Math.max(0, ((a.at || 0) - (g.qStart || 0)) / 1000);
+        pts = 500 + Math.round(500 * Math.max(0, 1 - secs / LIVE_SECONDS));
+      }
+      scores[p.uid] = { score: (p.score || 0) + pts, last: pts, lastRight: right, lastAnswered: !!a };
+    });
+    await liveConn().setScores(lv.code, scores);
+    await liveConn().updateGame(lv.code, { state: 'reveal' });
+    lv.revealing = false;
+  }
+
+  async function hostAction(act) {
+    const L = liveConn(), g = lv && lv.game;
+    if (!g) return;
+    if (act === 'start' && g.state === 'lobby' && lv.players.length) await askQuestion(0);
+    else if (act === 'reveal') await reveal();
+    else if (act === 'next' && g.state === 'reveal') {
+      if (g.qi + 1 < g.qs.length) await askQuestion(g.qi + 1);
+      else await L.updateGame(lv.code, { state: 'final' });
+    } else if (act === 'again') {
+      const code = lv.code;
+      await L.setScores(code, Object.fromEntries(lv.players.map(p => [p.uid, { score: 0, last: 0 }])));
+      await L.updateGame(code, { state: 'lobby', qi: -1, qs: liveQuestionIds(code + '|' + Date.now()) });
+    } else if (act === 'end') {
+      await closeLive();
+    }
+  }
+
+  const ranked = ps => ps.slice().sort((a, b) => (b.score || 0) - (a.score || 0));
+  const fmt = n => Number(n || 0).toLocaleString('en-US');
+
+  function choicesHtml(id, g, counts) {
+    const q = liveQuestion(id);
+    const shown = g.state !== 'question';
+    return `<div class="live-choices">${liveChoices(id).map((c, n) => {
+      const right = c === q.right;
+      const cls = shown ? (right ? ' right' : ' dim') : '';
+      const count = counts ? `<span style="margin-left:auto;font-variant-numeric:tabular-nums">${counts[c] || 0}</span>` : '';
+      return `<div class="live-choice${cls}" style="background:${LIVE_COLORS[n]}"><span class="lt">${'ABC'[n]}</span><span>${esc(c)}</span>${count}</div>`;
+    }).join('')}</div>`;
+  }
+
+  function renderHost() {
+    if (!lv || lv.role !== 'host') return;
+    const g = lv.game;
+    if (!g) { liveBody('<div class="live-big">The game has ended.</div>'); return; }
+    const players = ranked(lv.players);
+    if (g.state === 'lobby') {
+      liveBody(`
+        <div class="clue">
+          <div class="eyebrow">Join code</div>
+          <div class="live-code">${esc(lv.code)}</div>
+          <p class="board-help">On each phone or tablet: open ScriptureTok, tap 🎮, choose <b>Live game</b>, then <b>Join with a code</b>.</p>
+          <div class="live-players">${players.map(p => `<span>${esc(p.name)}</span>`).join('') || '<span style="opacity:.5">Waiting for players…</span>'}</div>
+          <div class="board-actions">
+            <button class="btn" data-host="start"${players.length ? '' : ' disabled style="opacity:.4"'}>Start · ${g.qs.length} questions</button>
+            <button class="btn ghost" data-host="end">Cancel</button>
+          </div>
+          ${modeNote()}
+        </div>`);
+      return;
+    }
+    if (g.state === 'question' || g.state === 'reveal') {
+      const id = g.qs[g.qi], q = liveQuestion(id);
+      const counts = {};
+      if (g.state === 'reveal') lv.answers.forEach(a => { counts[a.choice] = (counts[a.choice] || 0) + 1; });
+      const board = g.state === 'reveal' ? `
+        <p class="quiz-why" style="margin-top:14px"><b class="ok">Answer:</b> ${esc(q.right)}. ${esc(q.why)}</p>
+        <div class="grid gap-2" style="margin-top:14px">${players.slice(0, 5).map((p, i) =>
+          `<div class="score-row"><span>${i + 1}. ${esc(p.name)} ${p.last ? `<span style="color:var(--right)">+${fmt(p.last)}</span>` : ''}</span><b>${fmt(p.score)}</b></div>`).join('')}</div>
+        <div class="board-actions"><button class="btn" data-host="next">${g.qi + 1 < g.qs.length ? 'Next question' : 'Final scores'}</button></div>` : `
+        <div class="board-actions"><button class="btn ghost" data-host="reveal">Show the answer now</button></div>`;
+      liveBody(`
+        <div class="clue">
+          <div class="live-row">
+            <div class="eyebrow">Question ${g.qi + 1} of ${g.qs.length}${g.state === 'question' ? ` · ${lv.answers.length} of ${players.length} answered` : ''}</div>
+            ${g.state === 'question' ? `<div class="live-clock" id="liveClock">${Math.max(0, LIVE_SECONDS - Math.floor((Date.now() - (lv.localStart || Date.now())) / 1000))}</div>` : ''}
+          </div>
+          <p class="clue-q">${esc(q.q)}</p>
+          ${choicesHtml(id, g, g.state === 'reveal' ? counts : null)}
+          ${board}
+        </div>`);
+      return;
+    }
+    if (g.state === 'final') {
+      const total = players.reduce((n, p) => n + (p.score || 0), 0);
+      liveBody(`
+        <div class="clue">
+          <div class="eyebrow">Final scores</div>
+          <p class="clue-q">Together you scored ${fmt(total)}</p>
+          <div class="grid gap-2" style="margin-top:12px">${players.map((p, i) =>
+            `<div class="score-row"><span>${['🥇', '🥈', '🥉'][i] || (i + 1) + '.'} ${esc(p.name)}</span><b>${fmt(p.score)}</b></div>`).join('')}</div>
+          <div class="board-actions">
+            <button class="btn" data-host="again">Play again</button>
+            <button class="btn ghost" data-host="end">Done</button>
+          </div>
+        </div>`);
+    }
+  }
+
+  /* ----- player (a phone or tablet) ----- */
+
+  function joinForm(code, err) {
+    stopLive();
+    openLive();
+    let name = '';
+    try { name = localStorage.getItem('stok.live.name') || ''; } catch (e) {}
+    liveBody(`
+      <div class="clue" style="max-width:420px">
+        <p class="clue-q">Join a live game</p>
+        <label class="block text-[12px] text-white/60" for="liveCode">Code on the TV</label>
+        <input id="liveCode" class="field" inputmode="numeric" maxlength="4" autocomplete="off" value="${esc(code || '')}" style="font-size:28px;letter-spacing:.2em;text-align:center">
+        <label class="block mt-3 text-[12px] text-white/60" for="liveName">Your name</label>
+        <input id="liveName" class="field" maxlength="16" autocomplete="off" value="${esc(name)}">
+        ${err ? `<p class="parent-msg">${esc(err)}</p>` : ''}
+        <div class="board-actions"><button class="btn" data-live="joinnow">Join</button></div>
+        ${modeNote()}
+      </div>`);
+  }
+
+  async function joinLive() {
+    const code = $('liveCode').value.trim(), name = $('liveName').value.trim();
+    if (!/^\d{4}$/.test(code)) return joinForm(code, 'The code is 4 numbers.');
+    if (!name) return joinForm(code, 'Type your name.');
+    try { localStorage.setItem('stok.live.name', name); } catch (e) {}
+    const L = liveConn();
+    try { await L.init(); } catch (e) { return joinForm(code, e.message); }
+    const err = await L.join(code, name);
+    if (err) return joinForm(code, err);
+    lv = { role: 'player', code, name, game: null, players: [], picked: {}, unsub: [] };
+    lv.unsub.push(L.watchGame(code, g => { if (!lv) return; lv.game = g; renderPlayer(); }));
+    lv.unsub.push(L.watchPlayers(code, ps => { if (!lv) return; lv.players = ps; renderPlayer(); }));
+  }
+
+  async function playerAnswer(choice) {
+    const g = lv && lv.game;
+    if (!g || g.state !== 'question' || lv.picked[g.qi] != null) return;
+    lv.picked[g.qi] = choice;
+    renderPlayer();
+    await liveConn().answer(lv.code, g.qi, choice);
+  }
+
+  function renderPlayer() {
+    if (!lv || lv.role !== 'player') return;
+    const g = lv.game, L = liveConn();
+    if (!g) { liveBody('<div class="live-big">The game has ended.</div><p class="live-sub">Thanks for playing!</p>'); return; }
+    if (g.week !== WEEK.title) { liveBody('<div class="live-big">This game is for a different week.</div><p class="live-sub">Refresh ScriptureTok and join again.</p>'); return; }
+    const players = ranked(lv.players);
+    const me = players.find(p => p.uid === L.uid()) || { score: 0 };
+    const place = players.findIndex(p => p.uid === L.uid()) + 1;
+    const ord = n => n === 1 ? '1st' : n === 2 ? '2nd' : n === 3 ? '3rd' : n + 'th';
+    const standing = `<p class="live-sub">${fmt(me.score)} points${place ? ' · ' + ord(place) + ' place' : ''}</p>`;
+    if (g.state === 'lobby') { liveBody(`<div class="live-big">You're in, ${esc(lv.name)}!</div><p class="live-sub">Watch the TV. The game starts soon.</p>`); return; }
+    if (g.state === 'question') {
+      const id = g.qs[g.qi], q = liveQuestion(id);
+      if (lv.picked[g.qi] != null) { liveBody(`<div class="live-big">Locked in!</div><p class="live-sub">Waiting for the others…</p>`); return; }
+      liveBody(`
+        <div class="clue">
+          <div class="eyebrow">Question ${g.qi + 1} of ${g.qs.length}</div>
+          <p class="quiz-q" style="font-size:18px">${esc(q.q)}</p>
+          <div class="live-choices">${liveChoices(id).map((c, n) =>
+            `<button class="live-choice" style="background:${LIVE_COLORS[n]}" data-lpick="${esc(c)}"><span class="lt">${'ABC'[n]}</span><span>${esc(c)}</span></button>`).join('')}</div>
+        </div>`);
+      return;
+    }
+    if (g.state === 'reveal') {
+      const right = me.lastRight, answered = me.lastAnswered;
+      liveBody(`<div class="live-big">${right ? 'Right! +' + fmt(me.last) : answered ? 'Not this time' : 'Too slow!'}</div>${standing}`);
+      return;
+    }
+    if (g.state === 'final') {
+      const total = players.reduce((n, p) => n + (p.score || 0), 0);
+      liveBody(`<div class="live-big">${place === 1 ? '🥇 You won!' : 'You finished ' + ord(place)}</div>
+        <p class="live-sub">${fmt(me.score)} points · Together: ${fmt(total)}</p>`);
+    }
+  }
+
   /* ---------------- wiring ---------------- */
 
   let observer = null;
@@ -2205,6 +2671,21 @@ const ScriptureTok = (function () {
       else if (playing === 'climb') climbAction(el);
     });
 
+    // Live game.
+    $('liveExit').addEventListener('click', closeLive);
+    $('live').addEventListener('click', e => {
+      const el = e.target.closest('[data-live],[data-host],[data-lpick]');
+      if (!el || el.disabled) return;
+      if (el.dataset.lpick != null) playerAnswer(el.dataset.lpick);
+      else if (el.dataset.host) hostAction(el.dataset.host);
+      else if (el.dataset.live === 'host') hostLive();
+      else if (el.dataset.live === 'join') joinForm('');
+      else if (el.dataset.live === 'joinnow') joinLive();
+    });
+    $('live').addEventListener('keydown', e => {
+      if (e.key === 'Enter' && e.target.closest('#liveCode, #liveName')) joinLive();
+    });
+
     // Family board and parent screen.
     $('board').addEventListener('click', boardClick);
     $('boardExit').addEventListener('click', closeBoard);
@@ -2223,8 +2704,8 @@ const ScriptureTok = (function () {
         if (e.key === 'Backspace') { e.preventDefault(); wordKey('back'); return; }
         if (/^[a-z]$/i.test(e.key)) { wordKey(e.key.toUpperCase()); return; }
       }
-      if (e.key === 'Escape') { closeParent(); closeBoard(); closeGames(); if (!$('play').hidden) closePlay(); return; }
-      if (!$('board').hidden || !$('parent').hidden || !$('games').hidden || !$('play').hidden) return;
+      if (e.key === 'Escape') { closeParent(); closeBoard(); closeGames(); if (!$('play').hidden) closePlay(); if (!$('live').hidden) closeLive(); return; }
+      if (!$('board').hidden || !$('parent').hidden || !$('games').hidden || !$('play').hidden || !$('live').hidden) return;
       if (e.target.closest && e.target.closest('textarea, input')) return;
       if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
       e.preventDefault();
@@ -2276,6 +2757,9 @@ const ScriptureTok = (function () {
 
     // …/ScriptureTok/#family opens straight to Scripture Showdown: bookmark it on the TV laptop.
     if (location.hash === '#family') openBoard();
+    // …/#host on the TV, …/#join (or #join-1234 with the code) on a phone.
+    else if (location.hash === '#host') hostLive();
+    else if (/^#join(-\d{4})?$/.test(location.hash)) joinForm(location.hash.slice(6));
   }
 
   return { boot: boot };
