@@ -2188,10 +2188,16 @@ const TreasureUp = (function () {
   // Scores: 500 for a right answer plus up to 500 more for speed. Nothing
   // here changes anyone's XP.
   // Which Firebase project a copy of the app talks to, by where it's
-  // served. The test site uses the test project; the real app gets its own
-  // project when live play goes there. Anywhere else (a file on disk, the
-  // private preview, the tests) uses the Local version.
+  // served: the real app and the test site each have their own. Anywhere
+  // else (a file on disk, the private preview, the tests) uses the Local
+  // version.
   const FIREBASE_PROJECTS = {
+    '/TreasureUp/': {
+      apiKey: 'AIzaSyCFVw2nEIUteNZhYmBB1Xl0bzsHdtLoJW8',   // public by design; the rules protect the data
+      authDomain: 'treasure-up-54eeb.firebaseapp.com',
+      projectId: 'treasure-up-54eeb',
+      appId: '1:493129438219:web:1b9cc9a131bcc558e6a30e'
+    },
     '/TreasureUp-test/': {
       apiKey: 'AIzaSyB9X27jbNg4DOGcrZ8k1BGzR1veJXos3Tc',   // public by design; the rules protect the data
       authDomain: 'scripturetok-test.firebaseapp.com',
