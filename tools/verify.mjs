@@ -56,7 +56,8 @@ const MEDIA = {
     'Gospel For Kids',
     'Latter Day Kids',
     'LDS Come Follow Me',
-    'Line Upon Line — for Come Follow Me (Overviews for All Ages)'
+    'Line Upon Line — for Come Follow Me (Overviews for All Ages)',
+    'Thumb Follow Me'          // kids' Bible stories; name confirmed with YouTube 2026-09-24
   ]
 };
 
