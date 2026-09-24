@@ -46,6 +46,13 @@ blocked (private browsing); it just won't remember.
   headings. Reels are written in our own words and link back to it. Don't paste
   the manual's paragraphs in: the site is public, and the Church's terms of use
   cover personal and family use.
+- **The magazines:** each month's Friend (its "Come, Follow Me Weekly
+  Scripture Fun" has a family idea for every week), For the Strength of Youth
+  and the Liahona often tie to the week's chapters. Bonus questions can come
+  from them; the check script fetches the page and confirms the answer is on it.
+- **Videos:** clips only from the approved channels in `tools/verify.mjs`:
+  the Church's own channel, Scripture Central, followHIM Podcast, Don't Miss
+  This, and Talking Scripture.
 - **History:** a historical claim goes in only when it can be tied to a
   scripture source (for example, Charles Anthon via Joseph Smith—History 1:64–65).
 
@@ -85,8 +92,10 @@ Rules the check script enforces:
 - Every lesson section needs at least one reel, and at least 3 questions
   (reel questions plus bonuses) so it fills a column on the family board.
 - Bodies stay under 75 words and hooks under 60 characters.
-- A bonus's `find` words must be in its source verse (or on the lesson page,
-  checked with `--lesson`) and must not appear anywhere in the app.
+- A bonus's `find` words must be in its source verse, or on the Gospel
+  Library page it cites (lesson, Friend, For the Strength of Youth, Liahona),
+  and must not appear anywhere in the app. A reel can have several bonuses;
+  each shows after the one before is answered.
 - Pictures live in `media/`, under 150 KB, with alt text, a credit, and a
   link to their Media Library or Wikimedia Commons page.
 - Clips: under 3 minutes, from a channel on the approved list in
@@ -98,11 +107,12 @@ Rules the check script enforces:
 Then run:
 
 ```bash
-node tools/verify.mjs --lesson   # checks quotes, references, and the week against the lesson page
+node tools/verify.mjs --online   # quotes, references, and every Gospel Library page the week cites
 ```
 
-and push to `main`. The deploy runs the same check (without `--lesson`) and
-**refuses to publish** if anything fails.
+and push to `main`. The deploy runs the same check and **refuses to publish**
+if anything fails. (If the Church website itself is down, that's a warning,
+not a failure, so an outage can't block a deploy.)
 
 Answer order is shuffled in the app, so always put the right answer in
 `right`. Changing a reel's `id` resets that reel's answer.

@@ -616,19 +616,40 @@ const ScriptureTok = (function () {
       : `<button class="clip" data-clip="${esc(v.youtube)}" data-start="${v.start}" data-end="${v.end}" aria-label="Play clip: ${esc(v.title)}">${inner}</button>`;
   }
 
-  // One question block. `kind` is 'reel', 'recall' or 'bonus'; `picked` is
-  // the choice he already made, if any.
-  function quizHtml(r, kind, picked) {
-    const q = kind === 'bonus' ? r.bonus : r.question;
-    const seed = kind === 'recall' ? r.id + '|' + S.daily.day : kind === 'bonus' ? r.id + '|bonus' : r.id;
+  // A reel can have one bonus or several; each shows once the one before it
+  // is answered. A bonus's `source` is a verse ("Isaiah 22:15"), "lesson",
+  // or a Gospel Library page (the Friend, For the Strength of Youth, the
+  // Liahona, the manual).
+  const bonusesOf = r => !r.bonus ? [] : Array.isArray(r.bonus) ? r.bonus : [r.bonus];
+  const bonusKey = (id, n) => id + '#' + n;
+
+  function sourceLabel(src) {
+    if (src === 'lesson' || /\/study\/manual\//.test(src)) return "this week's lesson";
+    if (/\/study\/friend\//.test(src)) return 'the Friend';
+    if (/\/study\/ftsoy\//.test(src)) return 'For the Strength of Youth';
+    if (/\/study\/liahona\//.test(src)) return 'the Liahona';
+    if (/^https:\/\//.test(src)) return 'Gospel Library';
+    return src.replace(/:.*/, '');            // "Isaiah 22:15" -> "Isaiah 22"
+  }
+  function sourceLink(src) {
+    if (src === 'lesson') return WEEK.lesson;
+    if (/^https:\/\//.test(src)) return src;
+    return readLink(src, true);
+  }
+
+  // One question block. `kind` is 'reel', 'recall' or 'bonus' (with its
+  // index `n`); `picked` is the choice he already made, if any.
+  function quizHtml(r, kind, picked, n) {
+    const q = kind === 'bonus' ? bonusesOf(r)[n] : r.question;
+    const seed = kind === 'recall' ? r.id + '|' + S.daily.day : kind === 'bonus' ? r.id + '|bonus' + n : r.id;
     const choices = choicesFor(q, seed);
     const done = picked != null;
-    const where = kind === 'bonus' ? (q.source === 'lesson' ? "this week's lesson" : q.source.replace(/:.*/, '')) : '';
+    const where = kind === 'bonus' ? sourceLabel(q.source) : '';
     const label = kind === 'recall' ? 'Remember this? · +' + XP.recall + ' XP'
       : kind === 'bonus' ? 'Bonus · find it in ' + where + ' · +' + XP.bonus + ' XP'
       : 'Quick check · +' + XP.firstTry + ' XP if right';
     const findLink = kind === 'bonus' && !done
-      ? `<a class="find-link" href="${esc(q.source === 'lesson' ? WEEK.lesson : readLink(q.source, true))}" target="_blank" rel="noopener noreferrer">Open ${esc(where)} ↗</a>`
+      ? `<a class="find-link" href="${esc(sourceLink(q.source))}" target="_blank" rel="noopener noreferrer">Open ${esc(where)} ↗</a>`
       : '';
 
     const buttons = choices.map(c => {
@@ -649,7 +670,7 @@ const ScriptureTok = (function () {
     }
 
     return `
-      <div class="quiz${done ? ' done' : ''}${kind === 'bonus' ? ' bonus' : ''}" data-quiz="${esc(r.id)}" data-kind="${kind}">
+      <div class="quiz${done ? ' done' : ''}${kind === 'bonus' ? ' bonus' : ''}" data-quiz="${esc(r.id)}" data-kind="${kind}"${kind === 'bonus' ? ` data-n="${n}"` : ''}>
         <div class="eyebrow" style="color:var(--gold)">${label}</div>
         <p class="quiz-q">${esc(q.q)}</p>
         ${findLink}
@@ -667,8 +688,16 @@ const ScriptureTok = (function () {
     const credit = photo
       ? `<div class="credit">Picture: <a href="${esc(photo.link)}" target="_blank" rel="noopener noreferrer">${esc(photo.credit)}</a></div>`
       : '';
-    // The bonus shows once he's answered the reel's own question.
-    const bonus = r.bonus && a ? quizHtml(r, 'bonus', S.bonus[r.id] ? S.bonus[r.id].picked : null) : '';
+    // Bonuses show once he's answered the reel's own question, one at a
+    // time: the next appears after he answers the one before.
+    let bonus = '';
+    if (a) {
+      for (let n = 0; n < bonusesOf(r).length; n++) {
+        const b = S.bonus[bonusKey(r.id, n)];
+        bonus += quizHtml(r, 'bonus', b ? b.picked : null, n);
+        if (!b) break;
+      }
+    }
     return `
     <article class="reel${photo ? ' has-photo' : ''}" data-id="${esc(r.id)}" data-index="${i}">
       ${backdrop(r)}
@@ -736,10 +765,10 @@ const ScriptureTok = (function () {
     const headline = answered.length === total
       ? `You got ${right} of ${total} right the first time.`
       : `${answered.length} of ${total} questions answered so far.`;
-    const withBonus = WEEK.reels.filter(r => r.bonus);
-    const found = withBonus.filter(r => S.bonus[r.id] && S.bonus[r.id].right).length;
-    const bonusLine = withBonus.length
-      ? `<p class="reel-body mt-3"><b class="text-amber-300">Bonus:</b> found ${found} of ${withBonus.length} answers in the reading.</p>`
+    const allBonus = WEEK.reels.flatMap(r => bonusesOf(r).map((_, n) => bonusKey(r.id, n)));
+    const found = allBonus.filter(k => S.bonus[k] && S.bonus[k].right).length;
+    const bonusLine = allBonus.length
+      ? `<p class="reel-body mt-3"><b class="text-amber-300">Bonus:</b> found ${found} of ${allBonus.length} answers in the reading.</p>`
       : '';
 
     const rows = WEEK.reels.map(r => {
@@ -866,12 +895,14 @@ const ScriptureTok = (function () {
     const kind = quiz.dataset.kind;
     const r = reelById(id);
     if (!r) return;
-    const right = picked === (kind === 'bonus' ? r.bonus.right : r.question.right);
+    const n = Number(quiz.dataset.n);
+    const right = picked === (kind === 'bonus' ? bonusesOf(r)[n].right : r.question.right);
     const today = dayKey();
 
     if (kind === 'bonus') {
-      if (S.bonus[id]) return;                   // first try only
-      S.bonus[id] = { right, picked, day: today };
+      const key = bonusKey(id, n);
+      if (S.bonus[key]) return;                  // first try only
+      S.bonus[key] = { right, picked, day: today };
       markStudied();
       if (right) grantXp(XP.bonus, 'Found it in the reading');
       const card = quiz.closest('.reel');
@@ -1141,7 +1172,7 @@ const ScriptureTok = (function () {
     const cols = WEEK.sections.map((name, s) => {
       const reels = WEEK.reels.filter(r => r.section === s);
       const clues = reels.map(r => ({ id: r.id + ':q', q: r.question }))
-        .concat(reels.filter(r => r.bonus).map(r => ({ id: r.id + ':b', q: r.bonus, bonus: true })));
+        .concat(reels.flatMap(r => bonusesOf(r).map((b, n) => ({ id: r.id + ':b' + n, q: b, bonus: true }))));
       clues.forEach((c, k) => { c.value = 100 * (k + 1); c.col = s; });
       return { name, clues };
     });
@@ -1375,7 +1406,7 @@ const ScriptureTok = (function () {
     // week never counts toward this one.
     const live = new Set(WEEK.reels.map(r => r.id));
     Object.keys(S.answers).forEach(id => { if (!live.has(id)) delete S.answers[id]; });
-    Object.keys(S.bonus).forEach(id => { if (!live.has(id)) delete S.bonus[id]; });
+    Object.keys(S.bonus).forEach(k => { if (!live.has(k.split('#')[0])) delete S.bonus[k]; });
     Object.keys(S.recall).forEach(id => { if (!live.has(id)) delete S.recall[id]; });
 
     rollDay();
@@ -1417,10 +1448,14 @@ const ScriptureTok = (function () {
        question  { q, right, wrong: [two wrong answers], why }
                  Must be answerable from this reel. `why` shows after he
                  answers and points to the words that settle it.
-       bonus     optional { q, right, wrong, why, source, find }
-                 Answerable ONLY from the reading. `source` is a verse
-                 ("Isaiah 22:15") or "lesson". `find` is the exact words that
-                 settle it: they must be in the source and nowhere in the app.
+       bonus     optional { q, right, wrong, why, source, find }, or a list
+                 of them (they show one after another). Answerable ONLY from
+                 the reading. `source` is a verse ("Isaiah 22:15"), "lesson",
+                 or a Gospel Library page: the Friend, For the Strength of
+                 Youth, the Liahona or the manual (a churchofjesuschrist.org
+                 /study/… link). `find` is the exact words that settle it:
+                 they must be in the source and nowhere in the app. For a web
+                 page, write `why` in your own words, no “quotes”.
        media     optional, at most 4 pieces a week, only where a picture or
                  clip shows something the words can't.
                  image: { src: "media/….jpg", alt, credit, link }
@@ -1563,8 +1598,16 @@ const WEEK_CONTENT = {
           start: 554, end: 639,
           title: "Paul and John quote this verse",
           channel: "Scripture Central",
-          previewed: false
+          previewed: true      // watched by Blake, 2026-09-24
         }
+      },
+      bonus: {
+        q: "For the Strength of Youth explains what Isaiah's name means in Hebrew. What is it?",
+        right: "The Lord is salvation",
+        wrong: ["Prophet of kings", "Light of the morning"],
+        why: "His name in Hebrew means the Lord is salvation, and his book keeps pointing to the Savior.",
+        source: "https://www.churchofjesuschrist.org/study/ftsoy/2026/09/what-do-we-know-about-the-prophet-isaiah?lang=eng",
+        find: "His name in Hebrew means “the Lord is salvation.”"
       },
       gradient: "linear-gradient(150deg,#134e4a 0%,#0f766e 45%,#fbbf24 115%)",
       blobA: "rgba(253,224,71,.45)", blobB: "rgba(0,0,0,.45)"
@@ -1585,7 +1628,8 @@ const WEEK_CONTENT = {
         wrong: ["That hard times will never come", "That storms are a punishment"],
         why: "He is “a refuge from the storm”: a shelter while the storm is still going."
       },
-      bonus: {
+      bonus: [
+      {
         q: "Who does Isaiah 26:3 say the Lord will keep in perfect peace?",
         right: "The one whose mind is stayed on Him",
         wrong: ["The one who never has problems", "The one who works the hardest"],
@@ -1593,6 +1637,15 @@ const WEEK_CONTENT = {
         source: "Isaiah 26:3",
         find: "whose mind is stayed on thee"
       },
+      {
+        q: "The Friend explains what it means that Jesus Christ is a refuge from storms. What does it say?",
+        right: "He can comfort and protect us when things are hard",
+        wrong: ["He keeps every storm away", "He helps only when we are perfect"],
+        why: "The Friend says He can comfort and protect us when things are hard. Its family idea: build a blanket fort and talk about how He protects you.",
+        source: "https://www.churchofjesuschrist.org/study/friend/2026/09/come-follow-me/22-weekly-scripture-fun?lang=eng",
+        find: "That means He can comfort and protect us when things are hard"
+      }
+      ],
       gradient: "linear-gradient(150deg,#082f49 0%,#0369a1 50%,#38bdf8 100%)",
       blobA: "rgba(125,211,252,.45)", blobB: "rgba(0,0,0,.4)"
     },
@@ -1712,7 +1765,8 @@ const WEEK_CONTENT = {
         wrong: ["How to grow flowers in a desert", "Why deserts are dangerous"],
         why: "Deserts bloom, blind eyes open, and the ransomed come home. It all shows the Lord restoring what was lost."
       },
-      bonus: {
+      bonus: [
+      {
         q: "Isaiah 35 describes a highway for the Lord's people. What is it called?",
         right: "The way of holiness",
         wrong: ["The king's highway", "The golden road"],
@@ -1720,6 +1774,15 @@ const WEEK_CONTENT = {
         source: "Isaiah 35:8",
         find: "The way of holiness"
       },
+      {
+        q: "The Liahona article on Isaiah calls Jesus Christ the Master what?",
+        right: "Potter",
+        wrong: ["Builder", "Shepherd"],
+        why: "It calls Him the Master Potter, who can take our broken pieces and make us into something new.",
+        source: "https://www.churchofjesuschrist.org/study/liahona/2026/09/when-life-breaks-you-christ-can-repair-you?lang=eng",
+        find: "Jesus Christ is the Master Potter"
+      }
+      ],
       gradient: "linear-gradient(150deg,#78350f 0%,#be185d 55%,#fb7185 100%)",
       blobA: "rgba(253,164,175,.45)", blobB: "rgba(0,0,0,.4)"
     }

@@ -1,16 +1,20 @@
 #!/usr/bin/env node
 // Checks the week's content in index.html before it ships.
 //
-//   node tools/verify.mjs                       content, scripture and media checks (CI runs this)
-//   node tools/verify.mjs --lesson              also checks the week against the live lesson page
+//   node tools/verify.mjs                       content, scripture and media checks
+//   node tools/verify.mjs --online              also checks against the live Gospel Library pages:
+//                                               the lesson page, and every magazine or manual page a
+//                                               bonus cites (CI runs this). --lesson means the same.
 //   node tools/verify.mjs --allow-unpreviewed   for a private preview: clips nobody has watched yet pass
 //
 // What it checks:
 //   - every verse box quotes the scripture text exactly (… marks left-out words)
 //   - every “quote” in a hook, body, question or answer is really in the verse it cites
 //   - every reference named anywhere exists
-//   - every bonus answer is in its chapter (or on the lesson page) and NOWHERE in the app,
-//     so the only way to get it is to read
+//   - every bonus answer is in its chapter, or on the Gospel Library page it cites (the lesson,
+//     the Friend, For the Strength of Youth, the Liahona), and NOWHERE in the app, so the
+//     only way to get it is to read. A page that won't load is a warning, not a failure, so a
+//     Church website outage can't block a deploy; words that aren't on the page are a failure.
 //   - every picture has a description, a credit and a source link, and is small enough
 //   - every clip comes from an approved channel (asked of YouTube itself), is under
 //     3 minutes, and has been watched by a parent (previewed: true)
@@ -38,7 +42,14 @@ const MEDIA = {
   imageHosts: ['www.churchofjesuschrist.org', 'commons.wikimedia.org'],
   // YouTube channels a clip may come from, exactly as YouTube names them.
   // Add one only after deciding it's a source you trust for him.
-  channels: ['Scripture Central', 'The Church of Jesus Christ of Latter-day Saints']
+  // Approved by Blake 2026-09-24: Come, Follow Me series and the Church's own channel.
+  channels: [
+    'The Church of Jesus Christ of Latter-day Saints',
+    'Scripture Central',       // John Hilton III and others
+    'followHIM Podcast',       // Hank Smith & John Bytheway
+    "Don't Miss This",         // Emily Belle Freeman & David Butler
+    'Talking Scripture'
+  ]
 };
 
 const args = new Set(process.argv.slice(2));
@@ -88,14 +99,28 @@ function loadWeek() {
   return new Function('return (' + literal + ')')();
 }
 
-async function fetchLessonText(url) {
-  const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
-  if (!res.ok) { fail('lesson', `HTTP ${res.status} from ${url}`); return null; }
-  return (await res.text())
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&#x27;|&#39;/g, "'")
-    .replace(/\s+/g, ' ');
+// A Gospel Library page as plain text, or null if it won't load.
+async function fetchPageText(url) {
+  try {
+    const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+    if (!res.ok) { notes.push(`couldn't load ${url} (HTTP ${res.status}); its bonus answers weren't checked`); return null; }
+    return (await res.text())
+      .replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/g, ' ')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/&#x([0-9a-f]+);/gi, (m, h) => String.fromCodePoint(parseInt(h, 16)))
+      .replace(/&#(\d+);/g, (m, d) => String.fromCodePoint(Number(d)))
+      .replace(/&nbsp;/g, ' ').replace(/&quot;/g, '"').replace(/&amp;/g, '&')
+      .replace(/\s+/g, ' ');
+  } catch (e) {
+    notes.push(`couldn't reach ${url} (${e.message}); its bonus answers weren't checked`);
+    return null;
+  }
 }
+
+const bonusesOf = r => !r.bonus ? [] : Array.isArray(r.bonus) ? r.bonus : [r.bonus];
+const GOSPEL_LIBRARY = /^https:\/\/www\.churchofjesuschrist\.org\/study\//;
+// "lesson" is short for the week's lesson page.
+const webSource = (b, week) => b.source === 'lesson' ? week.lesson : GOSPEL_LIBRARY.test(b.source || '') ? b.source : null;
 
 // ---------- matching ----------
 
@@ -127,7 +152,7 @@ function expand(ref) {
   return out;
 }
 
-async function main(scripture, week, lessonText) {
+async function main(scripture, week, pages, online) {
   const { verses, books } = scripture;
 
   const textOf = ref => {
@@ -197,7 +222,7 @@ async function main(scripture, week, lessonText) {
   const appText = norm(week.reels.map(r => [
     r.hook, r.body, r.verse && r.verse.text,
     r.question && [r.question.q, r.question.right, ...(r.question.wrong || []), r.question.why].join(' '),
-    r.bonus && [r.bonus.q, ...(r.bonus.wrong || [])].join(' ')
+    ...bonusesOf(r).map(b => [b.q, ...(b.wrong || [])].join(' '))
   ].join(' ')).join(' '));
 
   for (const [n, r] of week.reels.entries()) {
@@ -234,24 +259,29 @@ async function main(scripture, week, lessonText) {
     checkText(where, 'right answer', q.right, home);
     checkText(where, 'wrong answers', (q.wrong || []).join(' | '), home);
 
-    // Bonus: answerable only from the reading.
-    if (r.bonus) {
-      const b = r.bonus;
-      checkQuestion(where, b, 'bonus');
-      if (!b.source || !b.find) fail(where, 'bonus needs source and find');
-      else if (b.source === 'lesson') {
-        if (/[“”]/.test(b.why)) fail(where, 'bonus from the lesson: don\'t put the lesson\'s words in “quotes” (they can only be checked against scripture)');
-        if (lessonText == null) notes.push(`${where}: bonus answer from the lesson not checked (run with --lesson)`);
-        else if (!norm(lessonText).includes(norm(b.find))) fail(where, `bonus: "${b.find}" is not on the lesson page`);
+    // Bonuses: answerable only from the reading.
+    for (const [bn, b] of bonusesOf(r).entries()) {
+      const label = bonusesOf(r).length > 1 ? `bonus ${bn + 1}` : 'bonus';
+      checkQuestion(where, b, label);
+      const url = webSource(b, week);
+      if (!b.source || !b.find) fail(where, `${label} needs source and find`);
+      else if (url) {
+        if (/[“”]/.test(b.why)) fail(where, `${label} from a web page: don't put its words in “quotes” (only scripture quotes get checked)`);
+        if (!online) notes.push(`${where}: ${label} answer from ${url.replace(/\?.*/, '')} not checked (run with --online)`);
+        else if (pages.get(url) != null && !norm(pages.get(url)).includes(trimPunct(norm(b.find)))) {
+          fail(where, `${label}: "${b.find}" is not on ${url} (check the link and the exact wording; a mistyped link still loads a page)`);
+        }
+      } else if (/^https?:/.test(b.source)) {
+        fail(where, `${label} source must be a verse, "lesson", or a Gospel Library page (churchofjesuschrist.org/study/…)`);
       } else {
         const src = textOf(b.source);
-        if (src == null) fail(where, `bonus source "${b.source}" not found`);
-        else if (!quoteMatches(b.find, src)) fail(where, `bonus: "${b.find}" is not in ${b.source}`);
-        checkText(where, 'bonus why', b.why, b.source);
-        checkText(where, 'bonus question', b.q, b.source);
+        if (src == null) fail(where, `${label} source "${b.source}" not found`);
+        else if (!quoteMatches(b.find, src)) fail(where, `${label}: "${b.find}" is not in ${b.source}`);
+        checkText(where, `${label} why`, b.why, b.source);
+        checkText(where, `${label} question`, b.q, b.source);
       }
       if (b.find && appText.includes(trimPunct(norm(b.find)))) {
-        fail(where, `bonus: "${b.find}" already appears in the app, so he doesn't need the reading to answer it`);
+        fail(where, `${label}: "${b.find}" already appears in the app, so he doesn't need the reading to answer it`);
       }
     }
 
@@ -303,11 +333,12 @@ async function main(scripture, week, lessonText) {
   week.sections.forEach((s, i) => { if (!used.has(i)) fail('week', `section "${s}" has no reel`); });
   // The family board uses each section as a column; it needs at least 3 questions.
   week.sections.forEach((s, i) => {
-    const n = week.reels.filter(r => r.section === i).reduce((k, r) => k + 1 + (r.bonus ? 1 : 0), 0);
+    const n = week.reels.filter(r => r.section === i).reduce((k, r) => k + 1 + bonusesOf(r).length, 0);
     if (used.has(i) && n < 3) fail('week', `section "${s}" has ${n} question${n === 1 ? '' : 's'}; the family board needs at least 3 per section (add a bonus)`);
   });
 
-  if (lessonText != null) {
+  const lessonText = pages.get(week.lesson);
+  if (online && lessonText != null) {
     for (const [label, want] of [['title', week.title], ['reference', week.reference], ['dates', week.dates.replace(/, \d{4}$/, '')], ...week.sections.map(s => ['section', s])]) {
       if (!lessonText.includes(want)) fail('lesson', `${label} "${want}" is not on the lesson page`);
     }
@@ -316,8 +347,13 @@ async function main(scripture, week, lessonText) {
 
 const scripture = await loadScripture();
 const week = loadWeek();
-const lessonText = args.has('--lesson') ? await fetchLessonText(week.lesson) : null;
-await main(scripture, week, lessonText);
+const online = args.has('--online') || args.has('--lesson');
+const pages = new Map();
+if (online) {
+  const urls = new Set([week.lesson, ...week.reels.flatMap(r => bonusesOf(r).map(b => webSource(b, week)).filter(Boolean))]);
+  await Promise.all([...urls].map(async u => pages.set(u, await fetchPageText(u))));
+}
+await main(scripture, week, pages, online);
 
 for (const n of notes) console.log('  · ' + n);
 if (failures.length) {
@@ -325,7 +361,8 @@ if (failures.length) {
   for (const f of failures) console.error('  - ' + f);
   process.exit(1);
 }
-const quotes = week.reels.reduce((n, r) => n + 1 + [r.hook, r.body, r.question.q, r.question.why, r.bonus && r.bonus.why].join(' ').split('“').length - 1, 0);
-const bonuses = week.reels.filter(r => r.bonus).length;
-console.log(`✓ ${week.title} (${week.dates}): ${week.reels.length} reels, ${quotes} quotes and ${bonuses} bonus answers checked against the text` +
-  (lessonText != null ? ', matches the lesson page' : ''));
+const quotes = week.reels.reduce((n, r) => n + 1 + [r.hook, r.body, r.question.q, r.question.why, ...bonusesOf(r).map(b => b.why)].join(' ').split('“').length - 1, 0);
+const bonuses = week.reels.reduce((n, r) => n + bonusesOf(r).length, 0);
+const loaded = [...pages.values()].filter(t => t != null).length;
+console.log(`✓ ${week.title} (${week.dates}): ${week.reels.length} reels, ${quotes} quotes and ${bonuses} bonus answers checked` +
+  (online ? `, ${loaded} of ${pages.size} Gospel Library pages checked live` : ''));
