@@ -29,6 +29,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Nothing ships unless every quote matches the scripture text, every
+      # reference exists, and every bonus answer is on the page it cites.
+      # See tools/verify.mjs.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check the week's content
+        run: node tools/verify.mjs --online
+        env:
+          SCRIPTURE_CACHE: ${{ runner.temp }}/scripture   # keep the data out of the published site
+
       - uses: actions/configure-pages@v5
 
       # The app is a single self-contained index.html at the repo root,
