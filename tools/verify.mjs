@@ -37,7 +37,9 @@ const VOLUMES = ['old-testament', 'new-testament', 'book-of-mormon', 'doctrine-a
 
 const LIMITS = { bodyWords: 75, hookChars: 60, whyWords: 40, choiceChars: 60 };
 const MEDIA = {
-  maxPerWeek: 4,
+  // A picture on any reel it fits (Blake, 2026-09-24: "most reels should get
+  // a pic"), one per reel. Clips stay few: a lesson, not a video feed.
+  maxClipsPerWeek: 2,
   maxImageKB: 150,
   maxClipSeconds: 180,
   imageHosts: ['www.churchofjesuschrist.org', 'commons.wikimedia.org'],
@@ -237,7 +239,7 @@ async function main(scripture, week, pages, online) {
 
   const ids = new Set();
   const used = new Set();
-  let mediaCount = 0;
+  let clipCount = 0;
 
   // Everything he can read in the app without opening the reading.
   const appText = norm(week.reels.map(r => [
@@ -309,7 +311,6 @@ async function main(scripture, week, pages, online) {
     // Media.
     const media = r.media || {};
     if (media.image) {
-      mediaCount++;
       const im = media.image;
       if (!im.src || !/^media\/[a-z0-9-]+\.(jpg|jpeg|png|webp)$/.test(im.src)) fail(where, 'image src must be media/<lowercase-name>.jpg|png|webp');
       else {
@@ -327,7 +328,7 @@ async function main(scripture, week, pages, online) {
       if (!MEDIA.imageHosts.includes(host)) fail(where, `image link must point to its page on ${MEDIA.imageHosts.join(' or ')}`);
     }
     if (media.video) {
-      mediaCount++;
+      clipCount++;
       const v = media.video;
       if (!/^[A-Za-z0-9_-]{11}$/.test(v.youtube || '')) fail(where, 'video.youtube must be an 11-character YouTube id');
       if (!(Number.isInteger(v.start) && Number.isInteger(v.end) && v.end > v.start)) fail(where, 'video needs whole-second start < end');
@@ -349,7 +350,7 @@ async function main(scripture, week, pages, online) {
     }
   }
 
-  if (mediaCount > MEDIA.maxPerWeek) fail('week', `${mediaCount} pictures and clips (max ${MEDIA.maxPerWeek}); keep it a lesson, not a video feed`);
+  if (clipCount > MEDIA.maxClipsPerWeek) fail('week', `${clipCount} clips (max ${MEDIA.maxClipsPerWeek}); keep it a lesson, not a video feed`);
   week.sections.forEach((s, i) => { if (!used.has(i)) fail('week', `section "${s}" has no reel`); });
   // The family board uses each section as a column; it needs at least 3 questions.
   week.sections.forEach((s, i) => {

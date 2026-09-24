@@ -24,11 +24,12 @@ verse itself, and **one question** answerable from what's on the screen.
 | **One try** | A wrong answer shows the right one and the words in the verse that settle it. |
 | **Daily warm-up** | On a new day, up to 3 earlier questions come back before the feed, missed ones first, with no verse to look at. Remembering one earns 15 XP. |
 | **Reading bonus** | After a reel's question, a bonus question whose answer is only in the chapter (or the lesson page), never in the app. One try, 25 XP. The link opens the chapter at the top, not at the answer. |
-| **Pictures and clips** | At most 4 a week, only where they show something the words can't. Clips load nothing until tapped, then play just the chosen stretch in YouTube's privacy-mode player. |
+| **Pictures and clips** | A picture on each reel it fits (Church Media Library art or public-domain photos, credited and linked). At most 2 clips a week, only where they show something the words can't. Clips load nothing until tapped, then play just the chosen stretch in YouTube's privacy-mode player. |
 | **Streak** | Days in a row with at least one question answered. A **streak freeze** (earned by solving the weekly puzzle) covers one missed day and is used automatically; the count shows next to the streak. |
 | **Notes** | After a reel, he can write what it means to him in his own words: 10 XP once per reel (12+ words, not filler). "Put it in my scriptures" copies the note and opens that verse in Gospel Library to paste it as a note there. No outside app can read Gospel Library notes, so the XP comes from writing it here. Notes are kept across weeks as a journal on his phone; a parent can read them in the parent screen, and the note box tells him so. |
-| **🎮 Games** | Next to the streak. **Weekly puzzle**: a Connections-style sort of 16 ideas into the lesson's 4 sections, unlocked once every reel is answered; 4 mistakes a day, repeat guesses are free, a lost try resets the next day; solving pays 40 XP and a streak freeze. **Who said it?**: match lines quoted exactly from scripture to their speaker, 5 XP each on the first try; one line also comes back in each day's warm-up. **Verse Word**: real Wordle rules (six tries, green/yellow/gray letters, and every guess must be a word from the Bible or Book of Mormon, per `scripture-words.js`, rebuilt by `node tools/build-words.mjs`), with hints that unlock: after 2 guesses the chapter, after 4 the verse with a blank. 15 XP solved in 1–2, 10 in 3–4, 5 in 5–6. **Scripture Climb**: a Millionaire-style ladder of ten questions (reel questions, then reading-only bonuses) from 100 to 32,000, safe at 1,000, with 50:50, Read it, and Ask a parent lifelines; the first climb each day pays 2 XP per right answer. **Scripture Showdown**: below. |
+| **🎮 Games** | Next to the streak. **Weekly puzzle**: a Connections-style sort of 16 ideas into the lesson's 4 sections, unlocked once every reel is answered; 4 mistakes a day, repeat guesses are free, a lost try resets the next day; solving pays 40 XP and a streak freeze. **Who said it?**: match lines quoted exactly from scripture to their speaker, 5 XP each on the first try; one line also comes back in each day's warm-up. **Verse Word**: real Wordle rules (six tries, green/yellow/gray letters, and every guess must be a word from the Bible or Book of Mormon, per `scripture-words.js`, rebuilt by `node tools/build-words.mjs`), with hints that unlock: after 2 guesses the chapter, after 4 the verse with a blank. 15 XP solved in 1–2, 10 in 3–4, 5 in 5–6. **Scripture Climb**: a Millionaire-style ladder of ten questions (reel questions, then reading-only bonuses) from 100 to 32,000 (a miss ends the climb and keeps the highest rung reached), with 50:50, Read it, and Ask a parent lifelines; the first climb each day pays 2 XP per right answer. **Scripture Showdown**: below. |
 | **Live game** | Kahoot-style. A TV or laptop hosts (`…/#host`): it shows a 4-digit code, then each question, and keeps score. Phones and tablets join with the code (`…/#join`, or `…/#join-1234`) and answer on their own screens in real time; the same answers appear in the same colors everywhere. 500 points for a right answer plus up to 500 for speed, 20 seconds a question, a leaderboard after each, and a family total at the end. No accounts needed to play; it never changes XP. Runs through Firebase across devices (`FIREBASE_CONFIG` in `index.html`, rules in `firestore.rules`); until that's set, it runs between tabs of one browser, which is also how the tests play it. |
+| **👪 Family** | Optional, next to 🎮. A parent signs in (Google, or a sign-in link by email) and starts a family. Grown-ups (grandparents, friends, roommates, the other parent) are added by email and sign in with that address; a child is added by first name and joins by opening a one-time link on their own phone or tablet, with no account. Links work once, for 7 days. **People** shows each person's level, XP, streak and this week's right answers, and a family total. Each person's progress is saved to the family, so a new device ("Link another device") or a parent's second phone picks up where the other left off. **Chat** is one family chat, text and emoji only: no private messages, links or photos, nobody can delete a message, and a parent can hide one (everyone sees it was hidden; parents can still read it and unhide it). A 👪 dot means a new message. `firestore.rules` enforces all of it. |
 | **Year trail** | The first card shows the 52 weeks of Come, Follow Me 2026 with this week marked; each finished week turns green. |
 | **Scripture Showdown** | A quiz-show board game for the whole family, built from the week's checked questions. Columns are the lesson's sections; reel questions are the low values, reading-only bonus questions the high ones, one of them a Daily Double. A parent hosts on a laptop hooked to the TV and taps who got each one; scores add up to a family total and a family best. Open it from the first or last card, or bookmark `…/TreasureUp/#family`. It never changes his XP. |
 | **Family rewards** | A parent sets rewards at XP marks behind a 4-digit PIN ("Pick Friday's movie at 300 XP"). He sees his progress on the first and last cards and gets "Reward unlocked, show a parent" when he crosses one; only the parent can mark it given. The PIN keeps an 11-year-old from editing his own rewards; it isn't security. |
@@ -37,7 +38,8 @@ verse itself, and **one question** answerable from what's on the screen.
 
 Progress lives in `localStorage` on that one device: no account, no
 analytics, no network calls except the font. It still works with storage
-blocked (private browsing); it just won't remember.
+blocked (private browsing); it just won't remember. A device that joins a
+family also saves a copy to the family's Firebase project.
 
 ---
 
@@ -160,3 +162,15 @@ a minute). Setting it up on a new repo:
 **On his phone:** open the link in Safari → Share → **Add to Home Screen**. On
 iOS it launches full-screen like an app. On Android, Chrome's **Add to Home
 screen** installs it full-screen too (`manifest.webmanifest` and `icons/`).
+
+**Family setup** (once per Firebase project; both are done for the test
+project, `scripturetok-test`):
+
+1. **Authentication → Sign-in method:** turn on **Google**, **Email/Password**
+   with **Email link (passwordless sign-in)**, and **Anonymous** (for live-game
+   players and children's devices) with **Auto clean-up OFF**, since it
+   deletes anonymous accounts 30 days after they're made, which would drop a
+   child's device from the family.
+2. **Authentication → Settings → Authorized domains:** add
+   `blakemerrell.github.io`.
+3. **Firestore → Rules:** paste all of `firestore.rules` and publish.
