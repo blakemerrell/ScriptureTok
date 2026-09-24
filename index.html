@@ -417,7 +417,7 @@
   }
   .climb-ladder span.done { background: rgba(52,211,153,.2); color: var(--right); }
   .climb-ladder span.now { background: var(--gold); color: #1c1406; }
-  .climb-ladder span.safe { outline: 1.5px dashed rgba(252,211,77,.6); outline-offset: 1px; }
+  .climb-ladder span.missed { background: rgba(251,113,133,.2); color: var(--wrong); }
   .lifelines { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
   .lifeline {
     font: inherit; font-size: 13px; font-weight: 800; padding: 8px 12px; border-radius: 999px; cursor: pointer;
@@ -2010,10 +2010,11 @@ const TreasureUp = (function () {
   /* ----- Scripture Climb: ten questions, each worth more, three lifelines ----- */
 
   // Easy reel questions first, then the reading-only bonuses. A miss ends
-  // the climb; after 1,000 you keep 1,000. The first climb each day pays
-  // 2 XP per right answer; more climbs are practice.
+  // the climb and you keep the highest rung you reached (no Millionaire-style
+  // drop to a safe level: the ladder and the score should say the same
+  // thing). The first climb each day pays 2 XP per right answer; more
+  // climbs are practice.
   const CLIMB_VALUES = [100, 200, 300, 500, 1000, 2000, 4000, 8000, 16000, 32000];
-  const CLIMB_SAFE = 4;
   let climb = null;
 
   function climbQuestions() {
@@ -2036,8 +2037,10 @@ const TreasureUp = (function () {
   function renderClimb() {
     const c = climb, body = $('playBody');
     const ladder = c.qs.map((_, i) => {
-      const cls = i < c.at || (c.over && i < c.rungs) ? 'done' : (!c.over && i === c.at) ? 'now' : '';
-      return `<span class="${cls}${i === CLIMB_SAFE ? ' safe' : ''}">${CLIMB_VALUES[i].toLocaleString('en-US')}</span>`;
+      const cls = i < c.at || (c.over && i < c.rungs) ? 'done'
+        : (c.over && i === c.rungs && c.rungs < c.qs.length) ? 'missed'
+        : (!c.over && i === c.at) ? 'now' : '';
+      return `<span class="${cls}">${CLIMB_VALUES[i].toLocaleString('en-US')}</span>`;
     }).join('');
     if (c.over) {
       body.innerHTML = `
@@ -2079,7 +2082,7 @@ const TreasureUp = (function () {
   function finishClimb(allRight) {
     const c = climb;
     c.rungs = allRight ? c.qs.length : c.at;
-    c.final = allRight ? CLIMB_VALUES[c.qs.length - 1] : c.at > CLIMB_SAFE ? CLIMB_VALUES[CLIMB_SAFE] : 0;
+    c.final = c.rungs ? CLIMB_VALUES[c.rungs - 1] : 0;   // the highest rung reached
     c.over = true;
     markStudied();
     if (S.climbDay !== dayKey()) {
