@@ -15,6 +15,8 @@
 <!-- Android: installs full-screen from Chrome's "Add to Home screen". -->
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<!-- Verse Word's dictionary: every 4–7 letter word in the Bible and Book of Mormon. -->
+<script src="scripture-words.js" defer></script>
 
 <!-- Inline SVG favicon so the whole app stays one file. -->
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%230a0a14'/%3E%3Cpath d='M40 30 L72 50 L40 70 Z' fill='%23fbbf24'/%3E%3Cpath d='M28 28 L28 72' stroke='%23a78bfa' stroke-width='8' stroke-linecap='round'/%3E%3C/svg%3E">
@@ -1936,12 +1938,20 @@ const TreasureUp = (function () {
     renderHud();
   }
 
-  /* ----- Verse Word: a Wordle-style daily word, its verse as the clue ----- */
+  /* ----- Verse Word: a Wordle-style daily word from the week's reading ----- */
 
-  // Knowing the verse is how you solve it; the colored letters help with
-  // spelling. One word a day from the week's list, six tries.
-  const WORD_XP = 10, WORD_TRIES = 6;
-  let vwTyped = '', vwMsg = '';
+  // Real Wordle rules to start: six tries, colors only. Hints unlock as you
+  // go: after 2 guesses the chapter, after 4 the verse with a blank. Solving
+  // sooner pays more (15 / 10 / 5 XP). A guess must be a word from the
+  // Bible or the Book of Mormon (scripture-words.js); if that list didn't
+  // load, any letters count rather than blocking the game.
+  const WORD_TRIES = 6;
+  const wordXp = guesses => guesses <= 2 ? 15 : guesses <= 4 ? 10 : 5;
+  let vwTyped = '', vwMsg = '', wordSet = null;
+  const isScriptureWord = w => {
+    if (!wordSet && window.SCRIPTURE_WORDS) wordSet = new Set(window.SCRIPTURE_WORDS.split(' '));
+    return !wordSet || wordSet.has(w);
+  };
 
   const todaysWord = () => {
     const list = WEEK.words || [];
@@ -1972,7 +1982,7 @@ const TreasureUp = (function () {
   function wordStatus() {
     if (!todaysWord()) return '';
     const st = wordState();
-    return st.status === 'won' ? 'Solved today ✓' : st.status === 'lost' ? 'New word tomorrow' : WORD_XP + ' XP · a new word every day';
+    return st.status === 'won' ? 'Solved today ✓' : st.status === 'lost' ? 'New word tomorrow' : 'Up to 15 XP · a new word every day';
   }
 
   function openWord() { vwTyped = ''; vwMsg = ''; openPlay('word', 'Verse Word'); renderWord(); }
@@ -1995,14 +2005,19 @@ const TreasureUp = (function () {
       ${n === 2 ? '<button class="vw-key wide" data-vk="enter">Enter</button>' : ''}
       ${[...row].map(c => `<button class="vw-key ${best[c] || ''}" data-vk="${c}">${c}</button>`).join('')}
       ${n === 2 ? '<button class="vw-key wide" data-vk="back" aria-label="Delete">⌫</button>' : ''}</div>`).join('');
-    const blank = st.status === 'playing' ? Array(L).fill('_').join(' ') : esc(w.word);
-    const clue = esc(w.clue).replace('____', '<b>' + blank + '</b>');
-    const msg = st.status === 'won' ? 'Solved in ' + st.guesses.length + '!' + (st.paid ? ' +' + WORD_XP + ' XP' : '')
+    const n = st.guesses.length, done = st.status !== 'playing';
+    const blank = done ? esc(w.word) : Array(L).fill('_').join(' ');
+    const verse = `<p class="vw-clue">“${esc(w.clue).replace('____', '<b>' + blank + '</b>')}” <span class="text-white/55 text-[13px]">${esc(w.ref)}</span></p>`;
+    const hints = done ? verse
+      : (n >= 2 ? `<p class="vw-clue">Hint: it's in <b>${esc(w.ref.replace(/:.*/, ''))}</b></p>` : '')
+        + (n >= 4 ? verse : `<p class="board-help" style="text-align:center;margin:0 auto 12px">${n < 2 ? 'A hint after 2 guesses' : 'Another hint after 4 guesses'}</p>`);
+    const paid = typeof st.paid === 'number' ? st.paid : st.paid ? 10 : 0;   // days solved before the XP tiers paid 10
+    const msg = st.status === 'won' ? 'Solved in ' + n + '!' + (paid ? ' +' + paid + ' XP' : '')
       : st.status === 'lost' ? 'The word was ' + w.word + '. A new word tomorrow.' : vwMsg;
     $('playBody').innerHTML = `
       <div class="pz-wrap">
-        <p class="board-help" style="text-align:center;margin:0 auto">Today's word is hiding in this verse. Six tries.</p>
-        <p class="vw-clue">“${clue}” <span class="text-white/55 text-[13px]">${esc(w.ref)}</span></p>
+        <p class="board-help" style="text-align:center;margin:0 auto">Today's word is from this week's reading. Six tries.</p>
+        ${hints}
         <div class="vw-grid">${rows.join('')}</div>
         <p class="pz-msg">${esc(msg)}</p>
         ${st.status === 'playing'
@@ -2019,6 +2034,7 @@ const TreasureUp = (function () {
     if (k === 'back') vwTyped = vwTyped.slice(0, -1);
     else if (k === 'enter') {
       if (vwTyped.length < L) vwMsg = 'The word has ' + L + ' letters.';
+      else if (vwTyped !== w.word && !isScriptureWord(vwTyped)) vwMsg = 'Not a word in the scriptures. Try another.';
       else {
         st.guesses.push(vwTyped);
         const won = vwTyped === w.word;
@@ -2026,7 +2042,7 @@ const TreasureUp = (function () {
         if (won || st.guesses.length >= WORD_TRIES) {
           st.status = won ? 'won' : 'lost';
           markStudied();
-          if (won && !st.paid) { st.paid = true; grantXp(WORD_XP, 'Verse Word'); }
+          if (won && !st.paid) { st.paid = wordXp(st.guesses.length); grantXp(st.paid, 'Verse Word'); }
         }
         save();
       }
