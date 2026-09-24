@@ -45,7 +45,7 @@ const MEDIA = {
   // Add one only after deciding it's a source you trust for him.
   // Approved by Blake 2026-09-24: Come, Follow Me series and the Church's own channel.
   channels: [
-    'The Church of Jesus Christ of Latter-day Saints',
+    'The Church of Jesus Christ of Latter-day Saints',   // @churchofjesuschrist, the official channel (confirmed 2026-09-24)
     'Scripture Central',       // John Hilton III and others
     'followHIM Podcast',       // Hank Smith & John Bytheway
     "Don't Miss This",         // Emily Belle Freeman & David Butler
