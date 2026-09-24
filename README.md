@@ -23,6 +23,8 @@ verse itself, and **one question** answerable from what's on the screen.
 | **Reading bonus** | After a reel's question, a bonus question whose answer is only in the chapter (or the lesson page), never in the app. One try, 25 XP. The link opens the chapter at the top, not at the answer. |
 | **Pictures and clips** | At most 4 a week, only where they show something the words can't. Clips load nothing until tapped, then play just the chosen stretch in YouTube's privacy-mode player. |
 | **Streak** | Days in a row with at least one question answered. |
+| **Family board** | A Jeopardy-style game for the whole family, built from the week's checked questions. Columns are the lesson's sections; reel questions are the low values, reading-only bonus questions the high ones, one of them a Daily Double. A parent hosts on a laptop hooked to the TV and taps who got each one; scores add up to a family total and a family best. Open it from the first or last card, or bookmark `…/ScriptureTok/#family`. It never changes his XP. |
+| **Family rewards** | A parent sets rewards at XP marks behind a 4-digit PIN ("Pick Friday's movie at 300 XP"). He sees his progress on the first and last cards and gets "Reward unlocked, show a parent" when he crosses one; only the parent can mark it given. The PIN keeps an 11-year-old from editing his own rewards; it isn't security. |
 | **Week report** | The last card lists every reel with ✓ / ✕, and points to the real reading for the week. |
 | **Sections match church** | Reels are grouped under the lesson's own section headings, so what he reads lines up with class on Sunday. |
 
@@ -80,7 +82,8 @@ Rules the check script enforces:
   `“Thy dead men shall live” (Isaiah 26:19)` or `(verse 6)` for the same
   chapter. A quote with no reference must come from the reel's own verse box.
 - Every reference named anywhere must exist.
-- Every lesson section needs at least one reel.
+- Every lesson section needs at least one reel, and at least 3 questions
+  (reel questions plus bonuses) so it fills a column on the family board.
 - Bodies stay under 75 words and hooks under 60 characters.
 - A bonus's `find` words must be in its source verse (or on the lesson page,
   checked with `--lesson`) and must not appear anywhere in the app.

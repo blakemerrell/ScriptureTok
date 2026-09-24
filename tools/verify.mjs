@@ -301,6 +301,11 @@ async function main(scripture, week, lessonText) {
 
   if (mediaCount > MEDIA.maxPerWeek) fail('week', `${mediaCount} pictures and clips (max ${MEDIA.maxPerWeek}); keep it a lesson, not a video feed`);
   week.sections.forEach((s, i) => { if (!used.has(i)) fail('week', `section "${s}" has no reel`); });
+  // The family board uses each section as a column; it needs at least 3 questions.
+  week.sections.forEach((s, i) => {
+    const n = week.reels.filter(r => r.section === i).reduce((k, r) => k + 1 + (r.bonus ? 1 : 0), 0);
+    if (used.has(i) && n < 3) fail('week', `section "${s}" has ${n} question${n === 1 ? '' : 's'}; the family board needs at least 3 per section (add a bonus)`);
+  });
 
   if (lessonText != null) {
     for (const [label, want] of [['title', week.title], ['reference', week.reference], ['dates', week.dates.replace(/, \d{4}$/, '')], ...week.sections.map(s => ['section', s])]) {
