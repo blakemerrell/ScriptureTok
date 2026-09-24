@@ -2187,7 +2187,21 @@ const ScriptureTok = (function () {
   //             and by the tests.
   // Scores: 500 for a right answer plus up to 500 more for speed. Nothing
   // here changes anyone's XP.
-  const FIREBASE_CONFIG = null;   // the test project's web config goes here
+  // Which Firebase project a copy of the app talks to, by where it's
+  // served. The test site uses the test project; the real app gets its own
+  // project when live play goes there. Anywhere else (a file on disk, the
+  // private preview, the tests) uses the Local version.
+  const FIREBASE_PROJECTS = {
+    '/ScriptureTok-test/': {
+      apiKey: 'AIzaSyB9X27jbNg4DOGcrZ8k1BGzR1veJXos3Tc',   // public by design; the rules protect the data
+      authDomain: 'scripturetok-test.firebaseapp.com',
+      projectId: 'scripturetok-test',
+      appId: '1:865412939485:web:f1652b7b6cfa874559e534'
+    }
+  };
+  const FIREBASE_CONFIG = Object.keys(FIREBASE_PROJECTS)
+    .filter(path => location.hostname.endsWith('github.io') && location.pathname.startsWith(path))
+    .map(path => FIREBASE_PROJECTS[path])[0] || null;
   const LIVE_SECONDS = 20, LIVE_QUESTIONS = 10;
   const LIVE_COLORS = ['#e11d48', '#2563eb', '#ca8a04'];
 
