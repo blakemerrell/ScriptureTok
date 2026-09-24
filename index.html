@@ -783,7 +783,7 @@ const TreasureUp = (function () {
     return `
       <div class="absolute inset-0" style="background-image:${r.gradient || 'linear-gradient(150deg,#1e293b,#0f172a)'}"></div>
       ${photo
-        ? `<img class="reel-photo" src="${esc(photo.src)}" alt="${esc(photo.alt)}" loading="lazy" decoding="async">`
+        ? `<img class="reel-photo" src="${esc(photo.src)}" alt="${esc(photo.alt)}" decoding="async">`
         : `<div class="blob" style="width:58vw;height:58vw;left:-14vw;top:8vh;background:${r.blobA || 'rgba(255,255,255,.28)'}"></div>
            <div class="blob" style="width:48vw;height:48vw;right:-10vw;top:42vh;background:${r.blobB || 'rgba(0,0,0,.3)'};animation-delay:-6s"></div>`}
       <div class="scrim"></div>`;
