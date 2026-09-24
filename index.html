@@ -2416,6 +2416,7 @@ const ScriptureTok = (function () {
 
   async function askQuestion(qi) {
     lv.localStart = Date.now();
+    lv.revealedQi = null;                        // a new question (or a new game) starts unrevealed
     watchAnswersFor(qi);
     await liveConn().updateGame(lv.code, { state: 'question', qi, qStart: 'now' });
     clearInterval(lv.tick);
@@ -2433,11 +2434,14 @@ const ScriptureTok = (function () {
     if (lv.players.every(p => lv.answers.some(a => a.uid === p.uid))) reveal();
   }
 
+  // Reveal once per question. The guard is per question, not a single busy
+  // flag: Firebase shows the new state before it confirms the save, so the
+  // host can already be on the next question while this one's save finishes.
   async function reveal() {
-    if (!lv || lv.revealing || !lv.game || lv.game.state !== 'question') return;
-    lv.revealing = true;
-    clearInterval(lv.tick);
+    if (!lv || !lv.game || lv.game.state !== 'question' || lv.revealedQi === lv.game.qi) return;
     const g = lv.game, q = liveQuestion(g.qs[g.qi]);
+    lv.revealedQi = g.qi;
+    clearInterval(lv.tick);
     const scores = {};
     lv.players.forEach(p => {
       const a = lv.answers.find(x => x.uid === p.uid);
@@ -2449,9 +2453,13 @@ const ScriptureTok = (function () {
       }
       scores[p.uid] = { score: (p.score || 0) + pts, last: pts, lastRight: right, lastAnswered: !!a };
     });
-    await liveConn().setScores(lv.code, scores);
-    await liveConn().updateGame(lv.code, { state: 'reveal' });
-    lv.revealing = false;
+    try {
+      await liveConn().setScores(lv.code, scores);
+      await liveConn().updateGame(lv.code, { state: 'reveal' });
+    } catch (e) {
+      if (lv && lv.revealedQi === g.qi) lv.revealedQi = null;   // let the button or the timer try again
+      toast("Couldn't reach the game", 'Check the internet and tap Show the answer again');
+    }
   }
 
   async function hostAction(act) {
