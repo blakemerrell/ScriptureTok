@@ -48,7 +48,14 @@ const MEDIA = {
     'Scripture Central',       // John Hilton III and others
     'followHIM Podcast',       // Hank Smith & John Bytheway
     "Don't Miss This",         // Emily Belle Freeman & David Butler
-    'Talking Scripture'
+    'Talking Scripture',
+    // Added by Blake 2026-09-24 (names confirmed with YouTube):
+    'BibleProject',            // not Latter-day Saint: watch for readings that differ from the lesson
+    'Church History Matters Podcast',
+    'Gospel For Kids',
+    'Latter Day Kids',
+    'LDS Come Follow Me',
+    'Line Upon Line — for Come Follow Me (Overviews for All Ages)'
   ]
 };
 
@@ -384,6 +391,21 @@ async function main(scripture, week, pages, online) {
     }
   }
 
+  // Verse Word: each word, put in its clue's blank, must be the verse's own words.
+  if (week.words) {
+    const seen = new Set();
+    for (const w of week.words) {
+      const where = 'word ' + (w.word || '?');
+      if (!/^[A-Z]{4,7}$/.test(w.word || '')) fail(where, 'word must be 4–7 capital letters');
+      if (seen.has(w.word)) fail(where, 'appears twice');
+      seen.add(w.word);
+      if ((w.clue || '').split('____').length !== 2) fail(where, 'clue needs exactly one ____ where the word goes');
+      const src = w.ref ? textOf(w.ref) : null;
+      if (src == null) fail(where, `reference "${w.ref}" does not exist`);
+      else if (!quoteMatches((w.clue || '').replace('____', w.word || ''), src)) fail(where, `"${(w.clue || '').replace('____', w.word)}" is not in ${w.ref}`);
+    }
+  }
+
   const lessonText = pages.get(week.lesson);
   if (online && lessonText != null) {
     for (const [label, want] of [['title', week.title], ['reference', week.reference], ['dates', week.dates.replace(/, \d{4}$/, '')], ...week.sections.map(s => ['section', s])]) {
@@ -410,7 +432,7 @@ if (failures.length) {
 }
 const quotes = week.reels.reduce((n, r) => n + 1 + [r.hook, r.body, r.question.q, r.question.why, ...bonusesOf(r).map(b => b.why)].join(' ').split('“').length - 1, 0);
 const bonuses = week.reels.reduce((n, r) => n + bonusesOf(r).length, 0);
-const extras = [week.puzzle && 'the weekly puzzle', week.sayings && `${week.sayings.length} Who-said-it lines`].filter(Boolean);
+const extras = [week.puzzle && 'the weekly puzzle', week.sayings && `${week.sayings.length} Who-said-it lines`, week.words && `${week.words.length} Verse Words`].filter(Boolean);
 const loaded = [...pages.values()].filter(t => t != null).length;
 console.log(`✓ ${week.title} (${week.dates}): ${week.reels.length} reels, ${quotes} quotes and ${bonuses} bonus answers checked` +
   (extras.length ? `, plus ${extras.join(' and ')}` : '') +

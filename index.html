@@ -12,6 +12,9 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="ScriptureTok">
 <meta name="mobile-web-app-capable" content="yes">
+<!-- Android: installs full-screen from Chrome's "Add to Home screen". -->
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 
 <!-- Inline SVG favicon so the whole app stays one file. -->
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%230a0a14'/%3E%3Cpath d='M40 30 L72 50 L40 70 Z' fill='%23fbbf24'/%3E%3Cpath d='M28 28 L28 72' stroke='%23a78bfa' stroke-width='8' stroke-linecap='round'/%3E%3C/svg%3E">
@@ -382,6 +385,53 @@
   .note-help { font-size: 12px; color: rgba(255,255,255,.55); margin-top: 8px; line-height: 1.4; }
   .journal-item { margin-top: 8px; padding: 10px 12px; border-radius: 12px; background: rgba(255,255,255,.05); }
 
+  /* ---- Verse Word (Wordle-style, with the verse as the clue) ---- */
+  .vw-clue { font-size: clamp(15px, 4vw, 20px); line-height: 1.45; text-align: center; margin: 6px 0 14px; }
+  .vw-clue b { color: var(--gold); letter-spacing: .12em; }
+  .vw-grid { display: grid; gap: 6px; justify-content: center; }
+  .vw-row { display: grid; gap: 6px; }
+  .vw-cell {
+    width: clamp(40px, 12vw, 58px); height: clamp(40px, 12vw, 58px);
+    display: grid; place-items: center; border-radius: 8px;
+    font-weight: 900; font-size: clamp(20px, 6vw, 30px); text-transform: uppercase;
+    border: 2px solid rgba(255,255,255,.22); background: rgba(255,255,255,.04);
+  }
+  .vw-cell.filled { border-color: rgba(255,255,255,.55); }
+  .vw-cell.g { background: #16a34a; border-color: #16a34a; }
+  .vw-cell.y { background: #ca8a04; border-color: #ca8a04; }
+  .vw-cell.x { background: rgba(255,255,255,.14); border-color: transparent; }
+  .vw-kb { display: grid; gap: 6px; margin-top: 16px; }
+  .vw-kr { display: flex; gap: 5px; justify-content: center; }
+  .vw-key {
+    flex: 1 1 0; max-width: 42px; height: 50px; border-radius: 8px; border: 0; cursor: pointer;
+    font: inherit; font-weight: 800; font-size: 15px; color: #fff; background: rgba(255,255,255,.18);
+  }
+  .vw-key.wide { max-width: 68px; font-size: 12px; }
+  .vw-key.g { background: #16a34a; } .vw-key.y { background: #ca8a04; } .vw-key.x { background: rgba(255,255,255,.06); color: rgba(255,255,255,.4); }
+
+  /* ---- Scripture Climb (Millionaire-style) ---- */
+  .climb-ladder { display: flex; flex-wrap: wrap; gap: 5px; margin: 6px 0 14px; }
+  .climb-ladder span {
+    padding: 4px 8px; border-radius: 999px; font-size: 12px; font-weight: 800; font-variant-numeric: tabular-nums;
+    background: rgba(255,255,255,.07); color: rgba(255,255,255,.55);
+  }
+  .climb-ladder span.done { background: rgba(52,211,153,.2); color: var(--right); }
+  .climb-ladder span.now { background: var(--gold); color: #1c1406; }
+  .climb-ladder span.safe { outline: 1.5px dashed rgba(252,211,77,.6); outline-offset: 1px; }
+  .lifelines { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+  .lifeline {
+    font: inherit; font-size: 13px; font-weight: 800; padding: 8px 12px; border-radius: 999px; cursor: pointer;
+    color: #fff; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.25); text-decoration: none;
+  }
+  .lifeline:disabled, .lifeline.used { opacity: .35; cursor: default; pointer-events: none; }
+
+  /* ---- Year trail on the first card ---- */
+  .trail { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; max-width: 340px; }
+  .trail i { width: 9px; height: 9px; border-radius: 99px; background: rgba(255,255,255,.12); display: inline-block; }
+  .trail i.past { background: rgba(255,255,255,.28); }
+  .trail i.did { background: var(--right); }
+  .trail i.now { background: var(--gold); box-shadow: 0 0 0 3px rgba(252,211,77,.3); }
+
   /* Week report on the last card. */
   .report-row { display: flex; gap: 10px; align-items: baseline; font-size: 13.5px; line-height: 1.35; }
   .report-row .st { flex: 0 0 16px; font-weight: 900; text-align: center; }
@@ -465,11 +515,11 @@
   </div>
 </div>
 
-<!-- Family board: a Jeopardy-style game a parent hosts, best on the TV. -->
-<section id="board" hidden aria-label="Family board">
+<!-- Scripture Showdown: a quiz-show board game a parent hosts, best on the TV. -->
+<section id="board" hidden aria-label="Scripture Showdown">
   <div class="board-top">
     <div>
-      <div class="eyebrow">Family board</div>
+      <div class="eyebrow">Scripture Showdown</div>
       <div id="boardTitle" class="board-title"></div>
     </div>
     <div id="boardScores" class="board-scores"></div>
@@ -575,7 +625,12 @@ const ScriptureTok = (function () {
     freezes: 0,   // streak freezes: each covers one missed day, used automatically
     puzzle: null, // this week's puzzle: { week, day, solved: [groups], mistakes, status, rewarded }
     sayings: {},  // Who said it?: sayingId -> { right }  first try
-    notes: {}     // his journal: reelId -> { text, day, hook, ref, rewarded }; kept across weeks
+    notes: {},    // his journal: reelId -> { text, day, hook, ref, rewarded }; kept across weeks
+    words: {},    // Verse Word by day: { word, guesses, status, paid }
+    climbDay: null,  // last day a Scripture Climb paid XP
+    sayRecall: {},   // sayingId -> last day it came back in a warm-up
+    history: [],     // finished weeks, for the year trail: { title, num, right, answered }
+    weekTitle: null, weekNum: null
   });
 
   // Every storage access is wrapped: private windows and blocked site data
@@ -636,7 +691,14 @@ const ScriptureTok = (function () {
       .sort((x, y) => (y.missed - x.missed) || (x.last < y.last ? -1 : x.last > y.last ? 1 : 0))
       .slice(0, RECALL_PER_DAY)
       .map(x => x.id);
-    S.daily = { day: today, ids, done: {} };
+    let say = null;
+    if (ids.length && WEEK.sayings && WEEK.sayings.length) {
+      const seen = S.sayRecall || {};
+      say = WEEK.sayings
+        .map(x => ({ id: x.id, missed: !(S.sayings[x.id] && S.sayings[x.id].right), last: seen[x.id] || '' }))
+        .sort((a, b) => (b.missed - a.missed) || (a.last < b.last ? -1 : a.last > b.last ? 1 : 0))[0].id;
+    }
+    S.daily = { day: today, ids, done: {}, say, sayDone: null };
   }
 
   /* ---------------- helpers ---------------- */
@@ -847,6 +909,7 @@ const ScriptureTok = (function () {
         </div>
         <a href="${esc(WEEK.lesson)}" target="_blank" rel="noopener noreferrer"
            class="mt-5 inline-block text-[13px] font-semibold text-white/75 underline decoration-white/30">Open this week's lesson ↗</a>
+        ${trailHtml()}
         ${boardLinkHtml()}
         ${rewardsHtml()}
       </div>
@@ -897,6 +960,7 @@ const ScriptureTok = (function () {
     const cards = [];
     const recall = S.daily.ids.map(reelById).filter(Boolean);
     recall.forEach((r, n) => cards.push(i => recallHtml(r, n + 1, recall.length, i)));
+    if (S.daily.say && (WEEK.sayings || []).some(x => x.id === S.daily.say)) cards.push(sayRecallHtml);
     cards.push(introHtml);
     WEEK.reels.forEach(r => cards.push(i => reelHtml(r, i)));
     if (WEEK.puzzle) cards.push(puzzleCardHtml);
@@ -1149,8 +1213,8 @@ const ScriptureTok = (function () {
   }
 
   const boardLinkHtml = () => `
-    <button class="board-link" data-board>Family board
-      <small>A Jeopardy-style game on this week's questions, for the whole family</small></button>`;
+    <button class="board-link" data-board>Scripture Showdown
+      <small>A quiz-show game on this week's questions, for the whole family</small></button>`;
 
   // Intro and end cards show XP progress toward rewards; redraw both.
   function refreshCards() {
@@ -1260,7 +1324,7 @@ const ScriptureTok = (function () {
 
   /* ---------------- family board ---------------- */
 
-  // A Jeopardy-style game built from this week's checked questions.
+  // Scripture Showdown: a quiz-show board built from this week's checked questions.
   // Columns are the lesson's sections; the reel questions are the low
   // values and the reading-only bonus questions the high ones, with one
   // bonus as a Daily Double. A parent hosts: reads each question out loud,
@@ -1594,7 +1658,11 @@ const ScriptureTok = (function () {
       const got = WEEK.sayings.filter(x => S.sayings[x.id] && S.sayings[x.id].right).length;
       rows.push(gameRow('sayings', '🗣️', 'Who said it?', 'Match ' + WEEK.sayings.length + ' lines from this week to who said them.', got + ' of ' + WEEK.sayings.length + ' right · ' + SAY_XP + ' XP each', false));
     }
-    rows.push(gameRow('board', '📺', 'Family board', 'A Jeopardy-style game for the whole family, best on the TV.', 'Play together', false));
+    if (WEEK.words && WEEK.words.length) {
+      rows.push(gameRow('word', '🔤', 'Verse Word', "Today's word is hiding in a verse. Six tries.", wordStatus(), false));
+    }
+    rows.push(gameRow('climb', '🪜', 'Scripture Climb', 'Ten questions, each worth more. Three lifelines.', climbStatus(), false));
+    rows.push(gameRow('board', '📺', 'Scripture Showdown', 'A quiz-show game for the whole family, best on the TV.', 'Play together', false));
     $('gamesBody').innerHTML = rows.join('');
   }
 
@@ -1606,6 +1674,8 @@ const ScriptureTok = (function () {
     if (id === 'board') openBoard();
     else if (id === 'puzzle') openPuzzle();
     else if (id === 'sayings') openSayings();
+    else if (id === 'word') openWord();
+    else if (id === 'climb') openClimb();
   }
 
   let playing = null;   // 'puzzle' | 'sayings'
@@ -1803,6 +1873,273 @@ const ScriptureTok = (function () {
     renderHud();
   }
 
+  /* ----- Verse Word: a Wordle-style daily word, its verse as the clue ----- */
+
+  // Knowing the verse is how you solve it; the colored letters help with
+  // spelling. One word a day from the week's list, six tries.
+  const WORD_XP = 10, WORD_TRIES = 6;
+  let vwTyped = '', vwMsg = '';
+
+  const todaysWord = () => {
+    const list = WEEK.words || [];
+    return list.length ? list[new Date().getDay() % list.length] : null;
+  };
+
+  function wordState() {
+    const today = dayKey(), w = todaysWord();
+    S.words = S.words || {};
+    Object.keys(S.words).forEach(d => { if (dayDiff(d, today) > 14) delete S.words[d]; });
+    if (!S.words[today] || S.words[today].word !== w.word) S.words[today] = { word: w.word, guesses: [], status: 'playing' };
+    return S.words[today];
+  }
+
+  // Wordle's rule: greens first, then yellows only for letters still unused.
+  function scoreGuess(guess, word) {
+    const res = Array(word.length).fill('x'), left = {};
+    for (let i = 0; i < word.length; i++) {
+      if (guess[i] === word[i]) res[i] = 'g';
+      else left[word[i]] = (left[word[i]] || 0) + 1;
+    }
+    for (let i = 0; i < word.length; i++) {
+      if (res[i] !== 'g' && left[guess[i]]) { res[i] = 'y'; left[guess[i]] -= 1; }
+    }
+    return res;
+  }
+
+  function wordStatus() {
+    if (!todaysWord()) return '';
+    const st = wordState();
+    return st.status === 'won' ? 'Solved today ✓' : st.status === 'lost' ? 'New word tomorrow' : WORD_XP + ' XP · a new word every day';
+  }
+
+  function openWord() { vwTyped = ''; vwMsg = ''; openPlay('word', 'Verse Word'); renderWord(); }
+
+  function renderWord() {
+    const w = todaysWord(), st = wordState(), L = w.word.length;
+    const rows = [];
+    for (let r = 0; r < WORD_TRIES; r++) {
+      const g = st.guesses[r];
+      const letters = g || (r === st.guesses.length && st.status === 'playing' ? vwTyped : '');
+      const marks = g ? scoreGuess(g, w.word) : [];
+      rows.push(`<div class="vw-row" style="grid-template-columns:repeat(${L},auto)">${Array.from({ length: L }, (_, i) =>
+        `<div class="vw-cell${marks[i] ? ' ' + marks[i] : letters[i] ? ' filled' : ''}">${esc(letters[i] || '')}</div>`).join('')}</div>`);
+    }
+    const best = {}, rank = { g: 3, y: 2, x: 1 };
+    st.guesses.forEach(g => scoreGuess(g, w.word).forEach((m, i) => {
+      if (!best[g[i]] || rank[m] > rank[best[g[i]]]) best[g[i]] = m;
+    }));
+    const kb = ['QWERTYUIOP', 'ASDFGHJKL', 'ZXCVBNM'].map((row, n) => `<div class="vw-kr">
+      ${n === 2 ? '<button class="vw-key wide" data-vk="enter">Enter</button>' : ''}
+      ${[...row].map(c => `<button class="vw-key ${best[c] || ''}" data-vk="${c}">${c}</button>`).join('')}
+      ${n === 2 ? '<button class="vw-key wide" data-vk="back" aria-label="Delete">⌫</button>' : ''}</div>`).join('');
+    const blank = st.status === 'playing' ? Array(L).fill('_').join(' ') : esc(w.word);
+    const clue = esc(w.clue).replace('____', '<b>' + blank + '</b>');
+    const msg = st.status === 'won' ? 'Solved in ' + st.guesses.length + '!' + (st.paid ? ' +' + WORD_XP + ' XP' : '')
+      : st.status === 'lost' ? 'The word was ' + w.word + '. A new word tomorrow.' : vwMsg;
+    $('playBody').innerHTML = `
+      <div class="pz-wrap">
+        <p class="board-help" style="text-align:center;margin:0 auto">Today's word is hiding in this verse. Six tries.</p>
+        <p class="vw-clue">“${clue}” <span class="text-white/55 text-[13px]">${esc(w.ref)}</span></p>
+        <div class="vw-grid">${rows.join('')}</div>
+        <p class="pz-msg">${esc(msg)}</p>
+        ${st.status === 'playing'
+          ? `<div class="vw-kb">${kb}</div>`
+          : '<div class="board-actions" style="justify-content:center"><button class="btn" data-vk="exit">Back to the feed</button></div>'}
+      </div>`;
+  }
+
+  function wordKey(k) {
+    if (k === 'exit') { closePlay(); return; }
+    const w = todaysWord(), st = wordState(), L = w.word.length;
+    if (st.status !== 'playing') return;
+    vwMsg = '';
+    if (k === 'back') vwTyped = vwTyped.slice(0, -1);
+    else if (k === 'enter') {
+      if (vwTyped.length < L) vwMsg = 'The word has ' + L + ' letters.';
+      else {
+        st.guesses.push(vwTyped);
+        const won = vwTyped === w.word;
+        vwTyped = '';
+        if (won || st.guesses.length >= WORD_TRIES) {
+          st.status = won ? 'won' : 'lost';
+          markStudied();
+          if (won && !st.paid) { st.paid = true; grantXp(WORD_XP, 'Verse Word'); }
+        }
+        save();
+      }
+    } else if (/^[A-Z]$/.test(k) && vwTyped.length < L) vwTyped += k;
+    renderWord();
+    renderHud();
+  }
+
+  /* ----- Scripture Climb: ten questions, each worth more, three lifelines ----- */
+
+  // Easy reel questions first, then the reading-only bonuses. A miss ends
+  // the climb; after 1,000 you keep 1,000. The first climb each day pays
+  // 2 XP per right answer; more climbs are practice.
+  const CLIMB_VALUES = [100, 200, 300, 500, 1000, 2000, 4000, 8000, 16000, 32000];
+  const CLIMB_SAFE = 4;
+  let climb = null;
+
+  function climbQuestions() {
+    const seed = WEEK.title + '|' + dayKey();
+    const easy = shuffled(WEEK.reels.map(r => ({ q: r.question, src: r.verse.ref })), seed + '|easy');
+    const hard = shuffled(WEEK.reels.flatMap(r => bonusesOf(r).map(b => ({ q: b, src: b.source }))), seed + '|hard');
+    const qs = easy.slice(0, 5).concat(hard.slice(0, 5));
+    for (const x of easy.slice(5)) if (qs.length < CLIMB_VALUES.length) qs.push(x);
+    return qs.slice(0, CLIMB_VALUES.length);
+  }
+
+  const climbStatus = () => S.climbDay === dayKey() ? 'Climbed today · more climbs are practice' : 'Up to 20 XP today';
+
+  function openClimb() {
+    climb = { qs: climbQuestions(), at: 0, picked: null, hidden: null, used: {}, over: false };
+    openPlay('climb', 'Scripture Climb');
+    renderClimb();
+  }
+
+  function renderClimb() {
+    const c = climb, body = $('playBody');
+    const ladder = c.qs.map((_, i) => {
+      const cls = i < c.at || (c.over && i < c.rungs) ? 'done' : (!c.over && i === c.at) ? 'now' : '';
+      return `<span class="${cls}${i === CLIMB_SAFE ? ' safe' : ''}">${CLIMB_VALUES[i].toLocaleString('en-US')}</span>`;
+    }).join('');
+    if (c.over) {
+      body.innerHTML = `
+        <div class="clue">
+          <div class="climb-ladder">${ladder}</div>
+          <p class="clue-q">${c.rungs === c.qs.length ? 'To the top! ' : ''}You climbed to ${c.final.toLocaleString('en-US')}</p>
+          <p class="board-help">${c.rungs} of ${c.qs.length} right.${c.xp ? ' +' + c.xp + ' XP.' : ' This climb was practice (the first climb each day earns XP).'}</p>
+          <div class="board-actions">
+            <button class="btn" data-climb="again">Climb again</button>
+            <button class="btn ghost" data-climb="exit">Done</button>
+          </div>
+        </div>`;
+      return;
+    }
+    const cur = c.qs[c.at], shown = c.picked != null;
+    const choices = shuffled([cur.q.right].concat(cur.q.wrong), cur.q.q + '|climb').filter(x => x !== c.hidden).map(ch => {
+      const cls = shown ? (ch === cur.q.right ? ' is-right' : ch === c.picked ? ' is-wrong' : '') : '';
+      const mark = shown ? (ch === cur.q.right ? '✓' : ch === c.picked ? '✕' : '') : '';
+      return `<button class="choice${cls}" data-climb-pick="${esc(ch)}"${shown ? ' disabled' : ''}><span class="mark">${mark}</span><span>${esc(ch)}</span></button>`;
+    }).join('');
+    const right = shown && c.picked === cur.q.right;
+    body.innerHTML = `
+      <div class="clue">
+        <div class="climb-ladder">${ladder}</div>
+        <div class="eyebrow">Question ${c.at + 1} of ${c.qs.length} · for ${CLIMB_VALUES[c.at].toLocaleString('en-US')}</div>
+        <p class="clue-q">${esc(cur.q.q)}</p>
+        ${shown ? '' : `<div class="lifelines">
+          <button class="lifeline${c.used.half ? ' used' : ''}" data-life="half">50:50</button>
+          <a class="lifeline${c.used.read ? ' used' : ''}" data-life="read" href="${esc(sourceLink(cur.src))}" target="_blank" rel="noopener noreferrer">Read it ↗</a>
+          <button class="lifeline${c.used.parent ? ' used' : ''}" data-life="parent">Ask a parent</button>
+        </div>`}
+        ${c.askParent === c.at ? '<p class="parent-msg" style="margin-bottom:12px">Ask a parent! Talk it through together, then choose.</p>' : ''}
+        <div class="quiz${shown ? ' done' : ''}"><div class="quiz-choices">${choices}</div></div>
+        ${shown ? `<p class="quiz-why">${right ? '<b class="ok">Right.</b> ' : '<b class="no">Not quite.</b> '}${esc(cur.q.why)}</p>
+          <div class="board-actions"><button class="btn" data-climb="next">${right && c.at + 1 < c.qs.length ? 'Next question' : 'See how you did'}</button></div>` : ''}
+      </div>`;
+  }
+
+  function finishClimb(allRight) {
+    const c = climb;
+    c.rungs = allRight ? c.qs.length : c.at;
+    c.final = allRight ? CLIMB_VALUES[c.qs.length - 1] : c.at > CLIMB_SAFE ? CLIMB_VALUES[CLIMB_SAFE] : 0;
+    c.over = true;
+    markStudied();
+    if (S.climbDay !== dayKey()) {
+      S.climbDay = dayKey();
+      c.xp = c.rungs * 2;
+      if (c.xp) grantXp(c.xp, 'Scripture Climb');
+    }
+    save();
+  }
+
+  function climbAction(el) {
+    const c = climb;
+    if (el.dataset.climb === 'exit') { closePlay(); return; }
+    if (el.dataset.climb === 'again') { openClimb(); return; }
+    if (c.over) return;
+    const cur = c.qs[c.at];
+    if (el.dataset.climbPick != null && c.picked == null) {
+      c.picked = el.dataset.climbPick;
+    } else if (el.dataset.climb === 'next') {
+      const right = c.picked === cur.q.right;
+      if (right && c.at + 1 < c.qs.length) { c.at += 1; c.picked = null; c.hidden = null; }
+      else finishClimb(right);
+    } else if (el.dataset.life === 'half' && !c.used.half) {
+      c.used.half = true;
+      c.hidden = shuffled(cur.q.wrong, cur.q.q + '|half')[0];   // hide one wrong answer
+    } else if (el.dataset.life === 'parent' && !c.used.parent) {
+      c.used.parent = true;
+      c.askParent = c.at;
+    } else if (el.dataset.life === 'read' && !c.used.read) {
+      c.used.read = true;
+      setTimeout(renderClimb, 0);                  // let the link open first
+      return;
+    }
+    renderClimb();
+    renderHud();
+  }
+
+  /* ----- Who said it? in the daily warm-up ----- */
+
+  // On warm-up days one line comes back too: missed ones first, then the
+  // one longest since it last came back.
+  function sayRecallHtml(i) {
+    const x = WEEK.sayings.find(s => s.id === S.daily.say);
+    const d = S.daily.sayDone;
+    const buttons = shuffled([x.speaker].concat(x.wrong), x.id + '|' + S.daily.day).map(c => {
+      const cls = d ? (c === x.speaker ? ' is-right' : c === d.picked ? ' is-wrong' : '') : '';
+      const mark = d ? (c === x.speaker ? '✓' : c === d.picked ? '✕' : '') : '';
+      return `<button class="choice${cls}" data-sw-pick="${esc(c)}"${d ? ' disabled' : ''}><span class="mark">${mark}</span><span>${esc(c)}</span></button>`;
+    }).join('');
+    return `
+    <article class="reel" data-id="say-${esc(x.id)}" data-index="${i}">
+      ${backdrop({ gradient: 'linear-gradient(160deg,#0b1020 0%,#1c1433 55%,#2a1b10 100%)', blobA: 'rgba(252,211,77,.22)', blobB: 'rgba(0,0,0,.5)' })}
+      <div class="relative z-20 px-5 pr-7 content-pad">
+        <div class="eyebrow">Warm-up · Who said it?</div>
+        <p class="say-quote" style="font-size:clamp(22px,3.4vh,30px)">${esc(x.text)}</p>
+        <div class="quiz${d ? ' done' : ''}">
+          <div class="eyebrow" style="color:var(--gold)">Remember this? · +${SAY_XP} XP</div>
+          <div class="quiz-choices" style="margin-top:8px">${buttons}</div>
+          ${d ? `<p class="quiz-why">${d.right ? '<b class="ok">Right.</b> ' : '<b class="no">Not quite.</b> '}${esc(x.why)}<br><span class="text-white/55 text-[12px]">${esc(x.ref)}</span></p>` : ''}
+        </div>
+      </div>
+    </article>`;
+  }
+
+  function answerSayWarm(picked) {
+    if (S.daily.sayDone) return;
+    const x = WEEK.sayings.find(s => s.id === S.daily.say);
+    const right = picked === x.speaker;
+    S.daily.sayDone = { picked, right };
+    S.sayRecall = S.sayRecall || {};
+    S.sayRecall[x.id] = dayKey();
+    if (!S.sayings[x.id] || !S.sayings[x.id].right) S.sayings[x.id] = { right };
+    markStudied();
+    if (right) grantXp(SAY_XP, 'Who said it?');
+    save();
+    const card = document.querySelector('.reel[data-id="say-' + x.id + '"]');
+    redrawCard('say-' + x.id, sayRecallHtml(Number(card.dataset.index)));
+  }
+
+  /* ----- the year trail on the first card ----- */
+
+  // Come, Follow Me 2026 (Old Testament) runs 52 weeks. Each finished week
+  // becomes a green dot; the lesson link's number says which week this is.
+  const YEAR_WEEKS = 52;
+  function trailHtml() {
+    const now = S.weekNum;
+    if (!now) return '';
+    const did = new Set((S.history || []).map(h => h.num));
+    const dots = Array.from({ length: YEAR_WEEKS }, (_, k) => {
+      const n = k + 1;
+      return `<i class="${n === now ? 'now' : did.has(n) ? 'did' : n < now ? 'past' : ''}" title="Week ${n}"></i>`;
+    }).join('');
+    return `<div class="mt-5"><div class="eyebrow">Your year · week ${now} of ${YEAR_WEEKS}</div><div class="trail">${dots}</div></div>`;
+  }
+
   /* ---------------- wiring ---------------- */
 
   let observer = null;
@@ -1827,6 +2164,8 @@ const ScriptureTok = (function () {
     }, { passive: true });
 
     feed.addEventListener('click', e => {
+      const sw = e.target.closest('[data-sw-pick]');
+      if (sw) { if (!sw.disabled) answerSayWarm(sw.dataset.swPick); return; }
       const ns = e.target.closest('[data-note-save]');
       if (ns) { saveNote(ns.dataset.noteSave); return; }
       const ne = e.target.closest('[data-note-edit]');
@@ -1858,10 +2197,12 @@ const ScriptureTok = (function () {
     });
     $('playExit').addEventListener('click', closePlay);
     $('play').addEventListener('click', e => {
-      const el = e.target.closest('[data-pt],[data-pz],[data-say],[data-say-pick]');
+      const el = e.target.closest('[data-pt],[data-pz],[data-say],[data-say-pick],[data-vk],[data-climb],[data-climb-pick],[data-life]');
       if (!el || el.disabled) return;
       if (playing === 'puzzle') puzzleAction(el);
       else if (playing === 'sayings') sayingsAction(el);
+      else if (playing === 'word') wordKey(el.dataset.vk);
+      else if (playing === 'climb') climbAction(el);
     });
 
     // Family board and parent screen.
@@ -1877,6 +2218,11 @@ const ScriptureTok = (function () {
     // Desktop: arrows page the feed, so this is testable without a phone.
     // Escape closes the board or the parent screen.
     document.addEventListener('keydown', e => {
+      if (playing === 'word' && !$('play').hidden && !e.metaKey && !e.ctrlKey) {
+        if (e.key === 'Enter') { e.preventDefault(); wordKey('enter'); return; }
+        if (e.key === 'Backspace') { e.preventDefault(); wordKey('back'); return; }
+        if (/^[a-z]$/i.test(e.key)) { wordKey(e.key.toUpperCase()); return; }
+      }
       if (e.key === 'Escape') { closeParent(); closeBoard(); closeGames(); if (!$('play').hidden) closePlay(); return; }
       if (!$('board').hidden || !$('parent').hidden || !$('games').hidden || !$('play').hidden) return;
       if (e.target.closest && e.target.closest('textarea, input')) return;
@@ -1904,6 +2250,15 @@ const ScriptureTok = (function () {
     S = load();
     P = loadParent();
 
+    // A new week: keep a one-line summary of the last one for the year trail.
+    const weekNum = Number((/\/(\d+)\?/.exec(WEEK.lesson) || [])[1]) || null;
+    if (S.weekTitle && S.weekTitle !== WEEK.title) {
+      const vals = Object.values(S.answers);
+      if (vals.length) S.history.push({ title: S.weekTitle, num: S.weekNum, right: vals.filter(a => a.right).length, answered: vals.length });
+    }
+    S.weekTitle = WEEK.title;
+    S.weekNum = weekNum;
+
     // Drop saved answers for reels that aren't in this week, so an old
     // week never counts toward this one.
     const live = new Set(WEEK.reels.map(r => r.id));
@@ -1919,7 +2274,7 @@ const ScriptureTok = (function () {
     wire();
     save();
 
-    // …/ScriptureTok/#family opens straight to the board: bookmark it on the TV laptop.
+    // …/ScriptureTok/#family opens straight to Scripture Showdown: bookmark it on the TV laptop.
     if (location.hash === '#family') openBoard();
   }
 
@@ -2037,6 +2392,18 @@ const WEEK_CONTENT = {
     { id: "say-great-words", text: "Great are the words of Isaiah", ref: "3 Nephi 23:1",
       speaker: "Jesus Christ", wrong: ["Nephi", "Moroni"],
       why: "The resurrected Savior told the Nephites to search Isaiah diligently." }
+  ],
+
+  // Verse Word: one word a day, hidden in its verse. `clue` is the verse's
+  // own words with ____ where the word goes.
+  words: [
+    { word: "REFUGE", clue: "a ____ from the storm, a shadow from the heat", ref: "Isaiah 25:4" },
+    { word: "SEALED", clue: "the words of a book that is ____", ref: "Isaiah 29:11" },
+    { word: "DESERT", clue: "the ____ shall rejoice, and blossom as the rose", ref: "Isaiah 35:1" },
+    { word: "WONDER", clue: "a marvellous work and a ____", ref: "Isaiah 29:14" },
+    { word: "SMOOTH", clue: "speak unto us ____ things", ref: "Isaiah 30:10" },
+    { word: "BEHIND", clue: "thine ears shall hear a word ____ thee", ref: "Isaiah 30:21" },
+    { word: "STAYED", clue: "whose mind is ____ on thee", ref: "Isaiah 26:3" }
   ],
 
   reels: [

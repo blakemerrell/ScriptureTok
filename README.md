@@ -24,8 +24,9 @@ verse itself, and **one question** answerable from what's on the screen.
 | **Pictures and clips** | At most 4 a week, only where they show something the words can't. Clips load nothing until tapped, then play just the chosen stretch in YouTube's privacy-mode player. |
 | **Streak** | Days in a row with at least one question answered. A **streak freeze** (earned by solving the weekly puzzle) covers one missed day and is used automatically; the count shows next to the streak. |
 | **Notes** | After a reel, he can write what it means to him in his own words: 10 XP once per reel (12+ words, not filler). "Put it in my scriptures" copies the note and opens that verse in Gospel Library to paste it as a note there. No outside app can read Gospel Library notes, so the XP comes from writing it here. Notes are kept across weeks as a journal on his phone; a parent can read them in the parent screen, and the note box tells him so. |
-| **🎮 Games** | Next to the streak. **Weekly puzzle**: a Connections-style sort of 16 ideas into the lesson's 4 sections, unlocked once every reel is answered; 4 mistakes a day, repeat guesses are free, a lost try resets the next day; solving pays 40 XP and a streak freeze. **Who said it?**: match lines quoted exactly from scripture to their speaker, 5 XP each on the first try. **Family board**: below. |
-| **Family board** | A Jeopardy-style game for the whole family, built from the week's checked questions. Columns are the lesson's sections; reel questions are the low values, reading-only bonus questions the high ones, one of them a Daily Double. A parent hosts on a laptop hooked to the TV and taps who got each one; scores add up to a family total and a family best. Open it from the first or last card, or bookmark `…/ScriptureTok/#family`. It never changes his XP. |
+| **🎮 Games** | Next to the streak. **Weekly puzzle**: a Connections-style sort of 16 ideas into the lesson's 4 sections, unlocked once every reel is answered; 4 mistakes a day, repeat guesses are free, a lost try resets the next day; solving pays 40 XP and a streak freeze. **Who said it?**: match lines quoted exactly from scripture to their speaker, 5 XP each on the first try; one line also comes back in each day's warm-up. **Verse Word**: a Wordle-style daily word with its verse as the clue ("a ____ from the storm"), six tries, 10 XP. **Scripture Climb**: a Millionaire-style ladder of ten questions (reel questions, then reading-only bonuses) from 100 to 32,000, safe at 1,000, with 50:50, Read it, and Ask a parent lifelines; the first climb each day pays 2 XP per right answer. **Scripture Showdown**: below. |
+| **Year trail** | The first card shows the 52 weeks of Come, Follow Me 2026 with this week marked; each finished week turns green. |
+| **Scripture Showdown** | A quiz-show board game for the whole family, built from the week's checked questions. Columns are the lesson's sections; reel questions are the low values, reading-only bonus questions the high ones, one of them a Daily Double. A parent hosts on a laptop hooked to the TV and taps who got each one; scores add up to a family total and a family best. Open it from the first or last card, or bookmark `…/ScriptureTok/#family`. It never changes his XP. |
 | **Family rewards** | A parent sets rewards at XP marks behind a 4-digit PIN ("Pick Friday's movie at 300 XP"). He sees his progress on the first and last cards and gets "Reward unlocked, show a parent" when he crosses one; only the parent can mark it given. The PIN keeps an 11-year-old from editing his own rewards; it isn't security. |
 | **Week report** | The last card lists every reel with ✓ / ✕, and points to the real reading for the week. |
 | **Sections match church** | Reels are grouped under the lesson's own section headings, so what he reads lines up with class on Sunday. |
@@ -113,6 +114,9 @@ Two more blocks at the top of `WEEK_CONTENT` feed the games:
   reading.
 - `sayings`: at least 6 `{ id, text, ref, speaker, wrong: [two], why }`.
   `text` must be quoted exactly from `ref`.
+- `words`: Verse Word, one a day. `{ word, clue, ref }`: a 4–7 letter word in
+  capitals, and the verse's own words with `____` where the word goes. The
+  check puts the word in the blank and matches it against the verse.
 
 Then run:
 
@@ -144,4 +148,5 @@ a minute). Setting it up on a new repo:
 3. Push to `main`, or re-run the workflow from the Actions tab.
 
 **On his phone:** open the link in Safari → Share → **Add to Home Screen**. On
-iOS it launches full-screen like an app.
+iOS it launches full-screen like an app. On Android, Chrome's **Add to Home
+screen** installs it full-screen too (`manifest.webmanifest` and `icons/`).
