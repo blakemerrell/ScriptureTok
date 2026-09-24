@@ -404,13 +404,18 @@ async function main(scripture, week, pages, online) {
     }
   }
 
-  // Verse Word: each word, put in its clue's blank, must be the verse's own words.
+  // Verse Word: each word, put in its clue's blank, must be the verse's own words,
+  // and must be on the guess list (scripture-words.js) so it can be typed.
   if (week.words) {
     const seen = new Set();
+    const listFile = path.join(ROOT, 'scripture-words.js');
+    const guessable = fs.existsSync(listFile) ? new Set((/"([A-Z ]+)"/.exec(fs.readFileSync(listFile, 'utf8')) || [, ''])[1].split(' ')) : null;
+    if (!guessable) fail('words', 'scripture-words.js is missing: run node tools/build-words.mjs');
     for (const w of week.words) {
       const where = 'word ' + (w.word || '?');
       if (!/^[A-Z]{4,7}$/.test(w.word || '')) fail(where, 'word must be 4–7 capital letters');
       if (seen.has(w.word)) fail(where, 'appears twice');
+      if (guessable && w.word && !guessable.has(w.word)) fail(where, 'is not in scripture-words.js, so nobody could type it as a guess');
       seen.add(w.word);
       if ((w.clue || '').split('____').length !== 2) fail(where, 'clue needs exactly one ____ where the word goes');
       const src = w.ref ? textOf(w.ref) : null;
