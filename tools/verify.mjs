@@ -337,6 +337,53 @@ async function main(scripture, week, pages, online) {
     if (used.has(i) && n < 3) fail('week', `section "${s}" has ${n} question${n === 1 ? '' : 's'}; the family board needs at least 3 per section (add a bonus)`);
   });
 
+  // Weekly puzzle: 4 groups of 4, one per section, every tile from this week's reading.
+  if (week.puzzle) {
+    const where = 'puzzle';
+    const block = new Set();                                      // "Isaiah 13–14; 22; 24–30; 35"
+    const bm = /^(.+?) (\d.*)$/.exec(week.reference || '');
+    if (bm) for (const part of bm[2].split(';')) {
+      const [a, z] = part.trim().split(/[–-]/).map(Number);
+      for (let c = a; c <= (z || a); c++) block.add(`${bm[1]} ${c}`);
+    }
+    const groups = week.puzzle.groups || [];
+    if (groups.length !== 4) fail(where, `needs exactly 4 groups (has ${groups.length})`);
+    const secs = new Set(), texts = new Set();
+    for (const [gi, g] of groups.entries()) {
+      if (!week.sections[g.section]) fail(where, `group ${gi + 1}: section must be an index into sections`);
+      if (secs.has(g.section)) fail(where, `group ${gi + 1}: two groups use the same section`);
+      secs.add(g.section);
+      if (!Array.isArray(g.tiles) || g.tiles.length !== 4) fail(where, `group ${gi + 1} needs exactly 4 tiles`);
+      for (const t of g.tiles || []) {
+        if (!t.text || t.text.length > 24) fail(where, `tile "${t.text}" must be 1–24 characters`);
+        if (texts.has(t.text)) fail(where, `tile "${t.text}" appears twice`);
+        texts.add(t.text);
+        if (/[“”"]/.test(t.text || '')) fail(where, `tile "${t.text}": no quote marks on tiles`);
+        if (!t.ref || textOf(t.ref) == null) fail(where, `tile "${t.text}": reference "${t.ref}" does not exist`);
+        else if (block.size && !block.has(t.ref.replace(/:.*/, ''))) fail(where, `tile "${t.text}": ${t.ref} is outside this week's reading (${week.reference})`);
+      }
+    }
+  }
+
+  // Who said it?: every line quoted exactly from its reference.
+  if (week.sayings) {
+    const ids = new Set();
+    if (week.sayings.length < 6) fail('sayings', `needs at least 6 lines (has ${week.sayings.length})`);
+    for (const x of week.sayings) {
+      const where = x.id || 'saying';
+      if (!x.id || ids.has(x.id)) fail(where, 'each saying needs a unique id');
+      ids.add(x.id);
+      const src = x.ref ? textOf(x.ref) : null;
+      if (src == null) fail(where, `reference "${x.ref}" does not exist`);
+      else if (!quoteMatches(x.text || '', src)) fail(where, `"${x.text}" is not in ${x.ref}`);
+      const choices = [x.speaker, ...(x.wrong || [])];
+      if (!x.speaker || !Array.isArray(x.wrong) || x.wrong.length !== 2 || new Set(choices).size !== 3) fail(where, 'needs a speaker and two different wrong speakers');
+      if (!x.why) fail(where, 'needs a why');
+      else if (x.why.split(/\s+/).length > LIMITS.whyWords) fail(where, `why is over ${LIMITS.whyWords} words`);
+      checkText(where, 'why', x.why, x.ref);
+    }
+  }
+
   const lessonText = pages.get(week.lesson);
   if (online && lessonText != null) {
     for (const [label, want] of [['title', week.title], ['reference', week.reference], ['dates', week.dates.replace(/, \d{4}$/, '')], ...week.sections.map(s => ['section', s])]) {
@@ -363,6 +410,8 @@ if (failures.length) {
 }
 const quotes = week.reels.reduce((n, r) => n + 1 + [r.hook, r.body, r.question.q, r.question.why, ...bonusesOf(r).map(b => b.why)].join(' ').split('“').length - 1, 0);
 const bonuses = week.reels.reduce((n, r) => n + bonusesOf(r).length, 0);
+const extras = [week.puzzle && 'the weekly puzzle', week.sayings && `${week.sayings.length} Who-said-it lines`].filter(Boolean);
 const loaded = [...pages.values()].filter(t => t != null).length;
 console.log(`✓ ${week.title} (${week.dates}): ${week.reels.length} reels, ${quotes} quotes and ${bonuses} bonus answers checked` +
+  (extras.length ? `, plus ${extras.join(' and ')}` : '') +
   (online ? `, ${loaded} of ${pages.size} Gospel Library pages checked live` : ''));
