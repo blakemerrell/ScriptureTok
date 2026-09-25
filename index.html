@@ -544,6 +544,10 @@
   .ls-read .reel-body { font-size: 16px; }
   .ls-verse { margin-top: 12px; padding: 12px 14px; border-radius: 14px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.12); font-size: 16px; line-height: 1.5; }
   .ls-verse span.ref { display: block; margin-top: 6px; font-size: 12.5px; font-weight: 800; color: var(--gold); }
+  .ls-ref-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+  .ls-ref-row a { font-size: 12px; font-weight: 700; color: rgba(255,255,255,.65); text-decoration: underline; text-decoration-color: rgba(255,255,255,.3); white-space: nowrap; }
+  .ls-reads { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: -6px 0 16px; font-size: 13px; color: rgba(255,255,255,.65); }
+  .ls-reads a { padding: 6px 12px; border-radius: 999px; font-weight: 800; color: #1c1406; background: var(--gold); text-decoration: none; }
   .ls-blank { display: inline-block; min-width: 4.5em; border-bottom: 3px solid #c084fc; color: #e9d5ff; font-weight: 900; text-align: center; }
   .ls-opts { display: grid; gap: 10px; }
   .ls-opt {
@@ -4282,7 +4286,7 @@ const TreasureUp = (function () {
         ${img ? `<img src="${esc(img.src)}" alt="${esc(img.alt)}"><div class="credit" style="margin:-6px 0 10px">Picture: <a href="${esc(img.link)}" target="_blank" rel="noopener noreferrer">${esc(img.credit)}</a></div>` : ''}
         <div class="ls-prompt">${esc(r.hook)}</div><p class="reel-body">${esc(r.body)}</p>
         ${r.media && r.media.video && (r.media.video.previewed === true || window.TU_NO_EMBED) ? clipHtml(r.media.video) : ''}
-        <div class="ls-verse">“${esc(r.verse.text)}”<span class="ref">${esc(r.verse.ref)}</span></div></div>`;
+        <div class="ls-verse">“${esc(r.verse.text)}”<span class="ls-ref-row"><span class="ref">${esc(r.verse.ref)}</span>${readLink(r.verse.ref) ? `<a href="${esc(readLink(r.verse.ref))}" target="_blank" rel="noopener noreferrer">read the chapter ↗</a>` : ''}</span></div></div>`;
     } else if (step.kind === 'reel' || step.kind === 'recall') {
       html += `<div class="ls-prompt">${esc(step.q)}</div>${step.kind === 'recall' && !step.retry ? '<p class="ls-hint">From earlier this week. No peeking.</p>' : ''}${opts()}`;
     } else if (step.kind === 'blank') {
@@ -4294,7 +4298,11 @@ const TreasureUp = (function () {
         <div class="ls-words">${step.tiles.map((t, ti) => `<button class="ls-word${L.built.includes(ti) ? ' used' : ''}" data-ls="tile" data-i="${ti}"${L.checked ? ' disabled' : ''}>${esc(t.w)}</button>`).join('')}</div>`;
     } else if (step.kind === 'match') {
       const doneL = new Set(Object.keys(L.matched)), doneR = new Set(Object.values(L.matched));
+      // Each verse opens in Gospel Library, to read before matching.
+      const reads = step.right.filter(b => readLink(b))
+        .map(b => `<a href="${esc(readLink(b))}" target="_blank" rel="noopener noreferrer">${esc(b)} ↗</a>`).join('');
       html += `<div class="ls-prompt" style="font-size:18px">Tap an idea, then its verse.</div>
+        ${reads ? `<div class="ls-reads"><span>Read them first:</span>${reads}</div>` : ''}
         <div class="ls-match"><div class="ls-opts">${step.left.map(a => `<button class="ls-opt${doneL.has(a) ? ' done' : L.sel === a ? ' on' : ''}" data-ls="L" data-v="${esc(a)}"${doneL.has(a) ? ' disabled' : ''}>${esc(a)}</button>`).join('')}</div>
           <div class="ls-opts">${step.right.map(b => `<button class="ls-opt${doneR.has(b) ? ' done' : L.missR === b ? ' miss' : ''}" data-ls="R" data-v="${esc(b)}"${doneR.has(b) ? ' disabled' : ''}>${esc(b)}</button>`).join('')}</div></div>`;
     } else if (step.kind === 'say' || step.kind === 'saywarm') {
