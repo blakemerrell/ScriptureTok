@@ -488,6 +488,8 @@
   .fam-role { margin-left: 8px; font-size: 11px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--gold); }
   .fam-you { font-size: 12px; font-weight: 600; color: rgba(255,255,255,.55); }
   .fam-actions { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 6px; }
+  .fam-devices { display: grid; gap: 4px; margin-top: 8px; }
+  .fam-device { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-size: 12.5px; color: rgba(255,255,255,.65); }
   .fam-link {
     padding: 0; border: 0; background: none; cursor: pointer;
     font: inherit; font-size: 13px; font-weight: 700; color: rgba(255,255,255,.72);
@@ -755,8 +757,11 @@ const TreasureUp = (function () {
     return freshState();
   }
   function save() {
+    saveLocal();
+    queueSync();   // and to the family, if this device is in one
+  }
+  function saveLocal() {
     try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch (e) {}
-    queuePush();   // and to the family, if this device is in one
   }
 
   /* ---------------- dates ---------------- */
@@ -1694,7 +1699,7 @@ const TreasureUp = (function () {
     if (words.length < NOTE_MIN_WORDS) { msg.textContent = 'Write at least ' + NOTE_MIN_WORDS + ' words (' + words.length + ' so far).'; return; }
     if (new Set(words.map(w => w.toLowerCase())).size < 6) { msg.textContent = 'Use your own words: say what it means to you.'; return; }
     const old = S.notes[id] || {};
-    S.notes[id] = { text, day: old.day || dayKey(), hook: r.hook, ref: r.verse.ref, rewarded: !!old.rewarded };
+    S.notes[id] = { text, day: old.day || dayKey(), at: Date.now(), hook: r.hook, ref: r.verse.ref, rewarded: !!old.rewarded };
     noteEditing.delete(id);
     markStudied();
     if (!S.notes[id].rewarded) { S.notes[id].rewarded = true; grantXp(NOTE_XP, 'Wrote a note'); }
@@ -2810,7 +2815,9 @@ const TreasureUp = (function () {
   let fam = null;     // the family screen while it's open
   let famQueue = Promise.resolve(), famUid, famAuthOff = null, famLatestOff = null;
   let famLatest = { at: 0, mine: true };
-  let bootState = null, lastPushed = null, pushTimer = null, famWarned = false;
+  const LOST_KEY = 'treasureup.lostFamily';  // why this device is no longer in its family, for the family screen
+  let syncTimer = null, syncChain = Promise.resolve(), syncFails = 0, backupOff = null;
+  let pendingAdopt = null, adoptTimer = null, claimAsked = false;
 
   function loadFam() {
     try { const raw = localStorage.getItem(FAM_KEY); if (raw) return JSON.parse(raw); } catch (e) {}
@@ -2846,14 +2853,21 @@ const TreasureUp = (function () {
   // sign-in link opens the family screen.
   function familyBoot() {
     famButtons();
-    bootState = JSON.stringify(S);
-    let restored = null;
-    try { restored = sessionStorage.getItem('treasureup.restoredXp'); sessionStorage.removeItem('treasureup.restoredXp'); } catch (e) {}
-    if (restored) toast('👪 Progress restored', restored + ' XP from the family');
+    let note = null;
+    try { note = sessionStorage.getItem('treasureup.adopted'); sessionStorage.removeItem('treasureup.adopted'); } catch (e) {}
+    if (note) toast('👪 ' + note.split('|')[0], note.split('|')[1] || '');
     const q = new URLSearchParams(location.search);
     if (q.get('invite') || (q.get('mode') === 'signIn' && q.get('oobCode'))) openFam();
     else if (F && FIREBASE_CONFIG) setTimeout(() => famConnect(), 600);
-    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') pushNow(); });
+    // Save before the app goes to the background. Coming back, or the
+    // internet coming back, reconnects (the first try may have been offline).
+    document.addEventListener('visibilitychange', () => {
+      if (!F || !FIREBASE_CONFIG) return;
+      if (document.visibilityState === 'hidden') syncNow();
+      else if (!authUser()) famConnect();
+      else queueSync(500);
+    });
+    window.addEventListener('online', () => { if (F && FIREBASE_CONFIG) famConnect(); });
   }
 
   // Everything that depends on who's signed in runs through here, one at
@@ -2885,10 +2899,16 @@ const TreasureUp = (function () {
     const u = authUser();
     famUid = u && u.uid;
     // A device's place in the family belongs to the account that joined.
-    if (F && (!u || u.uid !== F.uid)) { F = null; saveFam(); }
-    if (!F && realAccount(u)) await findMyFamily(u);
+    // Someone else signing in on purpose is fine; otherwise the device lost
+    // its sign-in (browser data cleared, or the account deleted), and the
+    // family screen says so and how to get back in.
+    if (F && (!u || u.uid !== F.uid)) {
+      if (realAccount(u)) { leaveLocally(); }
+      else lostFamily('signin');
+    }
+    if (!F && u) await findMyFamily(u);
     if (F) await checkMembership();
-    if (F) { watchLatest(); await restoreOrPush(false); }
+    if (F) { watchLatest(); if (claimProgress()) { watchBackup(); await syncNow(); } }
     const raw = q.get('invite') || stored('treasureup.pendingInvite');
     if (raw && fam) await loadInvite(raw);
     famUid = authUser() ? authUser().uid : null;
@@ -2906,6 +2926,7 @@ const TreasureUp = (function () {
       const d = m.data();
       F = { fid, uid: u.uid, pid: d.pid, name: d.name, role: d.role, family: f.data().name };
       saveFam();
+      store(LOST_KEY, null);
     } catch (e) { if (e.code !== 'permission-denied') throw e; }   // not in it any more
   }
 
@@ -2915,69 +2936,230 @@ const TreasureUp = (function () {
       if (!m.exists) throw Object.assign(new Error('gone'), { code: 'permission-denied' });
       const d = m.data();
       Object.assign(F, { name: d.name, role: d.role, pid: d.pid });
+      delete F.pending;
       saveFam();
     } catch (e) {
       if (e.code !== 'permission-denied') throw e;
-      toast('👪 ' + F.family, 'This device was taken out of the family');
-      leaveLocally();
+      if (F.pending) { F = null; saveFam(); return; }   // a join that never went through
+      // Refused because this device is no longer signed in as the member
+      // (its sign-in was cleared), or because a parent removed it.
+      const u = authUser();
+      lostFamily(u && u.uid === F.uid ? 'removed' : 'signin');
     }
   }
+  // A listener or a save was refused: find out whether this device is still in the family.
+  function recheckMembership(e) {
+    if (e && e.code && e.code !== 'permission-denied') return;
+    famQueue = famQueue.then(() => F && checkMembership()).catch(() => {});
+  }
+  // This device is no longer in its family: say why, here and on the family screen.
+  function lostFamily(reason) {
+    store(LOST_KEY, JSON.stringify({ family: F.family, name: F.name, role: F.role, reason }));
+    toast('👪 ' + F.family, reason === 'removed' ? 'A parent took this device out of the family' : 'This device lost its place in the family. Open 👪 to get back in');
+    leaveLocally();
+  }
+  // Its progress stays on the device, still marked as that person's.
   function leaveLocally() {
     stopFamWatch();
     if (famLatestOff) { famLatestOff(); famLatestOff = null; }
+    if (backupOff) { backupOff(); backupOff = null; }
+    clearTimeout(syncTimer); syncTimer = null;
+    pendingAdopt = null;
     F = null; saveFam();
     $('chatDot').hidden = true;
   }
 
-  /* ----- progress: saved to the family, restored on a new device ----- */
+  /* ----- progress: whose it is, saved to the family, merged across devices ----- */
 
-  // The family keeps whichever copy has more XP (XP only ever goes up).
-  // A device with less, and nothing done since it opened, takes the
-  // family's copy; otherwise this device's copy is saved.
-  async function restoreOrPush(joining) {
-    const b = await famCol(F.fid, 'backup').doc(F.pid).get();
-    const remote = b.exists ? b.data() : null;
-    const untouched = JSON.stringify(S) === bootState;
-    let already = false;
-    try { already = sessionStorage.getItem('treasureup.restoring') === F.pid; } catch (e) {}
-    if (remote && remote.xp > S.xp && (untouched || joining) && !already) {
-      try {
-        sessionStorage.setItem('treasureup.restoring', F.pid);
-        sessionStorage.setItem('treasureup.restoredXp', String(remote.xp));
-        localStorage.setItem(STORE_KEY, remote.state);
-      } catch (e) { return; }
-      location.reload();
-      return new Promise(() => {});     // nothing more until the reload
+  // Progress lives on the device (S). S.owner says whose it is: a family
+  // member's pid, or null for progress not linked to anyone (a device used
+  // before it joined a family). A device only ever saves or loads its
+  // owner's family copy, so a different person signing in never mixes two
+  // people's progress: the other person's is set aside on the device (its
+  // own slot) and comes back when they do.
+  const slotKey = owner => STORE_KEY + '@' + (owner || 'local');
+  const syncKey = pid => 'treasureup.synced@' + pid;
+  const hasProgress = s => s.xp > 0 || Object.keys(s.answers || {}).length > 0 ||
+    Object.keys(s.notes || {}).length > 0 || (s.history || []).length > 0;
+  // The same progress always gives the same text, so two copies compare.
+  function canon(v) {
+    if (Array.isArray(v)) return '[' + v.map(canon).join(',') + ']';
+    if (v && typeof v === 'object') {
+      return '{' + Object.keys(v).filter(k => v[k] !== undefined).sort().map(k => JSON.stringify(k) + ':' + canon(v[k])).join(',') + '}';
     }
-    await pushNow();
+    return JSON.stringify(v === undefined ? null : v);
   }
 
-  function queuePush() {
-    if (F && !pushTimer) pushTimer = setTimeout(pushNow, 3000);
+  // Restart the app with another person's progress on this device, setting
+  // the current progress aside in its own slot.
+  function switchProgress(to, name, note) {
+    try {
+      localStorage.setItem(slotKey(S.owner), JSON.stringify(S));
+      const raw = localStorage.getItem(slotKey(to));
+      localStorage.setItem(STORE_KEY, JSON.stringify(Object.assign(raw ? JSON.parse(raw) : {}, { owner: to, ownerName: name })));
+      localStorage.removeItem(slotKey(to));
+      if (note) sessionStorage.setItem('treasureup.adopted', note);
+    } catch (e) { toast("👪 Couldn't switch", 'This device is out of storage space'); return; }
+    location.reload();
   }
-  async function pushNow() {
-    clearTimeout(pushTimer); pushTimer = null;
+
+  // Before anything is saved to the family, the progress on this device
+  // must be the signed-in person's. True when it is; otherwise it asks.
+  function claimProgress() {
+    if (S.owner === F.pid) return true;
+    if (!hasProgress(S)) { S.owner = F.pid; S.ownerName = F.name; saveLocal(); return true; }
+    if (stored(slotKey(F.pid))) { switchProgress(F.pid, F.name); return false; }   // they've used this device before
+    if (fam) { fam.claim = true; renderFam(); }
+    else if (!claimAsked) { claimAsked = true; toast('👪 One question first', 'Open 👪 to finish setting up this device'); }
+    return false;
+  }
+  function claimAnswer(yes) {
+    fam.claim = false;
+    if (!yes) return switchProgress(F.pid, F.name);
+    S.owner = F.pid; S.ownerName = F.name;
+    save();
+    watchBackup();
+    renderFam();
+  }
+
+  // Saving to the family. The family keeps one copy per person. Each
+  // device remembers the last progress of its own that the family's copy
+  // is known to include. If only this device changed since, it saves; if
+  // only the family's copy changed (another device), this device takes it;
+  // if both changed, they're merged, so nothing done on either is lost.
+  const synced = () => (F ? stored(syncKey(F.pid)) : null);
+  function setSynced(json) { store(syncKey(F.pid), json); store('treasureup.savedAt', String(Date.now())); }
+
+  function queueSync(ms) {
+    if (!F || syncTimer) return;
+    syncTimer = setTimeout(syncNow, ms == null ? 3000 : ms);
+  }
+  function syncNow() {
+    clearTimeout(syncTimer); syncTimer = null;
+    syncChain = syncChain.then(syncProgress).then(() => { syncFails = 0; }, syncFailed);
+    return syncChain;
+  }
+  async function syncProgress() {
     const u = authUser();
-    if (!F || !u || u.uid !== F.uid) return;
-    const state = JSON.stringify(S);
-    if (state === lastPushed) return;
-    const vals = Object.values(S.answers);
-    const b = fs().batch();
-    b.set(famCol(F.fid, 'progress').doc(F.pid), {
-      name: F.name, xp: S.xp, streak: liveStreak(), lastStudy: S.lastStudy || '', week: WEEK.title,
-      right: vals.filter(a => a.right).length, answered: vals.length, updated: TS()
+    if (!F || F.pending || !u || u.uid !== F.uid || S.owner !== F.pid) return;
+    const ref = famCol(F.fid, 'backup').doc(F.pid), sumRef = famCol(F.fid, 'progress').doc(F.pid);
+    const mine = canon(S), base = synced();
+    let wrote = null, take = null;
+    await fs().runTransaction(async t => {
+      wrote = take = null;
+      const snap = await t.get(ref);
+      const theirs = snap.exists ? snap.data().state : null;
+      if (theirs === mine) return;
+      let next;
+      if (theirs == null || theirs === base) next = S;                                   // only this device changed
+      else if (mine === base) { take = theirs; return; }                                  // only the family's copy changed
+      else next = mergeProgress(JSON.parse(theirs), S, base ? JSON.parse(base) : null);    // both changed
+      next = Object.assign({}, next, { owner: F.pid, ownerName: F.name });
+      wrote = canon(next);
+      t.set(ref, { xp: next.xp, state: wrote, by: F.uid, updated: TS() });
+      t.set(sumRef, summaryOf(next));
     });
-    b.set(famCol(F.fid, 'backup').doc(F.pid), { xp: S.xp, state, by: F.uid, updated: TS() });
-    try { await b.commit(); lastPushed = state; }
-    catch (e) {
-      // Refused: this device was taken out of the family, or the family's
-      // copy has more XP (another device is ahead; reopening picks it up).
-      if (e.code !== 'permission-denied') return;
-      famQueue = famQueue.then(async () => {
-        if (F) await checkMembership();
-        if (F && !famWarned) { famWarned = true; toast('👪 Newer progress on another device', 'Close and reopen Treasure Up to get it'); }
-      }).catch(() => {});
+    if (take) { adopt(take, mine, 'Progress synced|From your other device'); return; }
+    setSynced(mine);                   // the family's copy now includes everything here
+    if (wrote && wrote !== mine) adopt(wrote, mine, 'Progress merged|With your other device');
+    if ($('famPeople')) renderPeople();
+  }
+  function syncFailed(e) {
+    if (e && e.code === 'permission-denied') return recheckMembership(e);   // most likely taken out of the family
+    // No connection, or Firestore busy: try again, less often each time.
+    syncFails++;
+    clearTimeout(syncTimer);
+    syncTimer = setTimeout(syncNow, Math.min(300000, 15000 * Math.pow(2, syncFails - 1)));
+    if ($('famPeople')) renderPeople();
+  }
+
+  // Another device saved: catch up without waiting for a restart.
+  function watchBackup() {
+    if (backupOff) backupOff();
+    if (!F || S.owner !== F.pid) return;
+    backupOff = famCol(F.fid, 'backup').doc(F.pid).onSnapshot(snap => {
+      if (!snap.metadata.hasPendingWrites && snap.exists && snap.data().state !== synced()) queueSync(300);
+    }, recheckMembership);
+  }
+
+  // Put the family's copy on this device: restart the app with it once
+  // nothing is being used (a game, the TV board, typed text). If this
+  // device's progress changed in the meantime, sync again instead (merge).
+  function adopt(json, from, note) {
+    pendingAdopt = { json, from, note };
+    tryAdopt();
+  }
+  function tryAdopt() {
+    clearTimeout(adoptTimer);
+    const a = pendingAdopt;
+    if (!a || !F) return;
+    if (canon(S) !== a.from) { pendingAdopt = null; queueSync(0); return; }
+    const typing = [...document.querySelectorAll('textarea, input.field')].some(t => t.value.trim() && !t.readOnly);
+    const busy = ['play', 'live', 'board', 'parent'].some(id => !$(id).hidden) || typing;
+    if (busy) { adoptTimer = setTimeout(tryAdopt, 10000); return; }
+    try {
+      localStorage.setItem(STORE_KEY, a.json);
+      store(syncKey(F.pid), a.json);
+      sessionStorage.setItem('treasureup.adopted', a.note);
+    } catch (e) { return; }
+    location.reload();
+  }
+
+  // Two copies of one person's progress that both changed since they last
+  // agreed (base): keep everything from both. The family's copy (theirs)
+  // wins where both did the same thing; XP is the family's plus what this
+  // device earned since base, not counting anything the family's copy
+  // already has.
+  function mergeProgress(R, L, B) {
+    B = B || {};
+    const has = (o, k) => !!o && Object.prototype.hasOwnProperty.call(o, k);
+    const M = JSON.parse(JSON.stringify(R));
+    let gained = Math.max(0, (L.xp || 0) - (B.xp || 0));
+    for (const k in L.answers || {}) if (!has(B.answers, k) && has(R.answers, k) && L.answers[k].right) gained -= XP.firstTry;
+    for (const k in L.bonus || {}) if (!has(B.bonus, k) && has(R.bonus, k) && L.bonus[k].right) gained -= XP.bonus;
+    for (const k in L.notes || {}) {
+      if (L.notes[k].rewarded && !(has(B.notes, k) && B.notes[k].rewarded) && has(R.notes, k) && R.notes[k].rewarded) gained -= NOTE_XP;
     }
+    M.xp = (R.xp || 0) + Math.max(0, gained);
+    for (const key of ['answers', 'bonus', 'sayings', 'recall', 'sayRecall']) M[key] = Object.assign({}, L[key] || {}, R[key] || {});
+    // Notes: the later edit wins.
+    M.notes = Object.assign({}, L.notes || {}, R.notes || {});
+    for (const k in L.notes || {}) if (!has(R.notes, k) || (L.notes[k].at || 0) > (R.notes[k].at || 0)) M.notes[k] = L.notes[k];
+    // Verse Word: the day's game that got further.
+    M.words = Object.assign({}, L.words || {}, R.words || {});
+    for (const d in L.words || {}) {
+      const a = L.words[d], b = (R.words || {})[d];
+      if (b && (a.guesses || []).length > (b.guesses || []).length) M.words[d] = a;
+    }
+    // Streak: whichever studied more recently.
+    if ((L.lastStudy || '') > (R.lastStudy || '')) Object.assign(M, { lastStudy: L.lastStudy, streak: L.streak, freezes: L.freezes });
+    else if (L.lastStudy === R.lastStudy) M.streak = Math.max(L.streak || 0, R.streak || 0);
+    // Today's warm-up: both sets of answers.
+    if (L.daily && (!R.daily || L.daily.day > R.daily.day)) M.daily = L.daily;
+    else if (L.daily && R.daily && L.daily.day === R.daily.day) {
+      M.daily = Object.assign({}, R.daily, { done: Object.assign({}, L.daily.done, R.daily.done), sayDone: R.daily.sayDone != null ? R.daily.sayDone : L.daily.sayDone });
+    }
+    // The weekly puzzle: the one that got further this week.
+    const pzAhead = (a, b) => {
+      if (!a) return false;
+      if (!b) return true;
+      if (a.week !== b.week) return a.week === WEEK.title;
+      if ((a.status === 'won') !== (b.status === 'won')) return a.status === 'won';
+      return (a.solved || []).length > (b.solved || []).length;
+    };
+    if (pzAhead(L.puzzle, R.puzzle)) M.puzzle = L.puzzle;
+    M.climbDay = [L.climbDay, R.climbDay].filter(Boolean).sort().pop() || null;
+    if ((L.history || []).length > (R.history || []).length) M.history = L.history;
+    return M;
+  }
+
+  // What the whole family sees about one person.
+  function summaryOf(s) {
+    const vals = Object.values(s.answers || {});
+    return {
+      name: F.name, role: F.role === 'kid' ? 'kid' : 'grownup', xp: s.xp || 0, streak: s.streak || 0,
+      lastStudy: s.lastStudy || '', week: WEEK.title, right: vals.filter(a => a.right).length, answered: vals.length, updated: TS()
+    };
   }
 
   /* ----- the new-message dot ----- */
@@ -2989,7 +3171,7 @@ const TreasureUp = (function () {
       const m = d ? d.data({ serverTimestamps: 'estimate' }) : null;
       famLatest = { at: m ? tsMs(m.at) : 0, mine: !m || m.uid === F.uid };
       updateFamDot();
-    }, () => {});
+    }, recheckMembership);
   }
   function updateFamDot() {
     const reading = fam && fam.tab === 'chat' && F && !fam.invite;
@@ -3014,6 +3196,7 @@ const TreasureUp = (function () {
     stopFamWatch();
     fam = null;
     $('fam').hidden = true;
+    $('famBody').innerHTML = '';   // its lists refresh from background saves only while it's open
     store('treasureup.pendingInvite', null);
     if (new URLSearchParams(location.search).get('invite')) history.replaceState(null, '', location.pathname);
   }
@@ -3052,9 +3235,41 @@ const TreasureUp = (function () {
       <div class="board-actions"><button class="btn" data-fam="finish">Sign in</button></div>
       <p id="famNote" class="parent-msg"></p>`);
     if (fam.invite) return put(inviteHtml());
+    if (F && fam.claim) return put(claimHtml());
     if (F) { put(memberHtml()); famWatch(); renderPeople(); renderLink(); renderPending(); renderChat(true); updateFamDot(); return; }
     const u = authUser();
     put(realAccount(u) ? startHtml(u) : signInHtml());
+  }
+
+  // Whose is the progress already on this device?
+  function claimHtml() {
+    const kid = F.role === 'kid', L = levelFor(S.xp), name = esc(F.name);
+    const day = S.lastStudy ? new Date(S.lastStudy + 'T12:00:00').toLocaleDateString([], { month: 'short', day: 'numeric' }) : '';
+    const whose = S.owner && S.ownerName ? esc(S.ownerName) + "'s progress" : 'progress';
+    const it = kid ? name + "'s" : 'yours';
+    return `
+      <p class="clue-q" style="font-size:22px">One question first</p>
+      <p class="board-help">This device already has ${whose} on it: Level ${L}, ${S.xp} XP${day ? ', last studied ' + esc(day) : ''}. Is it ${it}?</p>
+      <div class="board-actions" style="flex-direction:column;align-items:stretch">
+        <button class="btn" data-fam="claim-yes">Yes, it's ${it}</button>
+        <button class="btn ghost" data-fam="claim-no">${kid ? 'No, start ' + name + ' fresh' : 'No, keep it apart'}</button>
+      </div>
+      <p class="fam-note">${kid
+        ? `If it isn't, it stays on this device, set apart, and ${name} starts fresh here (or picks up ${name}'s progress saved in the family).`
+        : "If it isn't, it stays on this device, set apart from your account, and comes back when you sign out."}</p>`;
+  }
+
+  // Why this device is no longer in its family, and how to get back in.
+  function lostHtml() {
+    let l = null;
+    try { l = JSON.parse(stored(LOST_KEY)); } catch (e) {}
+    if (!l) return '';
+    const name = esc(l.name), family = esc(l.family);
+    const why = l.reason === 'removed' ? `A parent took this device out of ${family}.` : `This device lost its place in ${family}: its sign-in was cleared.`;
+    const how = l.role !== 'kid' ? 'Sign in again below to get back in.'
+      : l.reason === 'removed' ? `If that was a mistake, a parent can add ${name} back from the family screen, and ${name}'s saved progress comes too.`
+      : `To get back in, ask a parent to tap "Link another device" under ${name} and open that link here. ${name}'s saved progress comes too.`;
+    return `<div class="fam-box" style="margin:0 0 14px">${why} ${how}</div>`;
   }
 
   function signInOptions(email) {
@@ -3069,7 +3284,7 @@ const TreasureUp = (function () {
   }
 
   function signInHtml() {
-    return `
+    return `${lostHtml()}
       <p class="clue-q" style="font-size:22px">Study together as a family</p>
       <p class="board-help">See how everyone's week is going, and talk about it in a family chat that parents can see all of.</p>
       <p class="fam-note" style="margin-top:14px">Grown-ups sign in here.</p>
@@ -3125,8 +3340,8 @@ const TreasureUp = (function () {
       if (F) return head + `<p class="board-help">This device is already in ${esc(F.family)} as ${esc(F.name)}. A parent can take it out of that family first.</p>${done}`;
       if (realAccount(u)) return head + `
         <p class="board-help">This link makes this device ${esc(d.name)}'s. It's signed in as ${esc(u.email || 'a grown-up')} right now.
-          Open the link on ${esc(d.name)}'s own phone or tablet, or sign out here first.</p>
-        <div class="board-actions"><button class="btn" data-fam="signoutjoin">Sign out and join as ${esc(d.name)}</button></div>
+          Open the link on ${esc(d.name)}'s own phone or tablet, or sign out here first and then join.</p>
+        <div class="board-actions"><button class="btn" data-fam="signout">Sign out first</button></div>
         <p id="famNote" class="parent-msg"></p>`;
       return head + `
         <p class="board-help">This phone or tablet will save ${esc(d.name)}'s progress to the family, and ${esc(d.name)} can use the family chat. Parents can read every message.</p>
@@ -3158,13 +3373,18 @@ const TreasureUp = (function () {
     b.set(famCol(fid, 'members').doc(u.uid), { name: d.name, role: d.role, pid, invite: token, joined: TS() });
     b.update(famCol(fid, 'invites').doc(token), { usedBy: u.uid });
     b.set(fs().collection('users').doc(u.uid), { fid });
-    await b.commit();
-    F = { fid, uid: u.uid, pid, name: d.name, role: d.role, family: d.family };
+    // Remembered before it's sent, so a phone closed mid-join finishes it
+    // (or forgets it, if it never reached the family) next time.
+    F = { fid, uid: u.uid, pid, name: d.name, role: d.role, family: d.family, pending: true };
     saveFam();
+    try { await b.commit(); } catch (e) { F = null; saveFam(); throw e; }
+    delete F.pending;
+    saveFam();
+    store(LOST_KEY, null);
     clearInvite();
     toast('👪 Welcome to ' + d.family, 'Joined as ' + d.name);
     watchLatest();
-    await restoreOrPush(true);
+    if (claimProgress()) { watchBackup(); await syncNow(); }
   }
 
   async function startFamily() {
@@ -3180,8 +3400,9 @@ const TreasureUp = (function () {
     await b.commit();
     F = { fid: ref.id, uid: u.uid, pid: u.uid, name, role: 'parent', family };
     saveFam();
+    store(LOST_KEY, null);
     watchLatest();
-    await restoreOrPush(false);
+    if (claimProgress()) { watchBackup(); await syncNow(); }
     return true;
   }
 
@@ -3233,11 +3454,16 @@ const TreasureUp = (function () {
     drop();
   }
 
+  // Their progress goes with their account: the device goes back to what
+  // it had before they signed in (or starts fresh), and theirs is set
+  // aside on the device for when they sign in again.
   async function famSignOut() {
-    await pushNow();
+    await syncNow();
+    const owner = S.owner;
     leaveLocally();
-    fam.sent = null;
+    if (fam) fam.sent = null;
     await firebase.auth().signOut();   // the auth listener redraws
+    if (owner) switchProgress(null, null);
   }
 
   /* ----- a member's view: People and Chat ----- */
@@ -3271,10 +3497,12 @@ const TreasureUp = (function () {
     on(famDoc(F.fid), s => {
       if (!s.exists || !F) return;
       F.family = s.data().name; saveFam();
+      fam.createdBy = s.data().createdBy;
       if (!fam.invite) $('famTitle').textContent = F.family;
+      renderPeople();
     });
     on(famCol(F.fid, 'members'), q => {
-      fam.members = q.docs.map(d => Object.assign({ uid: d.id }, d.data()));
+      fam.members = q.docs.map(d => Object.assign({ uid: d.id }, d.data({ serverTimestamps: 'estimate' })));
       const mine = fam.members.find(m => m.uid === F.uid);
       if (mine && mine.role !== F.role) { F.role = mine.role; saveFam(); stopFamWatch(); renderFam(); return; }
       renderPeople();
@@ -3306,30 +3534,44 @@ const TreasureUp = (function () {
     famQueue = famQueue.then(() => F && checkMembership()).catch(() => {}).then(() => renderFam());
   }
 
-  // People, one row each: a child with two devices is still one person.
+  // People, one row each; a child's devices are listed under them.
   function people() {
     const by = new Map();
     fam.members.forEach(m => {
-      const p = by.get(m.pid) || { pid: m.pid, name: m.name, role: m.role, uids: [] };
-      p.uids.push(m.uid);
+      const p = by.get(m.pid) || { pid: m.pid, name: m.name, role: m.role, devices: [] };
+      p.devices.push({ uid: m.uid, joined: tsMs(m.joined) || 0 });
       by.set(m.pid, p);
     });
     const prog = new Map(fam.progress.map(g => [g.pid, g]));
     const order = { kid: 0, parent: 1, adult: 2 };
-    return [...by.values()].map(p => Object.assign(p, { prog: prog.get(p.pid) || null }))
-      .sort((a, b) => (order[a.role] - order[b.role]) || a.name.localeCompare(b.name));
+    return [...by.values()].map(p => Object.assign(p, {
+      prog: prog.get(p.pid) || null,
+      founder: !!fam.createdBy && p.devices.some(d => d.uid === fam.createdBy),
+      devices: p.devices.sort((a, b) => a.joined - b.joined)
+    })).sort((a, b) => (order[a.role] - order[b.role]) || a.name.localeCompare(b.name));
   }
 
   function renderPeople() {
     const el = $('famPeople');
-    if (!el) return;
+    if (!el || !F || !fam) return;
     const ps = people();
     const total = ps.reduce((n, p) => n + (p.prog && p.prog.week === WEEK.title ? p.prog.right || 0 : 0), 0);
     el.innerHTML = `
       <div class="fam-total">Together this week
         <b>${total} right answer${total === 1 ? '' : 's'}</b>
         <small>${esc(WEEK.title)}</small></div>
-      ${ps.map(personHtml).join('')}`;
+      ${ps.map(personHtml).join('')}
+      ${takenOutHtml()}
+      <p class="fam-note">${esc(savedLine())}</p>`;
+  }
+
+  // Whether this device's progress has reached the family.
+  function savedLine() {
+    if (S.owner !== F.pid) return 'This device saves to the family once the question about its progress is answered.';
+    const at = Number(stored('treasureup.savedAt')) || 0;
+    if (canon(S) === synced()) return "This device's progress is saved to the family" + (at ? ' (' + when(at) + ').' : '.');
+    return "Some progress on this device isn't saved to the family yet" + (at ? ' (last saved ' + when(at) + ')' : '') +
+      '. It saves by itself when there’s a connection.';
   }
 
   function personHtml(p) {
@@ -3338,14 +3580,22 @@ const TreasureUp = (function () {
     const streak = g && g.lastStudy && dayDiff(g.lastStudy, dayKey()) <= 1 ? g.streak : 0;
     const week = !g ? "Hasn't played on a linked device yet"
       : g.week === WEEK.title ? `This week: ${g.right} of ${WEEK.reels.length} right` : 'This week: not started';
+    const confirm = (key, label, ask) => `<button class="fam-link${fam.confirm === key ? ' warn' : ''}" data-fam="confirm" data-key="${esc(key)}">${fam.confirm === key ? ask : label}</button>`;
     const acts = [];
-    if (parent && !me) {
-      if (p.role === 'kid') acts.push(`<button class="fam-link" data-fam="device" data-pid="${esc(p.pid)}">Link another device</button>`);
-      if (p.role === 'adult') acts.push(`<button class="fam-link" data-fam="role" data-pid="${esc(p.pid)}" data-role="parent">Make a parent</button>`);
-      if (p.role === 'parent') acts.push(`<button class="fam-link" data-fam="role" data-pid="${esc(p.pid)}" data-role="adult">Not a parent</button>`);
-      acts.push(fam.confirm === p.pid
-        ? `<button class="fam-link warn" data-fam="remove" data-pid="${esc(p.pid)}">Tap again to take ${esc(p.name)} out of the family</button>`
-        : `<button class="fam-link" data-fam="remove" data-pid="${esc(p.pid)}">Remove</button>`);
+    let devices = '';
+    // Parents see every device joined as a child, so one nobody recognizes stands out.
+    if (parent && p.role === 'kid') {
+      devices = `<div class="fam-devices">${p.devices.map(d => `
+        <div class="fam-device"><span>📱 Device joined ${esc(d.joined ? when(d.joined) : 'just now')}</span>
+          ${confirm('dev:' + d.uid, 'Remove', p.devices.length === 1 ? 'Tap again: ' + esc(p.name) + ' leaves the family' : 'Tap again to remove this device')}</div>`).join('')}</div>`;
+      acts.push(`<button class="fam-link" data-fam="device" data-pid="${esc(p.pid)}">Link another device</button>`);
+    }
+    // Whoever started the family stays a parent.
+    if (parent && !me && p.role !== 'kid' && !p.founder) {
+      acts.push(p.role === 'adult'
+        ? `<button class="fam-link" data-fam="role" data-pid="${esc(p.pid)}" data-role="parent">Make a parent</button>`
+        : `<button class="fam-link" data-fam="role" data-pid="${esc(p.pid)}" data-role="adult">Not a parent</button>`);
+      acts.push(confirm('person:' + p.pid, 'Remove', 'Tap again to take ' + esc(p.name) + ' out of the family'));
     }
     return `
       <div class="fam-person">
@@ -3354,8 +3604,31 @@ const TreasureUp = (function () {
           ${g ? `<span class="fp-lv">Level ${L} · ${esc(LEVEL_TITLES[L - 1])}</span>` : ''}
         </div>
         <div class="fp-sub">${g ? `${g.xp} XP · 🔥 ${streak} · ` : ''}${esc(week)}</div>
+        ${devices}
         ${acts.length ? `<div class="fam-actions">${acts.join('')}</div>` : ''}
       </div>`;
+  }
+
+  // People whose saved progress is still in the family after they were
+  // taken out: a parent can bring a child back with it, or delete it.
+  function takenOutHtml() {
+    if (F.role !== 'parent') return '';
+    const inFamily = new Set(fam.members.map(m => m.pid));
+    const gone = fam.progress.filter(g => !inFamily.has(g.pid));
+    if (!gone.length) return '';
+    return `<div class="eyebrow" style="margin-top:22px">Taken out of the family</div>` + gone.map(g => {
+      const kid = g.role ? g.role === 'kid' : g.pid.length < 20;
+      const key = 'saved:' + g.pid;
+      return `
+        <div class="fam-person">
+          <div class="fp-top"><span class="fp-name">${esc(g.name)}</span><span class="fp-lv">${g.xp} XP saved</span></div>
+          <div class="fp-sub">${kid ? `Adding ${esc(g.name)} back brings this progress with them.` : 'Inviting them again by email brings this progress back.'}</div>
+          <div class="fam-actions">
+            ${kid ? `<button class="fam-link" data-fam="device" data-pid="${esc(g.pid)}">Add ${esc(g.name)} back</button>` : ''}
+            <button class="fam-link${fam.confirm === key ? ' warn' : ''}" data-fam="confirm" data-key="${esc(key)}">${fam.confirm === key ? 'Tap again to delete it for good' : 'Delete saved progress'}</button>
+          </div>
+        </div>`;
+    }).join('');
   }
 
   function addHtml() {
@@ -3404,7 +3677,7 @@ const TreasureUp = (function () {
 
   function renderLink() {
     const el = $('famLink');
-    if (!el) return;
+    if (!el || !fam) return;
     const l = fam.link;
     if (!l) { el.innerHTML = ''; return; }
     const url = inviteUrl(l.token), who = esc(l.name);
@@ -3427,7 +3700,7 @@ const TreasureUp = (function () {
 
   function renderPending() {
     const el = $('famPending');
-    if (!el) return;
+    if (!el || !fam) return;
     const list = fam.invites.filter(i => i.expires > Date.now()).sort((a, b) => a.expires - b.expires);
     const until = ms => new Date(ms).toLocaleDateString([], { month: 'short', day: 'numeric' });
     el.innerHTML = !list.length ? '' : `
@@ -3444,23 +3717,25 @@ const TreasureUp = (function () {
         </div>`).join('')}`;
   }
 
+  // Remove a device or a person, or delete saved progress: the first tap
+  // asks, the second does it.
+  async function confirmAction(key) {
+    if (fam.confirm !== key) { fam.confirm = key; renderPeople(); return; }
+    fam.confirm = null;
+    const [what, id] = [key.slice(0, key.indexOf(':')), key.slice(key.indexOf(':') + 1)];
+    const b = fs().batch();
+    if (what === 'dev') b.delete(famCol(F.fid, 'members').doc(id));
+    if (what === 'person') { const p = people().find(x => x.pid === id); if (p) p.devices.forEach(d => b.delete(famCol(F.fid, 'members').doc(d.uid))); }
+    if (what === 'saved') { b.delete(famCol(F.fid, 'progress').doc(id)); b.delete(famCol(F.fid, 'backup').doc(id)); }
+    await b.commit();
+  }
+
   async function setRole(pid, role) {
     const p = people().find(x => x.pid === pid);
     if (!p) return;
     const b = fs().batch();
     p.uids.forEach(uid => b.update(famCol(F.fid, 'members').doc(uid), { role }));
     await b.commit();
-  }
-
-  async function removePerson(pid) {
-    if (fam.confirm !== pid) { fam.confirm = pid; renderPeople(); return; }
-    fam.confirm = null;
-    const p = people().find(x => x.pid === pid);
-    if (!p) return;
-    const b = fs().batch();
-    p.uids.forEach(uid => b.delete(famCol(F.fid, 'members').doc(uid)));
-    await b.commit();
-    toast('👪 ' + p.name, 'Taken out of the family');
   }
 
   /* ----- chat ----- */
@@ -3485,7 +3760,7 @@ const TreasureUp = (function () {
 
   function renderChat(first) {
     const el = $('chatList');
-    if (!el) return;
+    if (!el || !fam) return;
     const sc = $('fam');
     const nearBottom = sc.scrollHeight - sc.scrollTop - sc.clientHeight < 160;
     el.innerHTML = fam.messages.length ? fam.messages.map(msgHtml).join('')
@@ -3536,16 +3811,15 @@ const TreasureUp = (function () {
         return;
       }
       if (act === 'join') { el.disabled = true; await inQueue(joinFamily); return renderFam(); }
-      if (act === 'signoutjoin') {
-        el.disabled = true;
-        await inQueue(async () => { await firebase.auth().signOut(); await firebase.auth().signInAnonymously(); await joinFamily(); });
-        return renderFam();
-      }
+      if (act === 'claim-yes' || act === 'claim-no') return claimAnswer(act === 'claim-yes');
       if (act === 'tab') { fam.tab = el.dataset.tab; return renderFam(); }
       if (act === 'invite') return await inviteFromForm();
-      if (act === 'device') {
-        const p = people().find(x => x.pid === el.dataset.pid);
-        return p && await makeInvite('kid', p.name, '', p.pid);
+      if (act === 'device') {        // another device for a child, or a child taken out coming back
+        const p = people().find(x => x.pid === el.dataset.pid) || fam.progress.find(g => g.pid === el.dataset.pid);
+        if (!p) return;
+        await makeInvite('kid', p.name, '', el.dataset.pid);
+        $('famLink').scrollIntoView({ block: 'center', behavior: reduceMotion() ? 'auto' : 'smooth' });
+        return;
       }
       if (act === 'showlink') {
         const i = fam.invites.find(x => x.id === el.dataset.token);
@@ -3569,7 +3843,7 @@ const TreasureUp = (function () {
         return;
       }
       if (act === 'role') return await setRole(el.dataset.pid, el.dataset.role);
-      if (act === 'remove') return await removePerson(el.dataset.pid);
+      if (act === 'confirm') return await confirmAction(el.dataset.key);
       if (act === 'send') return await sendMsg();
       if (act === 'hide' || act === 'unhide') return await hideMsg(el.dataset.mid, act === 'hide');
     } catch (e) {
@@ -3720,6 +3994,13 @@ const TreasureUp = (function () {
     S = load();
     P = loadParent();
     F = loadFam();
+    // Progress saved before it had an owner: a device already in a family
+    // was saving it as that person's, and the family's copy matched it.
+    if (S.owner === undefined) {
+      S.owner = F ? F.pid : null;
+      S.ownerName = F ? F.name : null;
+      if (F && !stored(syncKey(F.pid))) store(syncKey(F.pid), canon(S));
+    }
 
     // A new week: keep a one-line summary of the last one for the year trail.
     const weekNum = Number((/\/(\d+)\?/.exec(WEEK.lesson) || [])[1]) || null;

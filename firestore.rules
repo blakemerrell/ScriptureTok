@@ -88,6 +88,7 @@ service cloud.firestore {
       function isParent() { return isMember() && me().role == 'parent'; }
       function nameOk(n) { return n is string && n.size() > 0 && n.size() <= 24; }
       function only(keys) { return request.resource.data.keys().hasOnly(keys); }
+      function founder() { return get(famPath()).data.createdBy; }
       function changes(keys) { return request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys); }
 
       allow read: if isMember();
@@ -131,13 +132,17 @@ service cloud.firestore {
           && request.resource.data.invite is string
           && request.resource.data.joined == request.time
           && (founding() || (request.resource.data.invite.size() >= 20 && redeeming()));
-        // A parent can make another grown-up a parent, or not. A child stays a child.
+        // A parent can make another grown-up a parent, or not. A child stays
+        // a child, and whoever started the family stays a parent, so a
+        // family always has one.
         allow update: if isParent()
+          && uid != founder()
           && resource.data.role != 'kid'
           && changes(['role'])
           && request.resource.data.role in ['parent', 'adult'];
-        // A parent can remove anyone; anyone can leave.
-        allow delete: if isParent() || (signedIn() && request.auth.uid == uid);
+        // A parent can remove anyone, and anyone can leave, except whoever
+        // started the family.
+        allow delete: if (isParent() || (signedIn() && request.auth.uid == uid)) && uid != founder();
       }
 
       match /invites/{token} {
@@ -208,15 +213,24 @@ service cloud.firestore {
       // full copy a new device restores from (only that person and parents
       // can read it: it holds their notes). Only that person's own devices
       // write them, and XP never goes backwards, so an old device can't
-      // overwrite newer progress.
+      // overwrite newer progress (the app merges instead). A parent can
+      // delete the saved progress of someone taken out of the family.
       match /progress/{pid} {
         allow read: if isMember();
         allow create, update: if isMember() && me().pid == pid
-          && only(['name', 'xp', 'streak', 'lastStudy', 'week', 'right', 'answered', 'updated'])
+          && only(['name', 'role', 'xp', 'streak', 'lastStudy', 'week', 'right', 'answered', 'updated'])
           && request.resource.data.name == me().name
-          && request.resource.data.xp is int && request.resource.data.xp >= 0
+          && request.resource.data.role == (me().role == 'kid' ? 'kid' : 'grownup')
+          && request.resource.data.xp is int && request.resource.data.xp >= 0 && request.resource.data.xp <= 10000000
+          && request.resource.data.streak is int && request.resource.data.streak >= 0 && request.resource.data.streak <= 5000
+          && request.resource.data.answered is int && request.resource.data.answered <= 100
+          && request.resource.data.right is int && request.resource.data.right >= 0
+          && request.resource.data.right <= request.resource.data.answered
+          && request.resource.data.lastStudy is string && request.resource.data.lastStudy.size() <= 10
+          && request.resource.data.week is string && request.resource.data.week.size() <= 120
           && request.resource.data.updated == request.time
           && (resource == null || request.resource.data.xp >= resource.data.xp);
+        allow delete: if isParent();
       }
 
       match /backup/{pid} {
@@ -224,10 +238,11 @@ service cloud.firestore {
         allow create, update: if isMember() && me().pid == pid
           && only(['xp', 'state', 'by', 'updated'])
           && request.resource.data.by == request.auth.uid
-          && request.resource.data.xp is int
+          && request.resource.data.xp is int && request.resource.data.xp <= 10000000
           && request.resource.data.state is string && request.resource.data.state.size() < 500000
           && request.resource.data.updated == request.time
           && (resource == null || request.resource.data.xp >= resource.data.xp);
+        allow delete: if isParent();
       }
     }
 
