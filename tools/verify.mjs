@@ -105,13 +105,43 @@ async function loadScripture() {
 
 // Every week in index.html, by running its content script with a stand-in
 // for the app (which would otherwise pick today's week and start up).
+// ---------- approval (developer mode) ----------
+// Each piece of a week carries `approved`: a fingerprint of its content
+// when Blake approved it in developer mode. Any later change makes the
+// fingerprint stop matching. Must match the app's approvalHash exactly.
+const canonJson = v => Array.isArray(v) ? '[' + v.map(canonJson).join(',') + ']'
+  : v && typeof v === 'object' ? '{' + Object.keys(v).filter(k => v[k] !== undefined).sort().map(k => JSON.stringify(k) + ':' + canonJson(v[k])).join(',') + '}'
+  : JSON.stringify(v === undefined ? null : v);
+function approvalHash(v) {
+  const c = canonJson(v);
+  let h = 0x811c9dc5;
+  for (let i = 0; i < c.length; i++) { h ^= c.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+  return (h >>> 0).toString(16).padStart(8, '0');
+}
+const withoutApproval = o => { const c = Object.assign({}, o); delete c.approved; return c; };
+// The pieces a week is reviewed in, with the fingerprint each should carry.
+function reviewItems(week) {
+  const items = [{ key: 'week', approved: week.approved, hash: approvalHash({ dates: week.dates, title: week.title, reference: week.reference, lesson: week.lesson, sections: week.sections }) }];
+  for (const r of week.reels || []) items.push({ key: 'reel:' + r.id, approved: r.approved, hash: approvalHash(withoutApproval(r)) });
+  for (const d of week.deep || []) items.push({ key: 'deep:' + d.id, approved: d.approved, hash: approvalHash(withoutApproval(d)) });
+  if (week.puzzle) items.push({ key: 'puzzle', approved: week.puzzle.approved, hash: approvalHash(withoutApproval(week.puzzle)) });
+  for (const x of week.sayings || []) items.push({ key: 'say:' + x.id, approved: x.approved, hash: approvalHash(withoutApproval(x)) });
+  if (week.words) items.push({ key: 'words', approved: week.wordsApproved, hash: approvalHash(week.words) });
+  return items;
+}
+// Weeks from here on can't go live without every piece approved; the two
+// weeks before went live before developer mode existed.
+const REVIEW_FROM = '2026-10-05';
+
+// content/weeks.js: a comment, then `window.TU_WEEKS = <JSON>;`. The same
+// rule developer mode uses to read and write it.
+const WEEKS_MARK = 'window.TU_WEEKS = ';
 function loadWeeks() {
-  const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
-  const start = html.indexOf('const WEEKS = [];');
-  const end = html.indexOf('</script>', start);
-  if (start < 0 || end < 0) throw new Error('Could not find the WEEKS block in index.html');
-  const stub = { pickWeek: w => w[0], boot() {} };
-  return new Function('TreasureUp', html.slice(start, end) + '\n;return WEEKS;')(stub);
+  const text = fs.readFileSync(path.join(ROOT, 'content', 'weeks.js'), 'utf8');
+  const at = text.indexOf(WEEKS_MARK), end = text.lastIndexOf(';');
+  if (at < 0 || end < at) throw new Error('content/weeks.js must be a comment, then window.TU_WEEKS = <JSON>;');
+  try { return JSON.parse(text.slice(at + WEEKS_MARK.length, end)); }
+  catch (e) { throw new Error('content/weeks.js is not valid JSON after window.TU_WEEKS = (' + e.message + ')'); }
 }
 
 // "September 28–October 4, 2026" -> "2026-09-28" (same rule as the app).
@@ -494,6 +524,13 @@ for (const week of weeks) {
   const num = (/\/(\d+)\?/.exec(week.lesson || '') || [])[1];
   weekLabel = weeks.length > 1 ? `Week ${num || '?'} · ` : '';
   await main(scripture, week, pages, online);
+  // The live app only takes weeks Blake approved in developer mode.
+  if (args.has('--require-approval') && weekStart(week.dates) >= REVIEW_FROM) {
+    for (const it of reviewItems(week)) {
+      if (!it.approved) failures.push(`${weekLabel}${it.key}: not approved yet (approve it in developer mode, then publish)`);
+      else if (it.approved !== it.hash) failures.push(`${weekLabel}${it.key}: changed since it was approved (approve it again in developer mode)`);
+    }
+  }
 }
 weekLabel = '';
 
@@ -501,6 +538,12 @@ for (const n of notes) console.log('  · ' + n);
 if (failures.length) {
   console.error(`✗ ${failures.length} problem${failures.length === 1 ? '' : 's'}:\n`);
   for (const f of failures) console.error('  - ' + f);
+  // In GitHub Actions each problem is also an annotation on the commit,
+  // which is how developer mode shows Blake what the checker found.
+  if (process.env.GITHUB_ACTIONS) {
+    const clean = t => t.replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A');
+    for (const f of failures.slice(0, 10)) console.log(`::error title=Content check::${clean(f)}`);
+  }
   process.exit(1);
 }
 for (const week of weeks) {

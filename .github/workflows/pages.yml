@@ -35,8 +35,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      # The live app (this repo) also requires every piece of a new week to
+      # be approved in developer mode; the test site shows drafts.
       - name: Check the week's content
-        run: node tools/verify.mjs --online
+        run: node tools/verify.mjs --online $([ "$GITHUB_REPOSITORY" = "blakemerrell/TreasureUp" ] && echo --require-approval)
         env:
           SCRIPTURE_CACHE: ${{ runner.temp }}/scripture   # keep the data out of the published site
 

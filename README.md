@@ -71,12 +71,13 @@ family also saves a copy to the family's Firebase project.
 
 ## Changing the weekly lesson
 
-Everything you edit is the **`CONTENT` block at the bottom of `index.html`**.
-Each week is one `WEEKS.push({ … })`. **Add next week any time before its
-Monday**: the app opens on the week whose dates include today, so it switches
-by itself (and last week turns green on the year trail). Keep weeks in date
-order and drop ones older than last week. The comment above the block
-describes every field. One reel, the short version:
+All content is **`content/weeks.js`** (see `content/README.md` for every
+field). Blake reviews, approves, changes and publishes it from **developer
+mode** on the test site (`…/TreasureUp-test/#dev`); new weeks arrive there as
+drafts. **Add next week any time before its Monday**: the app opens on the
+week whose dates include today, so it switches by itself (and last week turns
+green on the year trail). Keep weeks in date order and drop ones older than
+last week. One reel, the short version (as JSON in the file):
 
 ```js
 {
@@ -119,7 +120,7 @@ Rules the check script enforces:
   sets `previewed: true`; the private preview shows it, marked "not approved
   yet", so it can be reviewed.
 
-Two more blocks at the top of `WEEK_CONTENT` feed the games:
+Three more fields feed the games:
 
 - `puzzle.groups`: exactly 4 groups of 4 tiles, one group per lesson
   section. Each tile is `{ text, ref }`; the ref must be inside the week's
@@ -139,7 +140,8 @@ node tools/verify.mjs --online   # quotes, references, and every Gospel Library 
 ```
 
 and push to `main`. The deploy runs the same check and **refuses to publish**
-if anything fails. (If the Church website itself is down, that's a warning,
+if anything fails. The live app's deploy also refuses any week (from October
+5, 2026 on) that isn't fully approved in developer mode. (If the Church website itself is down, that's a warning,
 not a failure, so an outage can't block a deploy.)
 
 Answer order is shuffled in the app, so always put the right answer in
