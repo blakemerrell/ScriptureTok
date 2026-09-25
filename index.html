@@ -515,7 +515,7 @@
   .chat-form { display: flex; align-items: flex-end; gap: 8px; margin-top: 14px; }
   .chat-form textarea { flex: 1; min-height: 46px; max-height: 140px; resize: vertical; line-height: 1.35; }
 
-  /* ---- Today as a short lesson (preview) ---- */
+  /* ---- A day's lesson ---- */
   #lesson { position: fixed; inset: 0; z-index: 115; display: flex; flex-direction: column; background: #0f1020; }
   #lesson[hidden] { display: none; }
   .ls-top { display: flex; align-items: center; gap: 12px; padding: calc(var(--sat) + 12px) 16px 8px; }
@@ -565,8 +565,14 @@
   .ls-go:disabled { color: rgba(255,255,255,.4); background: rgba(255,255,255,.1); box-shadow: none; cursor: default; }
   .ls-foot.bad .ls-go { color: #fff; background: #ff4b4b; box-shadow: 0 4px 0 #c53030; }
   .ls-done { text-align: center; padding-top: 6vh; }
+  .ls-q { font-size: 18px; font-weight: 900; line-height: 1.25; margin: 18px 0 12px; }
+  .ls-hint { margin: -8px 0 14px; font-size: 13px; color: rgba(255,255,255,.6); }
+  .ls-earn { margin-left: 6px; font-size: 15px; color: var(--gold); }
+  .ls-streak { margin-top: 12px; font-size: 16px; font-weight: 900; color: #fdba74; }
+  .ls-news { margin-top: 8px; font-size: 14.5px; font-weight: 800; color: var(--gold); }
+  .ls-alt { display: block; width: 100%; margin-top: 8px; padding: 10px; font: inherit; font-size: 14px; font-weight: 800; color: rgba(255,255,255,.7); background: none; border: 0; cursor: pointer; }
   .ls-done .big { font-size: 64px; }
-  .ls-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 22px 0 8px; }
+  .ls-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 22px 0 8px; }
   .ls-stat { padding: 12px; border-radius: 16px; border: 2px solid #58cc02; }
   .ls-stat b { display: block; font-size: 26px; font-weight: 900; }
   .ls-stat span { font-size: 12px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: rgba(255,255,255,.6); }
@@ -618,7 +624,11 @@
   .today-bar { margin-top: 9px; height: 6px; border-radius: 999px; background: rgba(255,255,255,.14); overflow: hidden; }
   .today-bar div { height: 100%; border-radius: 999px; background: var(--gold); }
   .today .board-link { margin-top: 12px; }
+  .board-link.ls-start { font-size: 17px; font-weight: 900; background: #58cc02; border-color: #58cc02; box-shadow: 0 4px 0 #46a302; cursor: pointer; }
+  .board-link.ls-start small { color: rgba(255,255,255,.92); }
+  .today-alt { display: block; margin: 12px auto 0; font: inherit; font-size: 12.5px; font-weight: 700; color: rgba(255,255,255,.62); background: none; border: 0; cursor: pointer; text-decoration: underline; text-decoration-color: rgba(255,255,255,.3); }
   .week-map { margin-top: 16px; }
+  button.wm-row { width: 100%; text-align: left; font-family: inherit; background: none; border: 0; border-bottom: 1px solid rgba(255,255,255,.08); cursor: pointer; }
   .wm-row { display: grid; grid-template-columns: 34px 1fr auto; gap: 8px; align-items: baseline; padding: 6px 0; font-size: 13.5px; line-height: 1.3; color: rgba(255,255,255,.82); border-bottom: 1px solid rgba(255,255,255,.08); }
   .wm-day { font-size: 12px; font-weight: 800; color: rgba(255,255,255,.5); }
   .wm-row.now .wm-day, .wm-row.now .wm-name { color: var(--gold); font-weight: 800; }
@@ -794,12 +804,12 @@
   <div id="famBody"></div>
 </section>
 
-<!-- Today as a short lesson: a preview of a Duolingo-style flow (test site). -->
+<!-- A day's lesson, one step at a time. -->
 <section id="lesson" hidden aria-label="Today's lesson">
   <div class="ls-top">
     <button id="lessonExit" class="ls-x" aria-label="Close">✕</button>
     <div class="ls-prog"><div id="lessonBar"></div></div>
-    <span class="ls-tag">Preview</span>
+    <span id="lessonXp" class="ls-tag"></span>
   </div>
   <div id="lessonBody" class="ls-body"></div>
   <div id="lessonFoot" class="ls-foot"></div>
@@ -842,6 +852,9 @@
        - A bonus question, shown after the reel's own, can only be answered
          from the chapter or the lesson page. It pays the most.
        - The streak counts days in a row with at least one answer.
+       - A lesson records the same answers as the cards, so nothing pays
+         twice. Its practice steps (fill in the word, put the words in
+         order, match, who said it) pay nothing.
      ================================================================== -->
 <script>
 const TreasureUp = (function () {
@@ -1300,6 +1313,9 @@ const TreasureUp = (function () {
     const next = todayItems().find(x => !x.done) || weekPlan().flat().flatMap(entryItems).find(x => !x.done);
     return next ? next.card : 'end';
   }
+  // The app opens on the cover, where today's lesson starts; a finished
+  // week opens on its report.
+  const openingCard = () => landingCard() === 'end' ? 'end' : 'intro';
   function goToCard(id, smooth) {
     const el = document.querySelector('.reel[data-id="' + id + '"]');
     if (el) $('feed').scrollTo({ top: el.offsetTop, behavior: smooth && !reduceMotion() ? 'smooth' : 'auto' });
@@ -1360,13 +1376,17 @@ const TreasureUp = (function () {
     const before = levelFor(S.xp);
     S.xp += amount;
     const after = levelFor(S.xp);
-    toast('＋' + amount + ' XP', reason);
-    P.rewards
-      .filter(r => !r.claimed && beforeXp < r.xp && S.xp >= r.xp)
-      .forEach(r => toast('🎁 Reward unlocked', r.text + ' · show a parent'));
+    const unlocked = P.rewards.filter(r => !r.claimed && beforeXp < r.xp && S.xp >= r.xp);
+    // In a lesson the XP shows on the step, and a reward or a new level on
+    // its last screen, since the lesson covers the toasts.
+    if (lesson) unlocked.forEach(r => lesson.rewards.push(r.text));
+    else {
+      toast('＋' + amount + ' XP', reason);
+      unlocked.forEach(r => toast('🎁 Reward unlocked', r.text + ' · show a parent'));
+    }
     renderHud();
     if (P.rewards.length) refreshCards();
-    if (after > before) levelUp(after);
+    if (after > before) { if (lesson) lesson.level = after; else levelUp(after); }
   }
 
   let lvTimer = null;
@@ -1395,30 +1415,50 @@ const TreasureUp = (function () {
 
   /* ---------------- answering ---------------- */
 
+  // Recording an answer, from a card in the feed or a step in a lesson:
+  // the first try only. Each returns false if it was already answered.
+  function recordReel(id, picked) {
+    const r = reelById(id);
+    if (!r || S.answers[id]) return false;
+    const right = picked === r.question.right;
+    S.answers[id] = { right, picked, day: dayKey() };
+    markStudied();
+    if (right) grantXp(XP.firstTry, 'Got it the first time');
+    save();
+    return true;
+  }
+  function recordRecall(id, picked) {
+    const r = reelById(id);
+    if (!r || S.daily.done[id]) return false;
+    const right = picked === r.question.right;
+    S.daily.done[id] = { right, picked };
+    const rc = S.recall[id] || { misses: 0 };
+    S.recall[id] = { last: dayKey(), misses: right ? 0 : (rc.misses || 0) + 1 };
+    markStudied();
+    if (right) grantXp(XP.recall, 'Remembered it');
+    save();
+    return true;
+  }
+
   function answer(quiz, picked) {
     const id = quiz.dataset.quiz;
     const kind = quiz.dataset.kind;
     if (kind === 'deep') return answerDeep(quiz, id, picked);
     const r = reelById(id);
     if (!r) return;
-    const n = Number(quiz.dataset.n);
-    const right = picked === (kind === 'bonus' ? bonusesOf(r)[n].right : r.question.right);
-    const today = dayKey();
-
     if (kind === 'bonus') {
+      const n = Number(quiz.dataset.n);
+      const right = picked === bonusesOf(r)[n].right;
       const key = bonusKey(id, n);
       if (S.bonus[key]) return;                  // first try only
-      S.bonus[key] = { right, picked, day: today };
+      S.bonus[key] = { right, picked, day: dayKey() };
       markStudied();
       if (right) grantXp(XP.bonus, 'Found it in the reading');
       const card = quiz.closest('.reel');
       redrawCard(id, reelHtml(r, Number(card.dataset.index)));
       refreshEnd();
     } else if (kind === 'reel') {
-      if (S.answers[id]) return;                 // first try only
-      S.answers[id] = { right, picked, day: today };
-      markStudied();
-      if (right) grantXp(XP.firstTry, 'Got it the first time');
+      if (!recordReel(id, picked)) return;
       const card = quiz.closest('.reel');
       redrawCard(id, reelHtml(r, Number(card.dataset.index)));
       refreshEnd();
@@ -1426,12 +1466,7 @@ const TreasureUp = (function () {
       refreshDeep(r.section);
       refreshIntro();
     } else {
-      if (S.daily.done[id]) return;
-      S.daily.done[id] = { right, picked };
-      const rc = S.recall[id] || { misses: 0 };
-      S.recall[id] = { last: today, misses: right ? 0 : (rc.misses || 0) + 1 };
-      markStudied();
-      if (right) grantXp(XP.recall, 'Remembered it');
+      if (!recordRecall(id, picked)) return;
       const card = quiz.closest('.reel');
       const n = S.daily.ids.indexOf(id) + 1;
       redrawCard('recall-' + id, recallHtml(r, n, S.daily.ids.length, Number(card.dataset.index)));
@@ -1486,7 +1521,7 @@ const TreasureUp = (function () {
     const t = todayIndex(), entries = todayEntries(), items = entries.flatMap(entryItems);
     const done = items.filter(x => x.done).length;
     const now = entries.find(e => entryItems(e).some(x => !x.done));
-    const behind = now && weekPlan()[t].indexOf(now) < 0;
+    const behind = now && !weekPlan()[t].some(e => e.kind === now.kind && e.i === now.i);
     let head, sub;
     if (!items.length) {
       head = t === 6 ? 'Church day' : 'Catch up, or read ahead';
@@ -1499,27 +1534,29 @@ const TreasureUp = (function () {
       sub = `${behind ? 'Catching up first · ' : ''}${done} of ${items.length} done today`;
     }
     const warm = warmupsLeft().length;
+    const started = done > 0 || warm < S.daily.ids.length + (S.daily.say ? 1 : 0);
     return `
       <div class="today">
         <div class="eyebrow" style="color:var(--gold)">Today · ${DAY_NAMES[t]}</div>
         <div class="today-head">${esc(head)}</div>
         <div class="today-sub">${esc(sub)}</div>
         ${items.length ? `<div class="today-bar"><div style="width:${Math.round(done / items.length * 100)}%"></div></div>` : ''}
-        ${now || warm ? `<button class="board-link" data-jump>${warm ? "Start with today's warm-up ↓" : "Start today's reading ↓"}</button>` : ''}
-        ${lessonOffered() ? `<button class="board-link" data-lesson style="margin-top:8px;background:linear-gradient(90deg,rgba(88,204,2,.45),rgba(34,197,94,.3))">▶ Try today as a 5-minute lesson<small>A preview of a Duolingo-style flow. Nothing is saved.</small></button>` : ''}
+        ${now || warm ? `<button class="board-link ls-start" data-lesson="">▶ ${started ? 'Keep going' : "Start today's lesson"}<small>${esc(lessonParts(now))}</small></button>
+          <button class="today-alt" data-jump>or swipe through the reels ↓</button>` : ''}
       </div>`;
   }
 
   function weekMapHtml() {
     const t = todayIndex();
-    const rows = weekPlan().map((entries, d) => (entries.length ? entries : [null]).map(e => {
+    const rows = weekPlan().map((entries, d) => (entries.length ? entries : [null]).map((e, k) => {
       const items = e ? entryItems(e) : [], done = items.filter(x => x.done).length;
       const all = items.length && done === items.length;
-      const mark = all ? '✓' : done ? done + '/' + items.length : '';
-      return `<div class="wm-row${d === t ? ' now' : ''}${all ? ' done' : ''}">
+      const tag = items.length ? 'button' : 'div';
+      const mark = all ? '✓' : done ? done + '/' + items.length : items.length ? '›' : '';
+      return `<${tag} class="wm-row${d === t ? ' now' : ''}${all ? ' done' : ''}"${items.length ? ` data-lesson="${d}.${k}"` : ''}>
         <span class="wm-day">${DAY_NAMES[d].slice(0, 3)}</span>
         <span class="wm-name">${esc(e ? entryName(e) : 'Catch up, or read ahead')}</span>
-        <span class="wm-mark">${mark}</span></div>`;
+        <span class="wm-mark">${mark}</span></${tag}>`;
     }).join('')).join('');
     return `<div class="week-map"><div class="eyebrow">This week</div>${rows}</div>`;
   }
@@ -1578,13 +1615,19 @@ const TreasureUp = (function () {
       </div>`;
   }
 
-  function answerDeep(quiz, id, picked) {
+  function recordDeep(id, picked) {
     const d = deepItems().find(x => x.id === id);
-    if (!d || S.deep[id]) return;                  // first try only
+    if (!d || S.deep[id]) return false;            // first try only
     const right = picked === d.right;
     S.deep[id] = { right, picked, day: dayKey() };
     markStudied();
     if (right) grantXp(XP.bonus, 'Went deeper');
+    save();
+    return true;
+  }
+  function answerDeep(quiz, id, picked) {
+    const d = deepItems().find(x => x.id === id);
+    if (!recordDeep(id, picked)) return;
     const card = quiz.closest('.reel');
     redrawCard('deep-' + id, deepHtml(d, Number(card.dataset.index)));
     refreshEnd();
@@ -2626,9 +2669,9 @@ const TreasureUp = (function () {
     </article>`;
   }
 
-  function answerSayWarm(picked) {
-    if (S.daily.sayDone) return;
-    const x = WEEK.sayings.find(s => s.id === S.daily.say);
+  function recordSayWarm(picked) {
+    const x = S.daily.say && (WEEK.sayings || []).find(s => s.id === S.daily.say);
+    if (!x || S.daily.sayDone) return false;
     const right = picked === x.speaker;
     S.daily.sayDone = { picked, right };
     S.sayRecall = S.sayRecall || {};
@@ -2637,6 +2680,11 @@ const TreasureUp = (function () {
     markStudied();
     if (right) grantXp(SAY_XP, 'Who said it?');
     save();
+    return true;
+  }
+  function answerSayWarm(picked) {
+    if (!recordSayWarm(picked)) return;
+    const x = WEEK.sayings.find(s => s.id === S.daily.say);
     const card = document.querySelector('.reel[data-id="say-' + x.id + '"]');
     redrawCard('say-' + x.id, sayRecallHtml(Number(card.dataset.index)));
   }
@@ -3446,7 +3494,7 @@ const TreasureUp = (function () {
     if (!a || !F) return;
     if (canon(S) !== a.from) { pendingAdopt = null; queueSync(0); return; }
     const typing = [...document.querySelectorAll('textarea, input.field')].some(t => t.value.trim() && !t.readOnly);
-    const busy = ['play', 'live', 'board', 'parent'].some(id => !$(id).hidden) || typing;
+    const busy = ['play', 'live', 'board', 'parent', 'lesson'].some(id => !$(id).hidden) || typing;
     if (busy) { adoptTimer = setTimeout(tryAdopt, 10000); return; }
     try {
       localStorage.setItem(STORE_KEY, a.json);
@@ -4205,26 +4253,41 @@ const TreasureUp = (function () {
     }
   }
 
-  /* ---------------- today as a short lesson (preview) ---------------- */
+  /* ---------------- a day's lesson ---------------- */
 
-  // A mockup of a Duolingo-style flow on the test site: today's section as
-  // one short lesson of mixed steps. Every step is built from the week's
-  // checked text (the reels, their verses, the puzzle's tiles, the
-  // Who-said-it lines), so nothing new needs checking. A preview: nothing it
-  // does is saved.
-  const lessonOffered = () => /\/TreasureUp-test\//.test(location.pathname) || location.protocol === 'file:';
+  // The main way through a day, Duolingo-style: one step at a time, with a
+  // progress bar, Check, and right or wrong with the why. A lesson is one
+  // part of the week's plan (a section, Friday's deep dive, Saturday's
+  // puzzle), after whatever is left of today's warm-up. It records answers
+  // exactly as the cards in the feed do, so the plan, the streak, XP and the
+  // family's copy all see them, and a question answered in one place shows
+  // as answered in the other and never pays twice. The practice steps (fill
+  // in the word, put the words in order, match, who said it) are built from
+  // the week's checked text and pay nothing. A missed step comes back at
+  // the end until he gets it right; only the first try counts.
   const LESSON_SKIP = new Set(('shall their which there these those thee thine unto them with from have that this will when what ' +
     'they were into upon your also hath doth said saith every because before after again being where whose shalt').split(' '));
   const wordsOf = t => t.match(/[A-Za-z’']+/g) || [];
   const keyWord = w => w.length >= 5 && !LESSON_SKIP.has(w.toLowerCase());
   let lesson = null;
 
-  function lessonSection() {
-    const e = todayEntries().find(x => x.kind === 'section');
-    if (e) return e.i;
-    const open = WEEK.sections.findIndex((_, i) => WEEK.reels.some(r => r.section === i && !S.answers[r.id]));
-    return open >= 0 ? open : Math.min(todayIndex(), WEEK.sections.length - 1);
+  // The part of the plan the Today card starts: the first one, from today
+  // or an earlier day, that isn't finished.
+  const lessonNow = () => todayEntries().find(e => entryItems(e).some(x => !x.done)) || null;
+  // What a lesson holds, for the button that starts it.
+  function lessonParts(e) {
+    const parts = warmupsLeft().length ? ['Warm-up'] : [];
+    if (e && e.kind === 'section') {
+      const n = WEEK.reels.filter(r => r.section === e.i && !S.answers[r.id]).length;
+      if (n) parts.push(n === 1 ? '1 reel' : n + ' reels');
+      if (deepItems().some(d => d.section === e.i && !S.deep[d.id])) parts.push('Go deeper');
+    } else if (e && e.kind === 'friday') {
+      const n = fridayItems().filter(d => !S.deep[d.id]).length;
+      parts.push(n === 1 ? '1 reading' : n + ' readings');
+    } else if (e && e.kind === 'puzzle') parts.push('The weekly puzzle');
+    return parts.join(' · ');
   }
+
   // Fill in the missing word: one word of the verse, and two from the week's other verses.
   function blankStep(r) {
     const words = wordsOf(r.verse.text).filter(keyWord);
@@ -4235,7 +4298,9 @@ const TreasureUp = (function () {
     const near = pool.sort((a, b) => Math.abs(a.length - right.length) - Math.abs(b.length - right.length) || hash(a) - hash(b)).slice(0, 6);
     const wrong = shuffled(near, r.id + '|near').slice(0, 2);
     if (wrong.length < 2) return null;
-    const at = r.verse.text.indexOf(right);
+    // The word itself, not the same letters inside a longer word.
+    const m = new RegExp('(^|[^A-Za-z’\'])' + right + '(?![A-Za-z’\'])').exec(r.verse.text);
+    const at = m.index + m[1].length;
     return { kind: 'blank', ref: r.verse.ref, before: r.verse.text.slice(0, at), after: r.verse.text.slice(at + right.length),
              right, choices: shuffled([right].concat(wrong), r.id + '|blankc') };
   }
@@ -4262,94 +4327,143 @@ const TreasureUp = (function () {
     const x = list.find(y => chapters.has(y.ref.replace(/:.*/, ''))) || list[hash(WEEK.title + section) % list.length];
     return { kind: 'say', text: x.text, ref: x.ref, right: x.speaker, choices: shuffled([x.speaker].concat(x.wrong), x.id + '|say'), why: x.why };
   }
-  function buildLesson() {
-    const sec = lessonSection(), reels = WEEK.reels.filter(r => r.section === sec), steps = [];
-    reels.forEach(r => {
-      steps.push({ kind: 'read', r });
-      steps.push({ kind: 'mc', q: r.question.q, right: r.question.right, why: r.question.why, choices: choicesFor(r.question, r.id + '|lesson') });
-      const b = blankStep(r);
-      if (b) steps.push(b);
-    });
-    if (reels.length) steps.push(orderStep(reels[hash(WEEK.title + sec) % reels.length]));
-    [matchStep(sec), sayStep(sec)].forEach(x => { if (x) steps.push(x); });
-    return { sec, steps, at: 0, right: 0, scored: 0, start: Date.now() };
+  const deepStep = d => ({ kind: 'deep', id: d.id, d, q: d.q, right: d.right, why: d.why, choices: choicesFor(d, 'deep|' + d.id) });
+
+  // A finished part plays again as practice: everything in it, nothing to earn.
+  function buildLesson(entry) {
+    const steps = [];
+    S.daily.ids.filter(id => !S.daily.done[id]).map(reelById).filter(Boolean).forEach(r => steps.push({
+      kind: 'recall', id: r.id, r, q: r.question.q, right: r.question.right, why: r.question.why, choices: choicesFor(r.question, r.id + '|' + S.daily.day) }));
+    const x = S.daily.say && !S.daily.sayDone && (WEEK.sayings || []).find(y => y.id === S.daily.say);
+    if (x) steps.push({ kind: 'saywarm', text: x.text, ref: x.ref, right: x.speaker, why: x.why, choices: shuffled([x.speaker].concat(x.wrong), x.id + '|' + S.daily.day) });
+    const practice = !!entry && entryItems(entry).every(i => i.done);
+    if (entry && entry.kind === 'section') {
+      const reels = WEEK.reels.filter(r => r.section === entry.i);
+      reels.filter(r => practice || !S.answers[r.id]).forEach(r => {
+        steps.push({ kind: 'read', r });
+        steps.push({ kind: 'reel', id: r.id, q: r.question.q, right: r.question.right, why: r.question.why, choices: choicesFor(r.question, r.id) });
+        const b = blankStep(r);
+        if (b) steps.push(b);
+      });
+      if (reels.length) steps.push(orderStep(reels[hash(WEEK.title + entry.i) % reels.length]));
+      [matchStep(entry.i), x ? null : sayStep(entry.i)].forEach(y => { if (y) steps.push(y); });
+      deepItems().filter(d => d.section === entry.i && (practice || !S.deep[d.id])).forEach(d => steps.push(deepStep(d)));
+    } else if (entry && entry.kind === 'friday') {
+      fridayItems().filter(d => practice || !S.deep[d.id]).forEach(d => steps.push(deepStep(d)));
+    } else if (entry && entry.kind === 'puzzle') steps.push({ kind: 'puzzle' });
+    return { entry, practice, steps, at: 0, right: 0, scored: 0, start: Date.now(), xp0: S.xp, rewards: [], level: 0 };
   }
 
-  function openLesson() {
-    lesson = buildLesson();
+  // `key` is a part of the week map ("day.part"), or '' for today's.
+  function openLesson(key) {
+    const m = /^(\d)\.(\d+)$/.exec(key || '');
+    const plan = weekPlan();
+    // Today's: the next unfinished part; the warm-up alone if that's all
+    // that's left; with nothing left, today's part again as practice.
+    const entry = m ? (plan[m[1]] || [])[m[2]]
+      : lessonNow() || (warmupsLeft().length ? null : plan[todayIndex()].find(e => e.kind !== 'family')) || null;
+    const L = buildLesson(entry || null);
+    if (!L.steps.length) { toast('Nothing planned today', 'Catch up, or read ahead on the week map'); return; }
+    lesson = L;
     lessonReset();
     $('lesson').hidden = false;
     renderLesson();
   }
+  // Back to the cover, where the Today card and the map show what's done.
   function closeLesson() {
+    const L = lesson;
     lesson = null;
     $('lesson').hidden = true;
     if (location.hash === '#lesson') history.replaceState(null, '', location.pathname + location.search);
+    if (!L) return;
+    renderFeed();
+    if (observer) document.querySelectorAll('.reel').forEach(r => observer.observe(r));
+    renderHud();
+    goToCard('intro');
+    if (L.level) levelUp(L.level);
   }
-  function lessonReset() { Object.assign(lesson, { picked: null, built: [], matched: {}, sel: null, misses: 0, checked: false, ok: null }); }
+  function lessonReset() { Object.assign(lesson, { picked: null, built: [], matched: {}, sel: null, missR: null, misses: 0, checked: false, ok: null, earned: 0 }); }
+
+  // Checking a step records it where the feed would, the first time only.
+  function recordStep(step, picked, ok) {
+    if (step.retry) return 0;
+    const before = S.xp;
+    if (step.kind === 'reel') recordReel(step.id, picked);
+    else if (step.kind === 'recall') recordRecall(step.id, picked);
+    else if (step.kind === 'saywarm') recordSayWarm(picked);
+    else if (step.kind === 'deep') recordDeep(step.id, picked);
+    return S.xp - before;
+  }
+
+  const LESSON_KIND = { recall: 'Warm-up · remember this?', saywarm: 'Warm-up · who said it?', reel: 'Choose the right answer',
+    blank: 'Fill in the missing word', order: 'Put the words in order', match: 'Match each idea to its verse', say: 'Who said it?', deep: 'Go deeper' };
 
   function renderLesson() {
     if (!lesson) return;
-    const L = lesson, step = L.steps[L.at];
+    const L = lesson, step = L.steps[L.at], xp = S.xp - L.xp0;
     $('lessonBar').style.width = Math.round(L.at / L.steps.length * 100) + '%';
+    $('lessonXp').textContent = xp ? '+' + xp + ' XP' : '';
     const body = $('lessonBody'), foot = $('lessonFoot');
     foot.className = 'ls-foot' + (L.checked ? (L.ok ? ' good' : ' bad') : '');
-    if (!step) {                                   // the end
-      const secs = Math.round((Date.now() - L.start) / 1000);
-      body.innerHTML = `<div class="ls-done"><div class="big">🎉</div>
-        <div class="ls-prompt">Lesson complete!</div>
-        <p class="reel-body">${esc(WEEK.sections[L.sec])}</p>
-        <div class="ls-stats"><div class="ls-stat"><b>${L.scored ? Math.round(L.right / L.scored * 100) : 100}%</b><span>Right</span></div>
-          <div class="ls-stat"><b>${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}</b><span>Time</span></div></div>
-        <p class="fam-note">A preview: nothing was saved. In the real thing, this would count toward today's streak, XP and the week's plan.</p></div>`;
-      foot.innerHTML = `<div class="ls-foot-in"><button class="ls-go" data-ls="close">Done</button></div>`;
-      return;
-    }
+    body.dataset.step = step ? step.kind : 'end';
+    if (!step) return renderLessonEnd(body, foot);
     const opt = (v, cls) => `<button class="ls-opt${cls}" data-ls="pick" data-v="${esc(v)}"${L.checked ? ' disabled' : ''}>${esc(v)}</button>`;
     const optCls = v => !L.checked ? (L.picked === v ? ' on' : '') : v === step.right ? ' good' : v === L.picked ? ' bad' : '';
-    let html = '';
+    const opts = () => `<div class="ls-opts">${step.choices.map(c => opt(c, optCls(c))).join('')}</div>`;
+    let html = `<div class="ls-kind">${step.retry ? '↻ Try it again' : step.kind === 'read' ? 'Read' : step.kind === 'puzzle' ? 'Saturday' : LESSON_KIND[step.kind]}</div>`;
     if (step.kind === 'read') {
       const r = step.r, img = r.media && r.media.image;
-      html = `<div class="ls-kind">Read</div><div class="ls-read">
-        ${img ? `<img src="${esc(img.src)}" alt="${esc(img.alt)}">` : ''}
+      html += `<div class="ls-read">
+        ${img ? `<img src="${esc(img.src)}" alt="${esc(img.alt)}"><div class="credit" style="margin:-6px 0 10px">Picture: <a href="${esc(img.link)}" target="_blank" rel="noopener noreferrer">${esc(img.credit)}</a></div>` : ''}
         <div class="ls-prompt">${esc(r.hook)}</div><p class="reel-body">${esc(r.body)}</p>
         <div class="ls-verse">“${esc(r.verse.text)}”<span class="ref">${esc(r.verse.ref)}</span></div></div>`;
-    } else if (step.kind === 'mc') {
-      html = `<div class="ls-kind">Choose the right answer</div><div class="ls-prompt">${esc(step.q)}</div>
-        <div class="ls-opts">${step.choices.map(c => opt(c, optCls(c))).join('')}</div>`;
+    } else if (step.kind === 'reel' || step.kind === 'recall') {
+      html += `<div class="ls-prompt">${esc(step.q)}</div>${step.kind === 'recall' && !step.retry ? '<p class="ls-hint">From earlier this week. No peeking.</p>' : ''}${opts()}`;
     } else if (step.kind === 'blank') {
       const fill = L.checked ? step.right : L.picked || '';
-      html = `<div class="ls-kind">Fill in the missing word</div>
-        <div class="ls-verse" style="margin:6px 0 18px">“${esc(step.before)}<span class="ls-blank">${esc(fill) || '&nbsp;'}</span>${esc(step.after)}”<span class="ref">${esc(step.ref)}</span></div>
-        <div class="ls-opts">${step.choices.map(c => opt(c, optCls(c))).join('')}</div>`;
+      html += `<div class="ls-verse" style="margin:6px 0 18px">“${esc(step.before)}<span class="ls-blank">${esc(fill) || '&nbsp;'}</span>${esc(step.after)}”<span class="ref">${esc(step.ref)}</span></div>${opts()}`;
     } else if (step.kind === 'order') {
-      html = `<div class="ls-kind">Put the words in order</div><div class="ls-prompt" style="font-size:18px">From ${esc(step.ref)}</div>
+      html += `<div class="ls-prompt" style="font-size:18px">From ${esc(step.ref)}</div>
         <div class="ls-line">${L.built.map((ti, n) => `<button class="ls-word" data-ls="unt" data-n="${n}"${L.checked ? ' disabled' : ''}>${esc(step.tiles[ti].w)}</button>`).join('')}</div>
         <div class="ls-words">${step.tiles.map((t, ti) => `<button class="ls-word${L.built.includes(ti) ? ' used' : ''}" data-ls="tile" data-i="${ti}"${L.checked ? ' disabled' : ''}>${esc(t.w)}</button>`).join('')}</div>`;
     } else if (step.kind === 'match') {
       const doneL = new Set(Object.keys(L.matched)), doneR = new Set(Object.values(L.matched));
-      html = `<div class="ls-kind">Match each idea to its verse</div><div class="ls-prompt" style="font-size:18px">Tap an idea, then its verse.</div>
+      html += `<div class="ls-prompt" style="font-size:18px">Tap an idea, then its verse.</div>
         <div class="ls-match"><div class="ls-opts">${step.left.map(a => `<button class="ls-opt${doneL.has(a) ? ' done' : L.sel === a ? ' on' : ''}" data-ls="L" data-v="${esc(a)}"${doneL.has(a) ? ' disabled' : ''}>${esc(a)}</button>`).join('')}</div>
           <div class="ls-opts">${step.right.map(b => `<button class="ls-opt${doneR.has(b) ? ' done' : L.missR === b ? ' miss' : ''}" data-ls="R" data-v="${esc(b)}"${doneR.has(b) ? ' disabled' : ''}>${esc(b)}</button>`).join('')}</div></div>`;
-    } else if (step.kind === 'say') {
-      html = `<div class="ls-kind">Who said it?</div><div class="ls-prompt">“${esc(step.text)}”</div>
-        <div class="ls-opts">${step.choices.map(c => opt(c, optCls(c))).join('')}</div>`;
+    } else if (step.kind === 'say' || step.kind === 'saywarm') {
+      html += `<div class="ls-prompt">“${esc(step.text)}”</div>${opts()}`;
+    } else if (step.kind === 'deep') {
+      const d = step.d, web = /^https:|^lesson$/.test(d.read);
+      const url = d.read === 'lesson' ? WEEK.lesson : web ? d.read : readLink(d.read);
+      html += step.retry ? '' : `<div class="ls-prompt">${d.day === 'friday' ? esc(d.title) : 'Read ' + esc(d.read)}</div>
+        <p class="reel-body">${esc(d.intro)}</p>
+        ${url ? `<a class="deep-open" href="${esc(url)}" target="_blank" rel="noopener noreferrer">Open ${esc(web ? sourceLabel(d.read) : d.read)} ↗</a>` : ''}`;
+      html += `<div class="ls-q">${esc(step.q)}</div>${opts()}`;
+    } else if (step.kind === 'puzzle') {
+      const left = reelsLeft();
+      html += `<div class="ls-prompt">The weekly puzzle</div>
+        <p class="reel-body">${left ? `It opens once the week's reels are answered: ${left === 1 ? '1 is' : left + ' are'} left.`
+          : `Sixteen ideas from this week. Put each one in its lesson section, for ${PUZZLE_XP} XP and a streak freeze.`}</p>`;
     }
     body.innerHTML = html;
     body.scrollTop = 0;
     // The bottom: Continue, Check, or how it went.
     let footHtml;
     if (step.kind === 'read') footHtml = `<button class="ls-go" data-ls="next">Continue</button>`;
-    else if (step.kind === 'match') {
+    else if (step.kind === 'puzzle') {
+      footHtml = reelsLeft() ? `<button class="ls-go" data-ls="next">Continue</button>` : `<button class="ls-go" data-ls="puzzle">Start the puzzle</button>`;
+    } else if (step.kind === 'match') {
       const all = Object.keys(L.matched).length === step.pairs.length;
       footHtml = all ? `<div class="ls-say">${L.misses ? 'All matched' : 'Perfect!'}</div><button class="ls-go" data-ls="next">Continue</button>`
                      : `<button class="ls-go" disabled>Match them all</button>`;
       if (all) foot.className = 'ls-foot good';
     } else if (L.checked) {
       const answer = step.kind === 'order' ? step.words.join(' ') : step.right;
-      footHtml = `<div class="ls-say">${L.ok ? ['Nice!', 'Great job!', 'You got it!'][L.at % 3] : 'Correct answer:'}</div>
+      footHtml = `<div class="ls-say">${L.ok ? ['Nice!', 'Great job!', 'You got it!'][L.at % 3] : 'Correct answer:'}${L.earned ? ` <span class="ls-earn">+${L.earned} XP</span>` : ''}</div>
         ${!L.ok ? `<div class="ls-why" style="font-weight:800;color:#fff">${esc(answer)}</div>` : ''}
         ${step.why ? `<div class="ls-why">${esc(step.why)}</div>` : ''}
+        ${!L.ok ? `<div class="ls-why">It comes back at the end.</div>` : ''}
         <button class="ls-go" data-ls="next">Continue</button>`;
     } else {
       const ready = step.kind === 'order' ? L.built.length === step.tiles.length : L.picked != null;
@@ -4358,18 +4472,44 @@ const TreasureUp = (function () {
     foot.innerHTML = `<div class="ls-foot-in">${footHtml}</div>`;
   }
 
+  function renderLessonEnd(body, foot) {
+    const L = lesson, e = L.entry, secs = Math.round((Date.now() - L.start) / 1000), xp = S.xp - L.xp0, streak = liveStreak();
+    const next = L.practice ? null : lessonNow();
+    const name = e ? entryName(e) : "Today's warm-up";
+    body.innerHTML = `<div class="ls-done"><div class="big">🎉</div>
+      <div class="ls-prompt">${L.practice ? 'Practice done!' : 'Lesson complete!'}</div>
+      <p class="reel-body">${esc(name)}</p>
+      <div class="ls-stats">
+        <div class="ls-stat"><b>+${xp}</b><span>XP</span></div>
+        <div class="ls-stat"><b>${L.scored ? Math.round(L.right / L.scored * 100) : 100}%</b><span>Right first time</span></div>
+        <div class="ls-stat"><b>${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}</b><span>Time</span></div></div>
+      ${streak ? `<p class="ls-streak">🔥 ${streak}-day streak</p>` : ''}
+      ${L.level ? `<p class="ls-news">⭐ Level ${L.level}: ${esc(LEVEL_TITLES[L.level - 1])}</p>` : ''}
+      ${L.rewards.map(t => `<p class="ls-news">🎁 Reward unlocked: ${esc(t)} · show a parent</p>`).join('')}
+      ${L.practice ? `<p class="fam-note">Practice: this part was already answered, so nothing new was earned.</p>` : ''}
+      ${!next && !L.practice ? `<p class="fam-note">That's today's reading done. Come back tomorrow for the next part.</p>` : ''}</div>`;
+    foot.className = 'ls-foot';
+    foot.innerHTML = `<div class="ls-foot-in">${next ? `<button class="ls-go" data-ls="nextlesson">Next: ${esc(entryName(next))}</button>
+      <button class="ls-alt" data-ls="close">Done for now</button>` : `<button class="ls-go" data-ls="close">Done</button>`}</div>`;
+  }
+
   function lessonAction(el) {
     const L = lesson, step = L && L.steps[L.at], act = el.dataset.ls;
     if (!L) return;
     if (act === 'close') return closeLesson();
+    if (act === 'nextlesson') { closeLesson(); return openLesson(''); }
+    if (act === 'puzzle') { closeLesson(); return startGame('puzzle'); }
     if (act === 'next') { L.at++; lessonReset(); return renderLesson(); }
     if (act === 'pick' && !L.checked) L.picked = el.dataset.v;
     else if (act === 'tile' && !L.checked) L.built.push(Number(el.dataset.i));
     else if (act === 'unt' && !L.checked) L.built.splice(Number(el.dataset.n), 1);
     else if (act === 'check' && !L.checked) {
       L.ok = step.kind === 'order' ? L.built.map(i => step.tiles[i].w).join(' ') === step.words.join(' ') : L.picked === step.right;
-      L.checked = true; L.scored++;
-      if (L.ok) L.right++;
+      L.checked = true;
+      if (!step.retry) { L.scored++; if (L.ok) L.right++; }
+      L.earned = recordStep(step, L.picked, L.ok);
+      // A miss comes back at the end, with its choices in a new order.
+      if (!L.ok) L.steps.push(Object.assign({}, step, { retry: true, choices: step.choices && shuffled(step.choices, 'again' + L.steps.length) }));
     } else if (act === 'L') { L.sel = el.dataset.v; L.missR = null; }
     else if (act === 'R' && L.sel) {
       const pair = step.pairs.find(p => p.a === L.sel);
@@ -4936,7 +5076,8 @@ const TreasureUp = (function () {
       const clip = e.target.closest('button.clip');
       if (clip) { playClip(clip); return; }
       if (e.target.closest('[data-jump]')) { goToCard(landingCard(), true); return; }
-      if (e.target.closest('[data-lesson]')) { openLesson(); return; }
+      const ls = e.target.closest('[data-lesson]');
+      if (ls) { openLesson(ls.dataset.lesson); return; }
       const back = e.target.closest('[data-goto]');
       if (back) { goToCard(back.dataset.goto, true); return; }
       if (e.target.closest('[data-board]')) { openBoard(); return; }
@@ -5044,7 +5185,7 @@ const TreasureUp = (function () {
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState !== 'visible') return;
       if (S.daily && S.daily.day !== dayKey()) {
-        rollDay(); save(); renderFeed(); renderHud(); goToCard(landingCard());
+        rollDay(); save(); renderFeed(); renderHud(); goToCard(openingCard());
         document.querySelectorAll('.reel').forEach(r => observer.observe(r));
       }
     });
@@ -5093,7 +5234,7 @@ const TreasureUp = (function () {
     renderFeed();
     renderHud();
     wire();
-    goToCard(landingCard());
+    goToCard(openingCard());
     save();
 
     // …/TreasureUp/#family opens straight to Scripture Showdown: bookmark it on the TV laptop.
@@ -5103,8 +5244,8 @@ const TreasureUp = (function () {
     else if (/^#join(-\d{4})?$/.test(location.hash)) joinForm(location.hash.slice(6));
     // …/TreasureUp-test/#dev: developer mode.
     else if (location.hash === '#dev') openDev();
-    // …/TreasureUp-test/#lesson: today as a short lesson (preview).
-    else if (location.hash === '#lesson' && lessonOffered()) openLesson();
+    // …/#lesson opens today's lesson.
+    else if (location.hash === '#lesson') openLesson('');
 
     familyBoot();
   }

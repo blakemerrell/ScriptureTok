@@ -2,8 +2,9 @@
 
 *"Treasure up in your minds continually the words of life"* (D&C 84:85). Formerly ScriptureTok.
 
-The weekly **Come, Follow Me** lesson as a full-screen, swipeable feed, built
-so the lesson is understood, not just scrolled past.
+The weekly **Come, Follow Me** lesson as a short Duolingo-style lesson each
+day, with the whole week also a full-screen, swipeable feed, built so the
+lesson is understood, not just scrolled past.
 
 Live at **https://blakemerrell.github.io/TreasureUp/**
 
@@ -22,9 +23,10 @@ verse itself, and **one question** answerable from what's on the screen.
 |---|---|
 | **XP only for understanding** | Scrolling, tapping and opening the app earn nothing. A right answer on the first try earns 20 XP. |
 | **One try** | A wrong answer shows the right one and the words in the verse that settle it. |
-| **Daily warm-up** | On a new day, up to 3 earlier questions come back before the feed, missed ones first, with no verse to look at. Remembering one earns 15 XP. |
+| **Daily warm-up** | On a new day, up to 3 earlier questions come back at the start of the day's lesson (and as the feed's first cards), missed ones first, with no verse to look at. Remembering one earns 15 XP. |
 | **Reading bonus** | After a reel's question, a bonus question whose answer is only in the chapter (or the lesson page), never in the app. One try, 25 XP. The link opens the chapter at the top, not at the answer. |
-| **The week's plan** | The cover shows **Today** (today's section, what's left from earlier days first, and how much is done) and the week map: the lesson's sections one a day (Mon–Thu for a four-section week), Friday's deep dive, Saturday's puzzle, Sunday for church and a family game. It's a suggested pace, not a lock: everything stays open and reading ahead is fine. After the warm-up the app opens on today's next card. |
+| **The week's plan** | The app opens on the cover: **Today** (today's section, what's left from earlier days first, and how much is done) and the week map: the lesson's sections one a day (Mon–Thu for a four-section week), Friday's deep dive, Saturday's puzzle, Sunday for church and a family game. It's a suggested pace, not a lock: everything stays open and reading ahead is fine. A finished week opens on its report. |
+| **Today's lesson** | **▶ Start today's lesson** on the Today card plays that part of the plan one screen at a time, Duolingo-style: what's left of the warm-up, then for each reel read it (picture, text, verse), answer its question and fill in a missing word of the verse; then put a phrase of a verse in order, match each idea to its verse, and Go deeper. Friday's lesson is the two deep-dive pieces; Saturday's opens the puzzle. Each row of the week map opens that part's lesson. The lesson records the same answers as the cards, so XP, the streak, the plan and the family's copy all see them and nothing pays twice. The practice steps (fill in the word, order, match, who said it) are built from the week's checked text and pay nothing. A missed step comes back at the end until he gets it right; only the first try counts. Leaving partway keeps what he answered and reopening picks up there; a finished part replays as practice. The last screen shows XP, % right first time, time, the streak, and any new level or reward. Or `…/#lesson`. The swipe feed is one tap away ("or swipe through the reels") for looking back, clips, bonus questions and notes. |
 | **Go deeper** | After each section's reels, a longer reading the lesson points to ("Read Isaiah 14:12–17") with one question only that reading answers; it opens once the section's reels are answered. Friday adds two pieces: the children's part of the lesson and that month's Friend, For the Strength of Youth or Liahona. 25 XP each, first try, checked by `tools/verify.mjs` like the bonuses (the answer must be inside the passage it asks him to read). |
 | **Pictures and clips** | A picture on each reel it fits (Church Media Library art or public-domain photos, credited and linked), shown whole and undimmed at the top of the reel with the text below it. At most 2 clips a week, only where they show something the words can't. Clips load nothing until tapped, then play just the chosen stretch in YouTube's privacy-mode player. |
 | **Streak** | Days in a row with at least one question answered. A **streak freeze** (earned by solving the weekly puzzle) covers one missed day and is used automatically; the count shows next to the streak. |
