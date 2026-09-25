@@ -124,6 +124,11 @@
   /* Safe-area offsets as plain CSS: `calc(var(--sab)+10px)` without
      spaces is invalid, so these can't be Tailwind arbitrary values. */
   .hud-pad  { padding-top: calc(var(--sat) + 10px); }
+  /* Long level titles ("Prophet's Apprentice") wrap to two lines instead of
+     squeezing the XP bar out of the top row; narrow phones get tighter gaps. */
+  #levelTitle { max-width: 72px; line-height: 1.1; }
+  #hudRow { gap: 10px; }
+  @media (max-width: 380px) { #hudRow { gap: 6px; } }
   .hint-pos { bottom: calc(var(--sab) + 14px); }
 
   /* The text column. A reel with its question can be taller than a small
@@ -457,7 +462,7 @@
 
   /* ---- Family: people, join links and the family chat ---- */
   .hud-dot { position: absolute; top: 1px; right: 1px; width: 9px; height: 9px; border-radius: 99px; background: var(--gold); box-shadow: 0 0 0 2px #0a0a14; }
-  .hud-dot[hidden] { display: none; }
+  .hud-dot[hidden], #famBtn[hidden], #chatBtn[hidden] { display: none; }
   .fam-wrap { width: 100%; max-width: 560px; margin: 14px auto 0; }
   .fam-wrap label { display: block; margin-top: 12px; font-size: 12px; color: rgba(255,255,255,.6); }
   .fam-tabs { display: flex; gap: 8px; margin-bottom: 14px; }
@@ -529,7 +534,7 @@
 
 <!-- ==================== TOP HUD: level, XP bar, streak ==================== -->
 <header class="fixed top-0 left-0 right-0 z-50 px-4 hud-pad pb-3 pointer-events-none">
-  <div class="flex items-center gap-3">
+  <div id="hudRow" class="flex items-center gap-3">
 
     <!-- Level badge -->
     <div class="flex items-center gap-2.5 rounded-full bg-black/45 backdrop-blur-md px-2.5 py-1.5 ring-1 ring-white/15">
@@ -553,8 +558,12 @@
     <!-- Games -->
     <button id="gamesBtn" class="pointer-events-auto grid place-items-center w-9 h-9 rounded-full bg-black/45 backdrop-blur-md ring-1 ring-white/15 shrink-0 text-lg leading-none" aria-label="Games">🎮</button>
 
-    <!-- Family: everyone's progress and the family chat. The dot means a new message. -->
-    <button id="famBtn" class="relative pointer-events-auto grid place-items-center w-9 h-9 rounded-full bg-black/45 backdrop-blur-md ring-1 ring-white/15 shrink-0 text-lg leading-none" aria-label="Family">👪<span id="famDot" class="hud-dot" hidden></span></button>
+    <!-- Family: sign in, or join with a link. Once this device is in a
+         family, 💬 takes its place (the family screen has People and Chat). -->
+    <button id="famBtn" class="relative pointer-events-auto grid place-items-center w-9 h-9 rounded-full bg-black/45 backdrop-blur-md ring-1 ring-white/15 shrink-0 text-lg leading-none" aria-label="Family">👪</button>
+
+    <!-- Family chat. The dot means a new message. -->
+    <button id="chatBtn" class="relative pointer-events-auto grid place-items-center w-9 h-9 rounded-full bg-black/45 backdrop-blur-md ring-1 ring-white/15 shrink-0 text-lg leading-none" aria-label="Family chat" hidden>💬<span id="chatDot" class="hud-dot" hidden></span></button>
 
     <!-- Study streak: days in a row he answered at least one question -->
     <div class="flex items-center gap-1 rounded-full bg-black/45 backdrop-blur-md px-2.5 py-1.5 ring-1 ring-white/15 shrink-0" title="Days in a row with a question answered">
@@ -2805,6 +2814,12 @@ const TreasureUp = (function () {
   }
   function saveFam() {
     try { F ? localStorage.setItem(FAM_KEY, JSON.stringify(F)) : localStorage.removeItem(FAM_KEY); } catch (e) {}
+    famButtons();
+  }
+  // One family button on the main page: 👪 to sign in or join, then 💬.
+  function famButtons() {
+    $('famBtn').hidden = !!F;
+    $('chatBtn').hidden = !F;
   }
   const store = (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} };
   const stored = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
@@ -2826,6 +2841,7 @@ const TreasureUp = (function () {
   // save progress and watch for new messages. A join link or an email
   // sign-in link opens the family screen.
   function familyBoot() {
+    famButtons();
     bootState = JSON.stringify(S);
     let restored = null;
     try { restored = sessionStorage.getItem('treasureup.restoredXp'); sessionStorage.removeItem('treasureup.restoredXp'); } catch (e) {}
@@ -2906,7 +2922,7 @@ const TreasureUp = (function () {
     stopFamWatch();
     if (famLatestOff) { famLatestOff(); famLatestOff = null; }
     F = null; saveFam();
-    $('famDot').hidden = true;
+    $('chatDot').hidden = true;
   }
 
   /* ----- progress: saved to the family, restored on a new device ----- */
@@ -2975,15 +2991,15 @@ const TreasureUp = (function () {
     const reading = fam && fam.tab === 'chat' && F && !fam.invite;
     if (reading && famLatest.at) store('treasureup.chatSeen', String(famLatest.at));
     const unread = !!F && !famLatest.mine && famLatest.at > (Number(stored('treasureup.chatSeen')) || 0);
-    $('famDot').hidden = !unread;
+    $('chatDot').hidden = !unread;
     const tabDot = $('famChatDot');
     if (tabDot) tabDot.hidden = !unread;
   }
 
   /* ----- the family screen ----- */
 
-  function openFam() {
-    if (!fam) fam = { tab: 'people', busy: FIREBASE_CONFIG ? 'Connecting…' : null, err: null, members: [], progress: [],
+  function openFam(tab) {
+    if (!fam) fam = { tab: tab || 'people', busy: FIREBASE_CONFIG ? 'Connecting…' : null, err: null, members: [], progress: [],
                       messages: [], hidden: {}, invites: [], unsub: [], watching: null, link: null, confirm: null, sent: null };
     $('fam').hidden = false;
     renderFam();
@@ -3641,7 +3657,8 @@ const TreasureUp = (function () {
     });
 
     // Family: people, join links and the chat.
-    $('famBtn').addEventListener('click', openFam);
+    $('famBtn').addEventListener('click', () => openFam('people'));
+    $('chatBtn').addEventListener('click', () => openFam('chat'));
     $('famExit').addEventListener('click', closeFam);
     $('fam').addEventListener('click', e => {
       const el = e.target.closest('[data-fam]');
