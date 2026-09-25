@@ -533,11 +533,27 @@
   .deep-open:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 
   /* Week report on the last card. */
-  .report-row { display: flex; gap: 10px; align-items: baseline; font-size: 13.5px; line-height: 1.35; }
-  .report-row .st { flex: 0 0 16px; font-weight: 900; text-align: center; }
-  .st-right { color: var(--right); }
-  .st-wrong { color: var(--wrong); }
-  .st-open  { color: rgba(255,255,255,.4); }
+  .kpis { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
+  .kpi { padding: 12px 14px; border-radius: 16px; background: rgba(0,0,0,.3); border: 1px solid rgba(255,255,255,.14); }
+  .kpi .k-top { display: flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: rgba(255,255,255,.7); }
+  .kpi .k-num { margin-top: 4px; font-size: 32px; font-weight: 900; line-height: 1.05; font-variant-numeric: tabular-nums; }
+  .kpi .k-num small { font-size: 16px; font-weight: 800; color: rgba(255,255,255,.5); }
+  .kpi .k-num.word { font-size: 22px; padding: 5px 0 3px; }
+  .kpi .k-bar { margin-top: 9px; height: 7px; border-radius: 999px; background: rgba(255,255,255,.14); overflow: hidden; }
+  .kpi .k-bar div { height: 100%; border-radius: 999px; background: var(--gold); }
+  .kpi.full { border-color: rgba(52,211,153,.6); }
+  .kpi.full .k-bar div { background: var(--right); }
+  .kpi .k-note { margin-top: 6px; font-size: 12px; color: rgba(255,255,255,.6); }
+  .report-row {
+    display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 2px; cursor: pointer;
+    font: inherit; font-size: 14px; line-height: 1.3; text-align: left; color: rgba(255,255,255,.88);
+    background: none; border: 0; border-bottom: 1px solid rgba(255,255,255,.08);
+  }
+  .report-row:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+  .report-row .st { flex: 0 0 24px; height: 24px; border-radius: 999px; display: grid; place-items: center; font-size: 12px; font-weight: 900; border: 1.5px solid rgba(255,255,255,.3); }
+  .report-row.is-right .st { background: var(--right); border-color: var(--right); color: #052e16; }
+  .report-row.is-wrong .st { background: var(--wrong); border-color: var(--wrong); color: #3b0512; }
+  .report-row .go { margin-left: auto; color: rgba(255,255,255,.35); }
 
   /* Position dots down the right edge. */
   #rail { position: fixed; right: 6px; top: 50%; transform: translateY(-50%);
@@ -1051,45 +1067,75 @@ const TreasureUp = (function () {
     </article>`;
   }
 
+  // The week's scoreboard: big numbers for how far he's got, then every
+  // reel as a checklist he can tap to go back to.
   function endHtml(i) {
+    const total = WEEK.reels.length;
     const answered = WEEK.reels.filter(r => S.answers[r.id]);
     const right = answered.filter(r => S.answers[r.id].right).length;
-    const total = WEEK.reels.length;
-    const headline = answered.length === total
-      ? `You got ${right} of ${total} right the first time.`
-      : `${answered.length} of ${total} questions answered so far.`;
     const allBonus = WEEK.reels.flatMap(r => bonusesOf(r).map((_, n) => bonusKey(r.id, n)));
     const found = allBonus.filter(k => S.bonus[k] && S.bonus[k].right).length;
-    const bonusLine = allBonus.length
-      ? `<p class="reel-body mt-3"><b class="text-amber-300">Bonus:</b> found ${found} of ${allBonus.length} answers in the reading.</p>`
-      : '';
-    const deepRight = deepItems().filter(d => S.deep[d.id] && S.deep[d.id].right).length;
-    const deepLine = deepItems().length
-      ? `<p class="reel-body mt-2"><b class="text-amber-300">Went deeper:</b> ${deepRight} of ${deepItems().length} readings.</p>`
-      : '';
+    const deep = deepItems(), deepRight = deep.filter(d => S.deep[d.id] && S.deep[d.id].right).length;
+    const notes = WEEK.reels.filter(r => S.notes[r.id]).length;
+    const pz = S.puzzle && S.puzzle.week === WEEK.title ? S.puzzle : null;
+    const left = total - answered.length;
+    const done = !left;
+    const headline = !answered.length ? 'Your week starts here'
+      : !done ? `${answered.length} of ${total} reels done`
+      : right === total ? 'A perfect week!' : 'You finished the week!';
+    const sub = !answered.length ? 'Answer a reel and watch these fill up.'
+      : !done ? `${left} to go. Every right answer counts.`
+      : right === total ? `All ${total} right the first time.` : `${right} of ${total} right the first time. Missed ones come back in the warm-ups.`;
+
+    const tile = (icon, label, n, of) => `
+      <div class="kpi${of && n >= of ? ' full' : ''}">
+        <div class="k-top"><span>${icon}</span>${label}</div>
+        <div class="k-num">${n}<small> / ${of}</small></div>
+        <div class="k-bar"><div style="width:${of ? Math.round(n / of * 100) : 0}%"></div></div>
+      </div>`;
+    const word = (icon, label, big, note, full) => `
+      <div class="kpi${full ? ' full' : ''}">
+        <div class="k-top"><span>${icon}</span>${label}</div>
+        <div class="k-num word">${big}</div>
+        <div class="k-note">${note}</div>
+      </div>`;
+    const puzzle = left ? word('🧩', 'Puzzle', '🔒', `Opens when all ${total} reels are done`)
+      : pz && pz.status === 'won' ? word('🧩', 'Puzzle', 'Solved!', 'Nice work', true)
+      : pz && pz.status === 'lost' && pz.day === dayKey() ? word('🧩', 'Puzzle', 'Tomorrow', 'Out of tries for today')
+      : word('🧩', 'Puzzle', 'Ready', 'It unlocked. Give it a try!');
+    const tiles = [
+      tile('📖', 'Reels', answered.length, total),
+      tile('✅', 'Right first time', right, total),
+      allBonus.length ? tile('🔎', 'Bonus finds', found, allBonus.length) : '',
+      deep.length ? tile('🧭', 'Went deeper', deepRight, deep.length) : '',
+      word('✏️', 'Notes', String(notes), notes ? `${notes * NOTE_XP} XP from notes` : 'Write one after any reel'),
+      puzzle
+    ].join('');
 
     const rows = WEEK.reels.map(r => {
       const a = S.answers[r.id];
-      const st = !a ? '<span class="st st-open">•</span>'
-               : a.right ? '<span class="st st-right">✓</span>'
-               : '<span class="st st-wrong">✕</span>';
-      return `<div class="report-row">${st}<span class="text-white/85">${esc(r.hook)}</span></div>`;
+      return `<button class="report-row${a ? (a.right ? ' is-right' : ' is-wrong') : ''}" data-goto="${esc(r.id)}">
+        <span class="st">${a ? (a.right ? '✓' : '✕') : ''}</span><span>${esc(r.hook)}</span><span class="go">›</span></button>`;
     }).join('');
+
+    const next = landingCard();
+    const nextName = next === 'end' ? '' : next.startsWith('recall-') || next.startsWith('say-') ? "Today's warm-up"
+      : next.startsWith('deep-') ? 'Go deeper' : next === 'puzzle' ? 'The weekly puzzle'
+      : next === 'intro' ? "This week's plan" : (reelById(next) || {}).hook || '';
 
     return `
     <article class="reel" data-id="end" data-index="${i}">
       ${backdrop({ gradient: 'linear-gradient(150deg,#052e16 0%,#065f46 48%,#0f766e 100%)', blobA: 'rgba(110,231,183,.35)', blobB: 'rgba(0,0,0,.45)' })}
       <div class="relative z-20 px-5 pr-7 content-pad">
-        <div class="eyebrow">End of this week's feed</div>
+        <div class="eyebrow">Your week · ${esc(WEEK.title)}</div>
         <h2 class="reel-hook" id="endHeadline">${esc(headline)}</h2>
-        <div class="mt-2 space-y-1.5" id="endRows">${rows}</div>
-        ${bonusLine}
-        ${deepLine}
-        ${notesLine()}
-        <p class="reel-body mt-4">Missed ones come back in the daily warm-ups.</p>
-        <p class="reel-body mt-2">The feed is a start. This week's reading is <b class="text-amber-300">${esc(WEEK.reference)}</b>.</p>
+        <p class="reel-body">${esc(sub)}</p>
+        <div class="kpis">${tiles}</div>
+        ${nextName ? `<button class="board-link" data-jump>Keep going ↓<small>Next: ${esc(nextName)}</small></button>` : ''}
+        <div class="eyebrow" style="margin-top:22px">Every reel · tap one to go back</div>
+        <div class="mt-1" id="endRows">${rows}</div>
         <a href="${esc(WEEK.lesson)}" target="_blank" rel="noopener noreferrer"
-           class="mt-4 inline-block text-[13px] font-semibold text-white/75 underline decoration-white/30">Open this week's lesson ↗</a>
+           class="mt-5 inline-block text-[13px] font-semibold text-white/75 underline decoration-white/30">Read the whole lesson: ${esc(WEEK.reference)} ↗</a>
         ${boardLinkHtml()}
         ${rewardsHtml()}
       </div>
@@ -1867,11 +1913,6 @@ const TreasureUp = (function () {
         <div class="note-actions"><button class="note-btn" data-note-save="${esc(r.id)}">Save note</button></div>
         <p class="note-help">Your parents can read your notes.</p>
       </div>`;
-  }
-
-  function notesLine() {
-    const n = WEEK.reels.filter(r => S.notes[r.id]).length;
-    return `<p class="reel-body mt-2"><b class="text-amber-300">Notes:</b> you wrote ${n} this week.</p>`;
   }
 
   function saveNote(id) {
@@ -4072,6 +4113,8 @@ const TreasureUp = (function () {
       const clip = e.target.closest('button.clip');
       if (clip) { playClip(clip); return; }
       if (e.target.closest('[data-jump]')) { goToCard(landingCard(), true); return; }
+      const back = e.target.closest('[data-goto]');
+      if (back) { goToCard(back.dataset.goto, true); return; }
       if (e.target.closest('[data-board]')) { openBoard(); return; }
       const g = e.target.closest('[data-game]');
       if (g) { startGame(g.dataset.game); return; }
