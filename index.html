@@ -515,6 +515,23 @@
   .chat-form { display: flex; align-items: flex-end; gap: 8px; margin-top: 14px; }
   .chat-form textarea { flex: 1; min-height: 46px; max-height: 140px; resize: vertical; line-height: 1.35; }
 
+  /* ---- The week's plan on the cover, and the Go-deeper cards ---- */
+  .today { margin-top: 16px; padding: 14px 16px; border-radius: 16px; background: rgba(0,0,0,.35); border: 1.5px solid rgba(252,211,77,.55); }
+  .today-head { margin-top: 4px; font-weight: 900; font-size: 19px; line-height: 1.2; }
+  .today-sub { margin-top: 3px; font-size: 13px; color: rgba(255,255,255,.72); }
+  .today-bar { margin-top: 9px; height: 6px; border-radius: 999px; background: rgba(255,255,255,.14); overflow: hidden; }
+  .today-bar div { height: 100%; border-radius: 999px; background: var(--gold); }
+  .today .board-link { margin-top: 12px; }
+  .week-map { margin-top: 16px; }
+  .wm-row { display: grid; grid-template-columns: 34px 1fr auto; gap: 8px; align-items: baseline; padding: 6px 0; font-size: 13.5px; line-height: 1.3; color: rgba(255,255,255,.82); border-bottom: 1px solid rgba(255,255,255,.08); }
+  .wm-day { font-size: 12px; font-weight: 800; color: rgba(255,255,255,.5); }
+  .wm-row.now .wm-day, .wm-row.now .wm-name { color: var(--gold); font-weight: 800; }
+  .wm-row.done .wm-name { color: rgba(255,255,255,.5); }
+  .wm-mark { font-size: 12px; font-weight: 900; color: rgba(255,255,255,.6); }
+  .wm-row.done .wm-mark { color: var(--right); }
+  .deep-open { display: inline-block; margin-top: 14px; padding: 10px 16px; border-radius: 999px; font-size: 14px; font-weight: 800; color: #1c1406; background: var(--gold); text-decoration: none; }
+  .deep-open:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
   /* Week report on the last card. */
   .report-row { display: flex; gap: 10px; align-items: baseline; font-size: 13.5px; line-height: 1.35; }
   .report-row .st { flex: 0 0 16px; font-weight: 900; text-align: center; }
@@ -737,6 +754,7 @@ const TreasureUp = (function () {
     recall: {},   // reelId -> { last, misses } last day it came back, times missed
     daily: null,  // { day, ids: [...], done: { reelId: right } }
     freezes: 0,   // streak freezes: each covers one missed day, used automatically
+    deep: {},     // Go-deeper questions: id -> { right, day, picked }  first try
     puzzle: null, // this week's puzzle: { week, day, solved: [groups], mistakes, status, rewarded }
     sayings: {},  // Who said it?: sayingId -> { right }  first try
     notes: {},    // his journal: reelId -> { text, day, hook, ref, rewarded }; kept across weeks
@@ -1021,11 +1039,9 @@ const TreasureUp = (function () {
         <div class="eyebrow">Come, Follow Me · ${esc(WEEK.dates)}</div>
         <h2 class="reel-hook" style="font-size:clamp(28px,4.4vh,38px)">${esc(WEEK.title)}</h2>
         <p class="text-[15px] font-bold text-amber-300">${esc(WEEK.reference)}</p>
-        <div class="mt-5 space-y-2.5 reel-body">
-          <p>${WEEK.reels.length} reels. Each one ends with a quick question.</p>
-          <p>You only earn XP for right answers.</p>
-          <p>Questions you miss come back in the daily warm-ups.</p>
-        </div>
+        ${todayHtml()}
+        ${weekMapHtml()}
+        <p class="reel-body mt-4" style="font-size:13px;color:rgba(255,255,255,.7)">XP only comes from right answers. Questions you miss come back in the daily warm-ups.</p>
         <a href="${esc(WEEK.lesson)}" target="_blank" rel="noopener noreferrer"
            class="mt-5 inline-block text-[13px] font-semibold text-white/75 underline decoration-white/30">Open this week's lesson ↗</a>
         ${trailHtml()}
@@ -1047,6 +1063,10 @@ const TreasureUp = (function () {
     const bonusLine = allBonus.length
       ? `<p class="reel-body mt-3"><b class="text-amber-300">Bonus:</b> found ${found} of ${allBonus.length} answers in the reading.</p>`
       : '';
+    const deepRight = deepItems().filter(d => S.deep[d.id] && S.deep[d.id].right).length;
+    const deepLine = deepItems().length
+      ? `<p class="reel-body mt-2"><b class="text-amber-300">Went deeper:</b> ${deepRight} of ${deepItems().length} readings.</p>`
+      : '';
 
     const rows = WEEK.reels.map(r => {
       const a = S.answers[r.id];
@@ -1064,6 +1084,7 @@ const TreasureUp = (function () {
         <h2 class="reel-hook" id="endHeadline">${esc(headline)}</h2>
         <div class="mt-2 space-y-1.5" id="endRows">${rows}</div>
         ${bonusLine}
+        ${deepLine}
         ${notesLine()}
         <p class="reel-body mt-4">Missed ones come back in the daily warm-ups.</p>
         <p class="reel-body mt-2">The feed is a start. This week's reading is <b class="text-amber-300">${esc(WEEK.reference)}</b>.</p>
@@ -1082,7 +1103,13 @@ const TreasureUp = (function () {
     const recall = S.daily.ids.map(reelById).filter(Boolean);
     recall.forEach((r, n) => cards.push(i => recallHtml(r, n + 1, recall.length, i)));
     if (S.daily.say && (WEEK.sayings || []).some(x => x.id === S.daily.say)) cards.push(sayRecallHtml);
-    WEEK.reels.forEach(r => cards.push(i => reelHtml(r, i)));
+    WEEK.reels.forEach((r, n) => {
+      cards.push(i => reelHtml(r, i));
+      if (!WEEK.reels.slice(n + 1).some(x => x.section === r.section)) {   // the section's last reel
+        deepItems().filter(d => d.section === r.section).forEach(d => cards.push(i => deepHtml(d, i)));
+      }
+    });
+    fridayItems().forEach(d => cards.push(i => deepHtml(d, i)));
     if (WEEK.puzzle) cards.push(puzzleCardHtml);
     cards.push(endHtml);
 
@@ -1096,13 +1123,14 @@ const TreasureUp = (function () {
   const warmupsLeft = () =>
     S.daily.ids.filter(id => !S.daily.done[id]).map(id => 'recall-' + id)
       .concat(S.daily.say && !S.daily.sayDone ? ['say-' + S.daily.say] : []);
+  // After the warm-up: today's part of the plan (anything left from earlier
+  // days first), then anything else left, since reading ahead is fine.
   function landingCard() {
     const warm = warmupsLeft();
     if (warm.length) return warm[0];
     if (!WEEK.reels.some(r => S.answers[r.id])) return 'intro';
-    const next = WEEK.reels.find(r => !S.answers[r.id]);
-    if (next) return next.id;
-    return WEEK.puzzle && puzzleState().status !== 'won' ? 'puzzle' : 'end';
+    const next = todayItems().find(x => !x.done) || weekPlan().flat().flatMap(entryItems).find(x => !x.done);
+    return next ? next.card : 'end';
   }
   function goToCard(id, smooth) {
     const el = document.querySelector('.reel[data-id="' + id + '"]');
@@ -1112,7 +1140,7 @@ const TreasureUp = (function () {
   function keepGoingHtml() {
     if (warmupsLeft().length) return '';
     const next = landingCard();
-    const where = next === 'puzzle' ? 'the weekly puzzle' : next === 'end' ? 'your week' : 'your next reel';
+    const where = next === 'end' ? 'your week' : todayItems().some(x => x.card === next) ? "today's reading" : 'the rest of the week';
     return `<button class="board-link" data-jump>Keep going ↓<small>On to ${where}</small></button>`;
   }
 
@@ -1202,6 +1230,7 @@ const TreasureUp = (function () {
   function answer(quiz, picked) {
     const id = quiz.dataset.quiz;
     const kind = quiz.dataset.kind;
+    if (kind === 'deep') return answerDeep(quiz, id, picked);
     const r = reelById(id);
     if (!r) return;
     const n = Number(quiz.dataset.n);
@@ -1226,6 +1255,8 @@ const TreasureUp = (function () {
       redrawCard(id, reelHtml(r, Number(card.dataset.index)));
       refreshEnd();
       refreshPuzzleCard();
+      refreshDeep(r.section);
+      refreshIntro();
     } else {
       if (S.daily.done[id]) return;
       S.daily.done[id] = { right, picked };
@@ -1237,6 +1268,158 @@ const TreasureUp = (function () {
       const n = S.daily.ids.indexOf(id) + 1;
       redrawCard('recall-' + id, recallHtml(r, n, S.daily.ids.length, Number(card.dataset.index)));
     }
+    renderHud();
+    save();
+  }
+
+  /* ---------------- the week's plan and Go deeper ---------------- */
+
+  // A suggested pace for the week, Monday to Sunday: the lesson's sections
+  // one a day, Friday's deep dive (the children's part of the lesson and a
+  // magazine piece), Saturday's puzzle, and Sunday for church and a family
+  // game. Nothing is locked: reading ahead is fine.
+  const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  const deepItems = () => WEEK.deep || [];
+  const fridayItems = () => deepItems().filter(d => d.day === 'friday');
+  function weekPlan() {
+    const n = WEEK.sections.length, days = DAY_NAMES.map(() => []);
+    WEEK.sections.forEach((_, i) => days[n <= 5 ? i : Math.floor(i * 5 / n)].push({ kind: 'section', i }));
+    if (fridayItems().length) days[n <= 4 ? 4 : 5].push({ kind: 'friday' });
+    if (WEEK.puzzle) days[5].push({ kind: 'puzzle' });
+    days[6].push({ kind: 'family' });
+    return days;
+  }
+  function todayIndex() {
+    const start = weekStart(WEEK.dates);
+    return start ? Math.max(0, Math.min(6, dayDiff(start, dayKey()))) : 0;
+  }
+  // The cards one part of the plan asks for, and whether each is done.
+  function entryItems(e) {
+    if (e.kind === 'section') {
+      return WEEK.reels.filter(r => r.section === e.i).map(r => ({ card: r.id, done: !!S.answers[r.id] }))
+        .concat(deepItems().filter(d => d.section === e.i).map(d => ({ card: 'deep-' + d.id, done: !!S.deep[d.id] })));
+    }
+    if (e.kind === 'friday') return fridayItems().map(d => ({ card: 'deep-' + d.id, done: !!S.deep[d.id] }));
+    if (e.kind === 'puzzle') return [{ card: 'puzzle', done: !!S.puzzle && S.puzzle.week === WEEK.title && S.puzzle.status === 'won' }];
+    return [];
+  }
+  const entryName = e => e.kind === 'section' ? WEEK.sections[e.i]
+    : e.kind === 'friday' ? "Deep dive: the children's lesson and a magazine piece"
+    : e.kind === 'puzzle' ? 'The weekly puzzle' : 'Church, then a family game';
+  // Today's part: anything unfinished from earlier days, then today's.
+  function todayEntries() {
+    const plan = weekPlan(), t = todayIndex();
+    const behind = plan.slice(0, t).flat().filter(e => entryItems(e).some(x => !x.done));
+    return behind.concat(plan[t].filter(e => e.kind !== 'family'));
+  }
+  const todayItems = () => todayEntries().flatMap(entryItems);
+
+  function todayHtml() {
+    const t = todayIndex(), entries = todayEntries(), items = entries.flatMap(entryItems);
+    const done = items.filter(x => x.done).length;
+    const now = entries.find(e => entryItems(e).some(x => !x.done));
+    const behind = now && weekPlan()[t].indexOf(now) < 0;
+    let head, sub;
+    if (!items.length) {
+      head = t === 6 ? 'Church day' : 'Catch up, or read ahead';
+      sub = t === 6 ? 'Go to church, then play Scripture Showdown or a live game with the family.' : 'Nothing new is planned for today.';
+    } else if (!now) {
+      head = "Today's reading is done";
+      sub = 'Keep going if you like, or come back tomorrow.';
+    } else {
+      head = entryName(now);
+      sub = `${behind ? 'Catching up first · ' : ''}${done} of ${items.length} done today`;
+    }
+    const warm = warmupsLeft().length;
+    return `
+      <div class="today">
+        <div class="eyebrow" style="color:var(--gold)">Today · ${DAY_NAMES[t]}</div>
+        <div class="today-head">${esc(head)}</div>
+        <div class="today-sub">${esc(sub)}</div>
+        ${items.length ? `<div class="today-bar"><div style="width:${Math.round(done / items.length * 100)}%"></div></div>` : ''}
+        ${now || warm ? `<button class="board-link" data-jump>${warm ? "Start with today's warm-up ↓" : "Start today's reading ↓"}</button>` : ''}
+      </div>`;
+  }
+
+  function weekMapHtml() {
+    const t = todayIndex();
+    const rows = weekPlan().map((entries, d) => (entries.length ? entries : [null]).map(e => {
+      const items = e ? entryItems(e) : [], done = items.filter(x => x.done).length;
+      const all = items.length && done === items.length;
+      const mark = all ? '✓' : done ? done + '/' + items.length : '';
+      return `<div class="wm-row${d === t ? ' now' : ''}${all ? ' done' : ''}">
+        <span class="wm-day">${DAY_NAMES[d].slice(0, 3)}</span>
+        <span class="wm-name">${esc(e ? entryName(e) : 'Catch up, or read ahead')}</span>
+        <span class="wm-mark">${mark}</span></div>`;
+    }).join('')).join('');
+    return `<div class="week-map"><div class="eyebrow">This week</div>${rows}</div>`;
+  }
+
+  function refreshIntro() {
+    const el = document.querySelector('.reel[data-id="intro"]');
+    if (el) redrawCard('intro', introHtml(Number(el.dataset.index)));
+  }
+  function refreshDeep(section) {
+    deepItems().filter(d => d.section === section).forEach(d => {
+      const el = document.querySelector('.reel[data-id="deep-' + d.id + '"]');
+      if (el) redrawCard('deep-' + d.id, deepHtml(d, Number(el.dataset.index)));
+    });
+  }
+
+  // Go deeper: a longer reading for one section (the one the lesson points
+  // to), or one of Friday's pieces, with a question only the reading
+  // answers. A section's reading opens once its reels are answered.
+  function deepHtml(d, i) {
+    const friday = d.day === 'friday';
+    const left = friday ? 0 : WEEK.reels.filter(r => r.section === d.section && !S.answers[r.id]).length;
+    const web = /^https:|^lesson$/.test(d.read);
+    const url = d.read === 'lesson' ? WEEK.lesson : web ? d.read : readLink(d.read);
+    const name = web ? sourceLabel(d.read) : d.read;
+    const a = S.deep[d.id];
+    return `
+    <article class="reel" data-id="deep-${esc(d.id)}" data-index="${i}">
+      ${backdrop({ gradient: 'linear-gradient(160deg,#0b1024 0%,#1e3a8a 62%,#3b1d6e 100%)', blobA: 'rgba(147,197,253,.3)', blobB: 'rgba(0,0,0,.45)' })}
+      <div class="relative z-20 px-5 pr-7 content-pad">
+        <div class="eyebrow">${friday ? 'Friday deep dive' : 'Go deeper · ' + esc(WEEK.sections[d.section])}</div>
+        <h2 class="reel-hook">${friday ? esc(d.title) : 'Read ' + esc(d.read)}</h2>
+        <p class="reel-body">${esc(d.intro)}</p>
+        ${url ? `<a class="deep-open" href="${esc(url)}" target="_blank" rel="noopener noreferrer">Open ${esc(name)} ↗</a>` : ''}
+        ${left ? `<p class="reel-body mt-4" style="color:rgba(255,255,255,.62)">Answer this part's ${left === 1 ? 'last reel' : left + ' reels'} first, then the question opens.</p>`
+               : deepQuizHtml(d, a ? a.picked : null)}
+      </div>
+    </article>`;
+  }
+
+  function deepQuizHtml(d, picked) {
+    const done = picked != null;
+    const buttons = choicesFor(d, 'deep|' + d.id).map(c => {
+      const right = c === d.right;
+      const cls = done ? (right ? ' is-right' : c === picked ? ' is-wrong' : '') : '';
+      const mark = done ? (right ? '✓' : c === picked ? '✕' : '') : '';
+      return `<button class="choice${cls}" data-choice="${esc(c)}" ${done ? 'disabled' : ''}>
+                <span class="mark">${mark}</span><span>${esc(c)}</span></button>`;
+    }).join('');
+    const why = !done ? '' : `<p class="quiz-why">${picked === d.right ? '<b class="ok">Right.</b> ' : '<b class="no">Not quite.</b> '}${esc(d.why)}</p>`;
+    return `
+      <div class="quiz bonus${done ? ' done' : ''}" data-quiz="${esc(d.id)}" data-kind="deep">
+        <div class="eyebrow" style="color:var(--gold)">Find it in the reading · +${XP.bonus} XP</div>
+        <p class="quiz-q">${esc(d.q)}</p>
+        <div class="quiz-choices">${buttons}</div>
+        ${why}
+      </div>`;
+  }
+
+  function answerDeep(quiz, id, picked) {
+    const d = deepItems().find(x => x.id === id);
+    if (!d || S.deep[id]) return;                  // first try only
+    const right = picked === d.right;
+    S.deep[id] = { right, picked, day: dayKey() };
+    markStudied();
+    if (right) grantXp(XP.bonus, 'Went deeper');
+    const card = quiz.closest('.reel');
+    redrawCard('deep-' + id, deepHtml(d, Number(card.dataset.index)));
+    refreshEnd();
+    refreshIntro();
     renderHud();
     save();
   }
@@ -3117,11 +3300,12 @@ const TreasureUp = (function () {
     let gained = Math.max(0, (L.xp || 0) - (B.xp || 0));
     for (const k in L.answers || {}) if (!has(B.answers, k) && has(R.answers, k) && L.answers[k].right) gained -= XP.firstTry;
     for (const k in L.bonus || {}) if (!has(B.bonus, k) && has(R.bonus, k) && L.bonus[k].right) gained -= XP.bonus;
+    for (const k in L.deep || {}) if (!has(B.deep, k) && has(R.deep, k) && L.deep[k].right) gained -= XP.bonus;
     for (const k in L.notes || {}) {
       if (L.notes[k].rewarded && !(has(B.notes, k) && B.notes[k].rewarded) && has(R.notes, k) && R.notes[k].rewarded) gained -= NOTE_XP;
     }
     M.xp = (R.xp || 0) + Math.max(0, gained);
-    for (const key of ['answers', 'bonus', 'sayings', 'recall', 'sayRecall']) M[key] = Object.assign({}, L[key] || {}, R[key] || {});
+    for (const key of ['answers', 'bonus', 'deep', 'sayings', 'recall', 'sayRecall']) M[key] = Object.assign({}, L[key] || {}, R[key] || {});
     // Notes: the later edit wins.
     M.notes = Object.assign({}, L.notes || {}, R.notes || {});
     for (const k in L.notes || {}) if (!has(R.notes, k) || (L.notes[k].at || 0) > (R.notes[k].at || 0)) M.notes[k] = L.notes[k];
@@ -4019,6 +4203,8 @@ const TreasureUp = (function () {
     Object.keys(S.recall).forEach(id => { if (!live.has(id)) delete S.recall[id]; });
     const sayIds = new Set((WEEK.sayings || []).map(x => x.id));
     Object.keys(S.sayings || {}).forEach(id => { if (!sayIds.has(id)) delete S.sayings[id]; });
+    const deepIds = new Set((WEEK.deep || []).map(d => d.id));
+    Object.keys(S.deep || {}).forEach(id => { if (!deepIds.has(id)) delete S.deep[id]; });
 
     rollDay();
     renderFeed();
@@ -4075,6 +4261,17 @@ const TreasureUp = (function () {
        lesson                    link to the lesson page
        sections                  the lesson's section headings, in order
 
+     deep (Go deeper): one per section, plus Friday's pieces.
+       id, section (index) or day: "friday" with a title
+       read      what he reads: a passage ("Isaiah 14:12–17", the one the
+                 lesson points to), "lesson", or a Gospel Library page
+       intro     a sentence or two on why it's worth reading
+       q, right, wrong, why, source, find   as for a bonus: answerable only
+                 from the reading, and `find` must be inside `read`
+       A section's reading opens once its reels are answered. The cover
+       plans the week: a section a day, Friday's deep dive, Saturday's
+       puzzle, Sunday's family game.
+
      Each reel:
        id        unique and stable. Changing it resets that reel's answer.
        section   index into `sections`
@@ -4096,8 +4293,9 @@ const TreasureUp = (function () {
                  /study/… link). `find` is the exact words that settle it:
                  they must be in the source and nowhere in the app. For a web
                  page, write `why` in your own words, no “quotes”.
-       media     optional, at most 4 pieces a week, only where a picture or
-                 clip shows something the words can't.
+       media     optional. A picture on any reel it truly fits (a picture of
+                 Jesus Christ never goes on a reel about Satan); at most 2
+                 clips a week, only where they show something the words can't.
                  image: { src: "media/….jpg", alt, credit, link }
                         link = its Media Library or Wikimedia Commons page
                  video: { youtube, start, end, title, channel, previewed }
@@ -4188,6 +4386,68 @@ WEEKS.push({
     { word: "SMOOTH", clue: "speak unto us ____ things", ref: "Isaiah 30:10" },
     { word: "BEHIND", clue: "thine ears shall hear a word ____ thee", ref: "Isaiah 30:21" },
     { word: "STAYED", clue: "whose mind is ____ on thee", ref: "Isaiah 26:3" }
+  ],
+
+  // Go deeper: one reading per section, the one this week's lesson points
+  // to, with a question only the reading answers. Friday's deep dive adds
+  // the children's part of the lesson and a magazine piece.
+  deep: [
+    {
+      id: "deep39-pride", section: 0, read: "Isaiah 14:12–17",
+      intro: "Isaiah shows where pride ends up. The one who wanted to sit above the stars is brought down, and people stare at him. Read what they say.",
+      q: "In Isaiah 14:16, what do people ask when they see the fallen one up close?",
+      right: "Is this really the one who made the earth shake?",
+      wrong: ["Where did his great army go?", "When will he come back to rule?"],
+      why: "Verse 16: “Is this the man that made the earth to tremble.” Pride looks big for a while, then it looks small.",
+      source: "Isaiah 14:16", find: "Is this the man that made the earth to tremble"
+    },
+    {
+      id: "deep39-feast", section: 1, read: "Isaiah 25:6–9",
+      intro: "Around the promise that death will be swallowed up, Isaiah describes a feast the Lord makes for all people. Read the whole scene, up to the moment the people see the One they waited for.",
+      q: "In Isaiah 25:9, what do the people say they will do now that their Lord has come?",
+      right: "Be glad and rejoice in His salvation",
+      wrong: ["Ask Him why He took so long", "Build Him a palace in Babylon"],
+      why: "They say, “we will be glad and rejoice in his salvation.” The waiting was worth it.",
+      source: "Isaiah 25:9", find: "we will be glad and rejoice in his salvation"
+    },
+    {
+      id: "deep39-wall", section: 2, read: "Isaiah 30:12–14",
+      intro: "The people told the prophets to stop warning them. Isaiah answers with a picture: a high wall with a crack in it. Read what happens to the wall.",
+      q: "In Isaiah 30:13, how does the cracked wall fall?",
+      right: "All at once, suddenly",
+      wrong: ["Slowly, one stone a year", "It never falls; it only leans"],
+      why: "Verse 13: its “breaking cometh suddenly at an instant.” Ignoring warnings can look safe right up until it isn't.",
+      source: "Isaiah 30:13", find: "whose breaking cometh suddenly at an instant"
+    },
+    {
+      id: "deep39-book", section: 3, read: "Isaiah 29:18–24",
+      intro: "Right after the sealed book, Isaiah tells what the book will do once it comes out. The lesson compares these verses with the title page of the Book of Mormon.",
+      q: "In Isaiah 29:18, who will hear the words of the book?",
+      right: "The deaf",
+      wrong: ["Only the learned", "Only the kings"],
+      why: "Verse 18: “In that day shall the deaf hear the words of the book.” People who couldn't hear God's word before would understand it.",
+      source: "Isaiah 29:18", find: "shall the deaf hear the words of the book"
+    },
+    {
+      id: "deep39-kids", day: "friday", title: "From the children's part of the lesson", read: "lesson",
+      intro: "This week's lesson has ideas for kids too. One is about the “marvellous work and a wonder” (Isaiah 29:14): finding things that stand for the Lord's marvelous works in our day.",
+      q: "Which three things does the lesson suggest to stand for the Lord's marvelous works in the latter days?",
+      right: "The Book of Mormon, a temple, and the First Vision",
+      wrong: ["A rainbow, a dove, and an ark", "A crown, a sword, and a throne"],
+      why: "It suggests a copy of the Book of Mormon, a picture of a temple, or a picture of the First Vision. Each is part of what the Lord restored.",
+      source: "https://www.churchofjesuschrist.org/study/manual/come-follow-me-for-home-and-church-old-testament-2026/39?lang=eng",
+      find: "a copy of the Book of Mormon, a picture of a temple, or a picture of the First Vision"
+    },
+    {
+      id: "deep39-ftsoy", day: "friday", title: "From For the Strength of Youth", read: "https://www.churchofjesuschrist.org/study/ftsoy/2026/09/what-do-we-know-about-the-prophet-isaiah?lang=eng",
+      intro: "A short article lists what we know about the prophet Isaiah. One fact is a key for reading him: his prophecies point to more than one time.",
+      q: "According to the article, which times do Isaiah's prophecies refer to?",
+      right: "His own day, Jesus's day, our day, and the Second Coming",
+      wrong: ["Only his own day in Jerusalem", "Only the end of the world"],
+      why: "It says they refer to his own day, Jesus Christ's day, the latter days (our day) and the Restoration, and the Second Coming. One verse can be about more than one time.",
+      source: "https://www.churchofjesuschrist.org/study/ftsoy/2026/09/what-do-we-know-about-the-prophet-isaiah?lang=eng",
+      find: "the latter days and the Restoration, and the Second Coming and Millennium"
+    }
   ],
 
   reels: [
@@ -4633,6 +4893,66 @@ WEEKS.push({
     { word: "RIVER", clue: "then had thy peace been as a ____", ref: "Isaiah 48:18" },
     { word: "REED", clue: "A bruised ____ shall he not break", ref: "Isaiah 42:3" },
     { word: "FORGET", clue: "yet will I not ____ thee", ref: "Isaiah 49:15" }
+  ],
+
+  // Go deeper: one reading per section (see week 39 for how it works).
+  deep: [
+    {
+      id: "deep40-fire", section: 0, read: "Isaiah 43:1–5",
+      intro: "Isaiah 43 opens with “Fear not: for I have redeemed thee.” Then come promises about water and fire. The hymn How Firm a Foundation borrows these words.",
+      q: "In Isaiah 43:2, what does the Lord promise when you walk through fire?",
+      right: "You won't be burned",
+      wrong: ["The fire will go out first", "You'll never have to go near fire"],
+      why: "Verse 2: “when thou walkest through the fire, thou shalt not be burned.” He doesn't promise no fire. He promises to be with you in it.",
+      source: "Isaiah 43:2", find: "thou shalt not be burned"
+    },
+    {
+      id: "deep40-in-vain", section: 1, read: "Isaiah 49:1–6",
+      intro: "Here the Lord's servant speaks. The lesson asks what helps when your service feels like it was for nothing. Read verse 4 closely.",
+      q: "In Isaiah 49:4, the servant feels his work was in vain. What does he still believe?",
+      right: "His work is with his God",
+      wrong: ["He should quit and rest", "No one will ever see it"],
+      why: "Verse 4: “yet surely my judgment is with the LORD, and my work with my God.” God sees work that nobody else notices.",
+      source: "Isaiah 49:4", find: "my work with my God"
+    },
+    {
+      id: "deep40-grasshoppers", section: 2, read: "Isaiah 40:21–23",
+      intro: "After the nations are a drop in a bucket, Isaiah keeps going. He describes how the people of the earth look from where God sits.",
+      q: "In Isaiah 40:22, what do the people of the earth look like from God's throne?",
+      right: "Grasshoppers",
+      wrong: ["Giants", "Stars"],
+      why: "Verse 22: “the inhabitants thereof are as grasshoppers.” Even the strongest rulers are small next to Him.",
+      source: "Isaiah 40:22", find: "the inhabitants thereof are as grasshoppers"
+    },
+    {
+      id: "deep40-springs", section: 3, read: "Isaiah 49:8–12",
+      intro: "Just before the verses about the palms of His hands, the Lord describes bringing His people home after hard times. Read how He leads them.",
+      q: "In Isaiah 49:10, where does the Lord guide the people He has mercy on?",
+      right: "By springs of water",
+      wrong: ["Through a burning desert with no rest", "Back to Babylon"],
+      why: "Verse 10: “even by the springs of water shall he guide them.” After the furnace comes cool water.",
+      source: "Isaiah 49:10", find: "by the springs of water shall he guide them"
+    },
+    {
+      id: "deep40-kids", day: "friday", title: "From the children's part of the lesson", read: "lesson",
+      intro: "The children's part of this week's lesson starts with “Prepare ye the way of the LORD” (Isaiah 40:3). It suggests clearing a path or straightening something crooked, then asks who prepared the way.",
+      q: "Which two people does the lesson suggest showing pictures of, because they prepared the way of the Lord?",
+      right: "John the Baptist and Joseph Smith",
+      wrong: ["Moses and Aaron", "Peter and Paul"],
+      why: "It suggests pictures of John the Baptist and Joseph Smith. John prepared the way for Jesus in His day; Joseph Smith helped prepare the way in ours.",
+      source: "https://www.churchofjesuschrist.org/study/manual/come-follow-me-for-home-and-church-old-testament-2026/40?lang=eng",
+      find: "pictures of John the Baptist and Joseph Smith"
+    },
+    {
+      id: "deep40-ftsoy", day: "friday", title: "From For the Strength of Youth", read: "https://www.churchofjesuschrist.org/study/ftsoy/2026/10/strength-training-with-isaiah?lang=eng",
+      intro: "An article called Strength Training with Isaiah gathers Isaiah's verses about getting spiritually strong, including this week's eagles verse.",
+      q: "According to the article, where does spiritual strength come from?",
+      right: "Heavenly Father and Jesus Christ",
+      wrong: ["Your own willpower alone", "Never making mistakes"],
+      why: "It says Heavenly Father and Jesus Christ are your strength, and that there is no other source of spiritual strength.",
+      source: "https://www.churchofjesuschrist.org/study/ftsoy/2026/10/strength-training-with-isaiah?lang=eng",
+      find: "There is no other source of spiritual strength"
+    }
   ],
 
   reels: [

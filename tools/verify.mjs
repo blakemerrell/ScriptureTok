@@ -246,7 +246,34 @@ async function main(scripture, week, pages, online) {
     r.hook, r.body, r.verse && r.verse.text,
     r.question && [r.question.q, r.question.right, ...(r.question.wrong || []), r.question.why].join(' '),
     ...bonusesOf(r).map(b => [b.q, ...(b.wrong || [])].join(' '))
-  ].join(' ')).join(' '));
+  ].join(' ')).join(' ') + ' ' + (week.deep || []).map(d => [d.intro, d.q, ...(d.wrong || [])].join(' ')).join(' '));
+
+  // A question only the reading answers (a bonus, or a Go-deeper item):
+  // its answer words are in the verse or Gospel Library page it cites, and
+  // nowhere in the app.
+  function checkReading(where, label, b) {
+    checkQuestion(where, b, label);
+    const url = webSource(b, week);
+    if (!b.source || !b.find) fail(where, `${label} needs source and find`);
+    else if (url) {
+      if (/[“”]/.test(b.why)) fail(where, `${label} from a web page: don't put its words in “quotes” (only scripture quotes get checked)`);
+      if (!online) note(`${where}: ${label} answer from ${url.replace(/\?.*/, '')} not checked (run with --online)`);
+      else if (pages.get(url) != null && !norm(pages.get(url)).includes(trimPunct(norm(b.find)))) {
+        fail(where, `${label}: "${b.find}" is not on ${url} (check the link and the exact wording; a mistyped link still loads a page)`);
+      }
+    } else if (/^https?:/.test(b.source)) {
+      fail(where, `${label} source must be a verse, "lesson", or a Gospel Library page (churchofjesuschrist.org/study/…)`);
+    } else {
+      const src = textOf(b.source);
+      if (src == null) fail(where, `${label} source "${b.source}" not found`);
+      else if (!quoteMatches(b.find, src)) fail(where, `${label}: "${b.find}" is not in ${b.source}`);
+      checkText(where, `${label} why`, b.why, b.source);
+      checkText(where, `${label} question`, b.q, b.source);
+    }
+    if (b.find && appText.includes(trimPunct(norm(b.find)))) {
+      fail(where, `${label}: "${b.find}" already appears in the app, so he doesn't need the reading to answer it`);
+    }
+  }
 
   for (const [n, r] of week.reels.entries()) {
     const where = r.id || `reel ${n + 1}`;
@@ -284,28 +311,7 @@ async function main(scripture, week, pages, online) {
 
     // Bonuses: answerable only from the reading.
     for (const [bn, b] of bonusesOf(r).entries()) {
-      const label = bonusesOf(r).length > 1 ? `bonus ${bn + 1}` : 'bonus';
-      checkQuestion(where, b, label);
-      const url = webSource(b, week);
-      if (!b.source || !b.find) fail(where, `${label} needs source and find`);
-      else if (url) {
-        if (/[“”]/.test(b.why)) fail(where, `${label} from a web page: don't put its words in “quotes” (only scripture quotes get checked)`);
-        if (!online) note(`${where}: ${label} answer from ${url.replace(/\?.*/, '')} not checked (run with --online)`);
-        else if (pages.get(url) != null && !norm(pages.get(url)).includes(trimPunct(norm(b.find)))) {
-          fail(where, `${label}: "${b.find}" is not on ${url} (check the link and the exact wording; a mistyped link still loads a page)`);
-        }
-      } else if (/^https?:/.test(b.source)) {
-        fail(where, `${label} source must be a verse, "lesson", or a Gospel Library page (churchofjesuschrist.org/study/…)`);
-      } else {
-        const src = textOf(b.source);
-        if (src == null) fail(where, `${label} source "${b.source}" not found`);
-        else if (!quoteMatches(b.find, src)) fail(where, `${label}: "${b.find}" is not in ${b.source}`);
-        checkText(where, `${label} why`, b.why, b.source);
-        checkText(where, `${label} question`, b.q, b.source);
-      }
-      if (b.find && appText.includes(trimPunct(norm(b.find)))) {
-        fail(where, `${label}: "${b.find}" already appears in the app, so he doesn't need the reading to answer it`);
-      }
+      checkReading(where, bonusesOf(r).length > 1 ? `bonus ${bn + 1}` : 'bonus', b);
     }
 
     // Media.
@@ -354,6 +360,34 @@ async function main(scripture, week, pages, online) {
         }
       }
     }
+  }
+
+  // Go deeper: a reading per section (the one the lesson points to) and
+  // Friday's pieces, each with a question only that reading answers.
+  const days = new Set();
+  for (const d of week.deep || []) {
+    const where = d.id || 'a Go-deeper item';
+    if (!d.id || !/^[a-z0-9-]+$/.test(d.id)) fail(where, 'id must be lowercase letters, digits and dashes');
+    if (ids.has(d.id)) fail(where, 'duplicate id');
+    ids.add(d.id);
+    const friday = d.day === 'friday';
+    if (!friday && !(Number.isInteger(d.section) && week.sections[d.section])) fail(where, 'needs a section (an index into sections) or day: "friday"');
+    if (!friday && days.has(d.section)) fail(where, `section ${d.section} already has a Go-deeper reading (one per section)`);
+    days.add(d.section);
+    if (friday && !d.title) fail(where, 'a Friday piece needs a title');
+    if (!d.intro) fail(where, 'missing intro');
+    const introWords = (d.intro || '').split(/\s+/).filter(Boolean).length;
+    if (introWords > LIMITS.whyWords + 5) fail(where, `intro is ${introWords} words (max ${LIMITS.whyWords + 5})`);
+    // What he's asked to read: a passage, the lesson, or a Gospel Library page.
+    const passage = /^https?:|^lesson$/.test(d.read || '') ? null : d.read;
+    if (!d.read) fail(where, 'missing read');
+    else if (passage) {
+      const text = textOf(passage);
+      if (text == null) fail(where, `read "${passage}" not found`);
+      else if (d.find && !quoteMatches(d.find, text)) fail(where, `the answer "${d.find}" is not in ${passage}, the passage it asks him to read`);
+    } else if (!webSource({ source: d.read }, week)) fail(where, 'read must be a passage, "lesson", or a Gospel Library page');
+    checkText(where, 'intro', d.intro, passage);
+    checkReading(where, 'question', d);
   }
 
   if (clipCount > MEDIA.maxClipsPerWeek) fail('week', `${clipCount} clips (max ${MEDIA.maxClipsPerWeek}); keep it a lesson, not a video feed`);
@@ -444,7 +478,8 @@ const weeks = loadWeeks();
 const online = args.has('--online') || args.has('--lesson');
 const pages = new Map();
 if (online) {
-  const urls = new Set(weeks.flatMap(week => [week.lesson, ...week.reels.flatMap(r => bonusesOf(r).map(b => webSource(b, week)).filter(Boolean))]));
+  const urls = new Set(weeks.flatMap(week => [week.lesson, ...week.reels.flatMap(r => bonusesOf(r).map(b => webSource(b, week)).filter(Boolean)),
+    ...(week.deep || []).map(d => webSource(d, week)).filter(Boolean)]));
   await Promise.all([...urls].map(async u => pages.set(u, await fetchPageText(u))));
 }
 
@@ -471,7 +506,7 @@ if (failures.length) {
 for (const week of weeks) {
   const quotes = week.reels.reduce((n, r) => n + 1 + [r.hook, r.body, r.question.q, r.question.why, ...bonusesOf(r).map(b => b.why)].join(' ').split('“').length - 1, 0);
   const bonuses = week.reels.reduce((n, r) => n + bonusesOf(r).length, 0);
-  const extras = [week.puzzle && 'the weekly puzzle', week.sayings && `${week.sayings.length} Who-said-it lines`, week.words && `${week.words.length} Verse Words`].filter(Boolean);
+  const extras = [(week.deep || []).length && `${week.deep.length} Go-deeper readings`, week.puzzle && 'the weekly puzzle', week.sayings && `${week.sayings.length} Who-said-it lines`, week.words && `${week.words.length} Verse Words`].filter(Boolean);
   console.log(`✓ ${week.title} (${week.dates}): ${week.reels.length} reels, ${quotes} quotes and ${bonuses} bonus answers checked` +
     (extras.length ? `, plus ${extras.join(' and ')}` : ''));
 }
