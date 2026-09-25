@@ -124,6 +124,11 @@
   /* Safe-area offsets as plain CSS: `calc(var(--sab)+10px)` without
      spaces is invalid, so these can't be Tailwind arbitrary values. */
   .hud-pad  { padding-top: calc(var(--sat) + 10px); }
+  /* Long level titles ("Prophet's Apprentice") wrap to two lines instead of
+     squeezing the XP bar out of the top row; narrow phones get tighter gaps. */
+  #levelTitle { max-width: 72px; line-height: 1.1; }
+  #hudRow { gap: 10px; }
+  @media (max-width: 380px) { #hudRow { gap: 6px; } }
   .hint-pos { bottom: calc(var(--sab) + 14px); }
 
   /* The text column. A reel with its question can be taller than a small
@@ -195,20 +200,24 @@
   .quiz-why .no { color: var(--wrong); }
   @keyframes whyIn { from { opacity: 0; transform: translateY(-4px); } }
 
-  /* A picture fills the reel behind the text; a heavier scrim keeps the
-     words readable over a busy painting. */
-  .reel-photo {
-    position: absolute; inset: 0; width: 100%; height: 100%;
-    object-fit: cover; object-position: center 25%;
+  /* A picture gets its own space at the top of its reel, whole and not
+     dimmed: the picture fits inside the space (nothing cropped), over a
+     blurred copy of itself that fills the rest, and the HUD sits over the
+     blurred part. The text follows below it, so the reel scrolls inside
+     itself on most phones. */
+  .has-photo .content-pad { padding-top: 0; min-height: 100dvh; }
+  .reel-pic {
+    position: relative; overflow: hidden;
+    margin: 0 -28px 0 -20px;                    /* full width: undo the column's px-5 pr-7 */
+    padding-top: calc(var(--sat) + 58px);
+    height: calc(var(--sat) + 58px + clamp(190px, 36vh, 380px));
   }
-  .has-photo .scrim {
-    background:
-      linear-gradient(to bottom, rgba(5,5,12,.7) 0%, rgba(5,5,12,0) 20%),
-      linear-gradient(to top, rgba(5,5,12,.96) 0%, rgba(5,5,12,.9) 55%, rgba(5,5,12,.6) 80%, rgba(5,5,12,.35) 100%);
+  .reel-pic .reel-photo-fill {
+    position: absolute; inset: -24px; width: calc(100% + 48px); height: calc(100% + 48px);
+    object-fit: cover; filter: blur(18px) brightness(.5);
   }
-  .has-photo .eyebrow, .has-photo .credit, .has-photo .reel-hook, .has-photo .reel-body {
-    text-shadow: 0 1px 10px rgba(0,0,0,.85), 0 0 2px rgba(0,0,0,.6);
-  }
+  .reel-pic .reel-photo { position: relative; display: block; width: 100%; height: 100%; object-fit: contain; }
+  .has-photo .credit { margin: 6px 0 10px; }
   /* Text that scrolls up inside a tall reel fades out under the HUD. */
   header { background: linear-gradient(to bottom, rgba(5,5,12,.88) 0%, rgba(5,5,12,.6) 65%, rgba(5,5,12,0) 100%); }
   .credit { font-size: 11px; color: rgba(255,255,255,.55); margin-top: 3px; }
@@ -267,7 +276,7 @@
     padding: calc(var(--sat) + 16px) 16px calc(var(--sab) + 16px);
     background: rgba(3,3,10,.82); backdrop-filter: blur(4px);
   }
-  .overlay[hidden], #board[hidden], #play[hidden], #live[hidden] { display: none; }
+  .overlay[hidden], #board[hidden], #play[hidden], #live[hidden], #fam[hidden] { display: none; }
   .overlay-card {
     width: 100%; max-width: 520px; max-height: 88dvh; overflow-y: auto;
     padding: 18px; border-radius: 22px; background: #12121f; border: 1px solid rgba(255,255,255,.12);
@@ -289,7 +298,7 @@
   .btn.ghost { background: rgba(255,255,255,.1); color: #fff; border: 1px solid rgba(255,255,255,.22); }
   .btn:focus-visible, .tile:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 
-  #board, #play, #live {
+  #board, #play, #live, #fam {
     position: fixed; inset: 0; z-index: 110; overflow-y: auto;
     display: flex; flex-direction: column;
     padding: calc(var(--sat) + 14px) 16px calc(var(--sab) + 16px);
@@ -455,12 +464,96 @@
   .live-sub { text-align: center; font-size: clamp(16px, 4vw, 24px); color: rgba(255,255,255,.75); margin-top: 12px; }
   .live-mode { font-size: 12px; color: rgba(255,255,255,.5); margin-top: 16px; }
 
+  /* ---- Family: people, join links and the family chat ---- */
+  .hud-dot { position: absolute; top: 1px; right: 1px; width: 9px; height: 9px; border-radius: 99px; background: var(--gold); box-shadow: 0 0 0 2px #0a0a14; }
+  .hud-dot[hidden], #famBtn[hidden], #chatBtn[hidden] { display: none; }
+  .fam-wrap { width: 100%; max-width: 560px; margin: 14px auto 0; }
+  .fam-wrap label { display: block; margin-top: 12px; font-size: 12px; color: rgba(255,255,255,.6); }
+  .fam-tabs { display: flex; gap: 8px; margin-bottom: 14px; }
+  .fam-tab {
+    position: relative; flex: 1; padding: 10px; border-radius: 999px; cursor: pointer;
+    font: inherit; font-weight: 800; font-size: 15px; color: #fff;
+    background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.18);
+  }
+  .fam-tab.on { background: #fff; color: #111; }
+  .fam-tab .hud-dot { top: 6px; right: 14px; }
+  .fam-total { padding: 14px 16px; border-radius: 16px; font-size: 13px; font-weight: 700; background: linear-gradient(90deg, rgba(124,58,237,.5), rgba(217,119,6,.4)); }
+  .fam-total b { display: block; font-size: 26px; font-weight: 900; color: var(--gold); margin: 2px 0; }
+  .fam-total small { font-size: 12px; font-weight: 600; color: rgba(255,255,255,.7); }
+  .fam-person { margin-top: 8px; padding: 12px 14px; border-radius: 14px; background: rgba(255,255,255,.06); }
+  .fam-person .fp-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .fam-person .fp-name { font-weight: 800; font-size: 16px; }
+  .fam-person .fp-lv { font-size: 12px; font-weight: 700; color: rgba(255,255,255,.65); white-space: nowrap; }
+  .fam-person .fp-sub { font-size: 13px; color: rgba(255,255,255,.72); margin-top: 3px; }
+  .fam-role { margin-left: 8px; font-size: 11px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--gold); }
+  .fam-you { font-size: 12px; font-weight: 600; color: rgba(255,255,255,.55); }
+  .fam-actions { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 6px; }
+  .fam-devices { display: grid; gap: 4px; margin-top: 8px; }
+  .fam-device { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-size: 12.5px; color: rgba(255,255,255,.65); }
+  .fam-link {
+    padding: 0; border: 0; background: none; cursor: pointer;
+    font: inherit; font-size: 13px; font-weight: 700; color: rgba(255,255,255,.72);
+    text-decoration: underline; text-decoration-color: rgba(255,255,255,.3);
+  }
+  .fam-link.warn { color: var(--wrong); }
+  .fam-kinds { display: grid; gap: 8px; margin-top: 8px; }
+  .fam-kinds label { display: flex; gap: 10px; align-items: flex-start; margin: 0; padding: 10px 12px; border-radius: 12px; cursor: pointer; font-size: 14px; font-weight: 800; color: #fff; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.12); }
+  .fam-kinds label small { display: block; font-size: 12px; font-weight: 600; color: rgba(255,255,255,.6); margin-top: 2px; }
+  .fam-kinds input { margin-top: 3px; accent-color: var(--gold); }
+  .fam-box { margin-top: 12px; padding: 12px 14px; border-radius: 14px; border: 1.5px solid var(--gold); background: rgba(252,211,77,.06); font-size: 14px; }
+  .fam-box .field { margin-top: 8px; font-size: 13px; }
+  .fam-note { font-size: 12px; color: rgba(255,255,255,.55); margin-top: 10px; line-height: 1.45; }
+  .chat-list { display: flex; flex-direction: column; gap: 8px; }
+  .msg { align-self: flex-start; max-width: 88%; padding: 8px 12px; border-radius: 14px; background: rgba(255,255,255,.08); }
+  .msg.mine { align-self: flex-end; background: rgba(124,58,237,.38); }
+  .msg .mh { display: flex; align-items: baseline; gap: 8px; font-size: 12px; color: rgba(255,255,255,.55); }
+  .msg .mh b { color: #fff; }
+  .msg .mh .fam-link { font-size: 12px; margin-left: auto; }
+  .msg .mt { margin-top: 2px; font-size: 15px; line-height: 1.4; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .msg.gone .mt { font-style: italic; color: rgba(255,255,255,.5); }
+  .msg .orig { margin-top: 4px; font-size: 13px; color: rgba(255,255,255,.45); white-space: pre-wrap; overflow-wrap: anywhere; }
+  .chat-form { display: flex; align-items: flex-end; gap: 8px; margin-top: 14px; }
+  .chat-form textarea { flex: 1; min-height: 46px; max-height: 140px; resize: vertical; line-height: 1.35; }
+
+  /* ---- The week's plan on the cover, and the Go-deeper cards ---- */
+  .today { margin-top: 16px; padding: 14px 16px; border-radius: 16px; background: rgba(0,0,0,.35); border: 1.5px solid rgba(252,211,77,.55); }
+  .today-head { margin-top: 4px; font-weight: 900; font-size: 19px; line-height: 1.2; }
+  .today-sub { margin-top: 3px; font-size: 13px; color: rgba(255,255,255,.72); }
+  .today-bar { margin-top: 9px; height: 6px; border-radius: 999px; background: rgba(255,255,255,.14); overflow: hidden; }
+  .today-bar div { height: 100%; border-radius: 999px; background: var(--gold); }
+  .today .board-link { margin-top: 12px; }
+  .week-map { margin-top: 16px; }
+  .wm-row { display: grid; grid-template-columns: 34px 1fr auto; gap: 8px; align-items: baseline; padding: 6px 0; font-size: 13.5px; line-height: 1.3; color: rgba(255,255,255,.82); border-bottom: 1px solid rgba(255,255,255,.08); }
+  .wm-day { font-size: 12px; font-weight: 800; color: rgba(255,255,255,.5); }
+  .wm-row.now .wm-day, .wm-row.now .wm-name { color: var(--gold); font-weight: 800; }
+  .wm-row.done .wm-name { color: rgba(255,255,255,.5); }
+  .wm-mark { font-size: 12px; font-weight: 900; color: rgba(255,255,255,.6); }
+  .wm-row.done .wm-mark { color: var(--right); }
+  .deep-open { display: inline-block; margin-top: 14px; padding: 10px 16px; border-radius: 999px; font-size: 14px; font-weight: 800; color: #1c1406; background: var(--gold); text-decoration: none; }
+  .deep-open:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
   /* Week report on the last card. */
-  .report-row { display: flex; gap: 10px; align-items: baseline; font-size: 13.5px; line-height: 1.35; }
-  .report-row .st { flex: 0 0 16px; font-weight: 900; text-align: center; }
-  .st-right { color: var(--right); }
-  .st-wrong { color: var(--wrong); }
-  .st-open  { color: rgba(255,255,255,.4); }
+  .kpis { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
+  .kpi { padding: 12px 14px; border-radius: 16px; background: rgba(0,0,0,.3); border: 1px solid rgba(255,255,255,.14); }
+  .kpi .k-top { display: flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: rgba(255,255,255,.7); }
+  .kpi .k-num { margin-top: 4px; font-size: 32px; font-weight: 900; line-height: 1.05; font-variant-numeric: tabular-nums; }
+  .kpi .k-num small { font-size: 16px; font-weight: 800; color: rgba(255,255,255,.5); }
+  .kpi .k-num.word { font-size: 22px; padding: 5px 0 3px; }
+  .kpi .k-bar { margin-top: 9px; height: 7px; border-radius: 999px; background: rgba(255,255,255,.14); overflow: hidden; }
+  .kpi .k-bar div { height: 100%; border-radius: 999px; background: var(--gold); }
+  .kpi.full { border-color: rgba(52,211,153,.6); }
+  .kpi.full .k-bar div { background: var(--right); }
+  .kpi .k-note { margin-top: 6px; font-size: 12px; color: rgba(255,255,255,.6); }
+  .report-row {
+    display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 2px; cursor: pointer;
+    font: inherit; font-size: 14px; line-height: 1.3; text-align: left; color: rgba(255,255,255,.88);
+    background: none; border: 0; border-bottom: 1px solid rgba(255,255,255,.08);
+  }
+  .report-row:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+  .report-row .st { flex: 0 0 24px; height: 24px; border-radius: 999px; display: grid; place-items: center; font-size: 12px; font-weight: 900; border: 1.5px solid rgba(255,255,255,.3); }
+  .report-row.is-right .st { background: var(--right); border-color: var(--right); color: #052e16; }
+  .report-row.is-wrong .st { background: var(--wrong); border-color: var(--wrong); color: #3b0512; }
+  .report-row .go { margin-left: auto; color: rgba(255,255,255,.35); }
 
   /* Position dots down the right edge. */
   #rail { position: fixed; right: 6px; top: 50%; transform: translateY(-50%);
@@ -480,7 +573,7 @@
 
 <!-- ==================== TOP HUD: level, XP bar, streak ==================== -->
 <header class="fixed top-0 left-0 right-0 z-50 px-4 hud-pad pb-3 pointer-events-none">
-  <div class="flex items-center gap-3">
+  <div id="hudRow" class="flex items-center gap-3">
 
     <!-- Level badge -->
     <div class="flex items-center gap-2.5 rounded-full bg-black/45 backdrop-blur-md px-2.5 py-1.5 ring-1 ring-white/15">
@@ -503,6 +596,13 @@
 
     <!-- Games -->
     <button id="gamesBtn" class="pointer-events-auto grid place-items-center w-9 h-9 rounded-full bg-black/45 backdrop-blur-md ring-1 ring-white/15 shrink-0 text-lg leading-none" aria-label="Games">🎮</button>
+
+    <!-- Family: sign in, or join with a link. Once this device is in a
+         family, 💬 takes its place (the family screen has People and Chat). -->
+    <button id="famBtn" class="relative pointer-events-auto grid place-items-center w-9 h-9 rounded-full bg-black/45 backdrop-blur-md ring-1 ring-white/15 shrink-0 text-lg leading-none" aria-label="Family">👪</button>
+
+    <!-- Family chat. The dot means a new message. -->
+    <button id="chatBtn" class="relative pointer-events-auto grid place-items-center w-9 h-9 rounded-full bg-black/45 backdrop-blur-md ring-1 ring-white/15 shrink-0 text-lg leading-none" aria-label="Family chat" hidden>💬<span id="chatDot" class="hud-dot" hidden></span></button>
 
     <!-- Study streak: days in a row he answered at least one question -->
     <div class="flex items-center gap-1 rounded-full bg-black/45 backdrop-blur-md px-2.5 py-1.5 ring-1 ring-white/15 shrink-0" title="Days in a row with a question answered">
@@ -586,6 +686,18 @@
   <div id="liveBody"></div>
 </section>
 
+<!-- Family: sign-in, everyone's progress, join links, and the family chat. -->
+<section id="fam" hidden aria-label="Family">
+  <div class="board-top">
+    <div>
+      <div class="eyebrow">Family</div>
+      <div id="famTitle" class="board-title"></div>
+    </div>
+    <button id="famExit" class="btn ghost" style="margin-left:auto">Exit</button>
+  </div>
+  <div id="famBody"></div>
+</section>
+
 <!-- Parents: the PIN and the reward list. -->
 <section id="parent" class="overlay" hidden aria-label="Parents">
   <div class="overlay-card">
@@ -658,6 +770,7 @@ const TreasureUp = (function () {
     recall: {},   // reelId -> { last, misses } last day it came back, times missed
     daily: null,  // { day, ids: [...], done: { reelId: right } }
     freezes: 0,   // streak freezes: each covers one missed day, used automatically
+    deep: {},     // Go-deeper questions: id -> { right, day, picked }  first try
     puzzle: null, // this week's puzzle: { week, day, solved: [groups], mistakes, status, rewarded }
     sayings: {},  // Who said it?: sayingId -> { right }  first try
     notes: {},    // his journal: reelId -> { text, day, hook, ref, rewarded }; kept across weeks
@@ -678,6 +791,10 @@ const TreasureUp = (function () {
     return freshState();
   }
   function save() {
+    saveLocal();
+    queueSync();   // and to the family, if this device is in one
+  }
+  function saveLocal() {
     try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch (e) {}
   }
 
@@ -781,13 +898,10 @@ const TreasureUp = (function () {
   /* ---------------- rendering ---------------- */
 
   function backdrop(r) {
-    const photo = r.media && r.media.image;
     return `
       <div class="absolute inset-0" style="background-image:${r.gradient || 'linear-gradient(150deg,#1e293b,#0f172a)'}"></div>
-      ${photo
-        ? `<img class="reel-photo" src="${esc(photo.src)}" alt="${esc(photo.alt)}" decoding="async">`
-        : `<div class="blob" style="width:58vw;height:58vw;left:-14vw;top:8vh;background:${r.blobA || 'rgba(255,255,255,.28)'}"></div>
-           <div class="blob" style="width:48vw;height:48vw;right:-10vw;top:42vh;background:${r.blobB || 'rgba(0,0,0,.3)'};animation-delay:-6s"></div>`}
+      <div class="blob" style="width:58vw;height:58vw;left:-14vw;top:8vh;background:${r.blobA || 'rgba(255,255,255,.28)'}"></div>
+      <div class="blob" style="width:48vw;height:48vw;right:-10vw;top:42vh;background:${r.blobB || 'rgba(0,0,0,.3)'};animation-delay:-6s"></div>
       <div class="scrim"></div>`;
   }
 
@@ -876,9 +990,12 @@ const TreasureUp = (function () {
     const picked = a ? a.picked : null;
     const media = r.media || {};
     const photo = media.image;
-    const credit = photo
-      ? `<div class="credit">Picture: <a href="${esc(photo.link)}" target="_blank" rel="noopener noreferrer">${esc(photo.credit)}</a></div>`
-      : '';
+    const pic = photo ? `
+        <div class="reel-pic">
+          <img class="reel-photo-fill" src="${esc(photo.src)}" alt="" aria-hidden="true" decoding="async">
+          <img class="reel-photo" src="${esc(photo.src)}" alt="${esc(photo.alt)}" decoding="async">
+        </div>
+        <div class="credit">Picture: <a href="${esc(photo.link)}" target="_blank" rel="noopener noreferrer">${esc(photo.credit)}</a></div>` : '';
     // Bonuses show once he's answered the reel's own question, one at a
     // time: the next appears after he answers the one before.
     let bonus = '';
@@ -893,8 +1010,8 @@ const TreasureUp = (function () {
     <article class="reel${photo ? ' has-photo' : ''}" data-id="${esc(r.id)}" data-index="${i}">
       ${backdrop(r)}
       <div class="relative z-20 px-5 pr-7 content-pad">
+        ${pic}
         <div class="eyebrow">${esc(WEEK.sections[r.section])}</div>
-        ${credit}
         <h2 class="reel-hook">${esc(r.hook)}</h2>
         <p class="reel-body">${esc(r.body)}</p>
         ${media.video && (media.video.previewed === true || window.TU_NO_EMBED) ? clipHtml(media.video) : ''}
@@ -938,11 +1055,9 @@ const TreasureUp = (function () {
         <div class="eyebrow">Come, Follow Me · ${esc(WEEK.dates)}</div>
         <h2 class="reel-hook" style="font-size:clamp(28px,4.4vh,38px)">${esc(WEEK.title)}</h2>
         <p class="text-[15px] font-bold text-amber-300">${esc(WEEK.reference)}</p>
-        <div class="mt-5 space-y-2.5 reel-body">
-          <p>${WEEK.reels.length} reels. Each one ends with a quick question.</p>
-          <p>You only earn XP for right answers.</p>
-          <p>Questions you miss come back in the daily warm-ups.</p>
-        </div>
+        ${todayHtml()}
+        ${weekMapHtml()}
+        <p class="reel-body mt-4" style="font-size:13px;color:rgba(255,255,255,.7)">XP only comes from right answers. Questions you miss come back in the daily warm-ups.</p>
         <a href="${esc(WEEK.lesson)}" target="_blank" rel="noopener noreferrer"
            class="mt-5 inline-block text-[13px] font-semibold text-white/75 underline decoration-white/30">Open this week's lesson ↗</a>
         ${trailHtml()}
@@ -952,40 +1067,75 @@ const TreasureUp = (function () {
     </article>`;
   }
 
+  // The week's scoreboard: big numbers for how far he's got, then every
+  // reel as a checklist he can tap to go back to.
   function endHtml(i) {
+    const total = WEEK.reels.length;
     const answered = WEEK.reels.filter(r => S.answers[r.id]);
     const right = answered.filter(r => S.answers[r.id].right).length;
-    const total = WEEK.reels.length;
-    const headline = answered.length === total
-      ? `You got ${right} of ${total} right the first time.`
-      : `${answered.length} of ${total} questions answered so far.`;
     const allBonus = WEEK.reels.flatMap(r => bonusesOf(r).map((_, n) => bonusKey(r.id, n)));
     const found = allBonus.filter(k => S.bonus[k] && S.bonus[k].right).length;
-    const bonusLine = allBonus.length
-      ? `<p class="reel-body mt-3"><b class="text-amber-300">Bonus:</b> found ${found} of ${allBonus.length} answers in the reading.</p>`
-      : '';
+    const deep = deepItems(), deepRight = deep.filter(d => S.deep[d.id] && S.deep[d.id].right).length;
+    const notes = WEEK.reels.filter(r => S.notes[r.id]).length;
+    const pz = S.puzzle && S.puzzle.week === WEEK.title ? S.puzzle : null;
+    const left = total - answered.length;
+    const done = !left;
+    const headline = !answered.length ? 'Your week starts here'
+      : !done ? `${answered.length} of ${total} reels done`
+      : right === total ? 'A perfect week!' : 'You finished the week!';
+    const sub = !answered.length ? 'Answer a reel and watch these fill up.'
+      : !done ? `${left} to go. Every right answer counts.`
+      : right === total ? `All ${total} right the first time.` : `${right} of ${total} right the first time. Missed ones come back in the warm-ups.`;
+
+    const tile = (icon, label, n, of) => `
+      <div class="kpi${of && n >= of ? ' full' : ''}">
+        <div class="k-top"><span>${icon}</span>${label}</div>
+        <div class="k-num">${n}<small> / ${of}</small></div>
+        <div class="k-bar"><div style="width:${of ? Math.round(n / of * 100) : 0}%"></div></div>
+      </div>`;
+    const word = (icon, label, big, note, full) => `
+      <div class="kpi${full ? ' full' : ''}">
+        <div class="k-top"><span>${icon}</span>${label}</div>
+        <div class="k-num word">${big}</div>
+        <div class="k-note">${note}</div>
+      </div>`;
+    const puzzle = left ? word('🧩', 'Puzzle', '🔒', `Opens when all ${total} reels are done`)
+      : pz && pz.status === 'won' ? word('🧩', 'Puzzle', 'Solved!', 'Nice work', true)
+      : pz && pz.status === 'lost' && pz.day === dayKey() ? word('🧩', 'Puzzle', 'Tomorrow', 'Out of tries for today')
+      : word('🧩', 'Puzzle', 'Ready', 'It unlocked. Give it a try!');
+    const tiles = [
+      tile('📖', 'Reels', answered.length, total),
+      tile('✅', 'Right first time', right, total),
+      allBonus.length ? tile('🔎', 'Bonus finds', found, allBonus.length) : '',
+      deep.length ? tile('🧭', 'Went deeper', deepRight, deep.length) : '',
+      word('✏️', 'Notes', String(notes), notes ? `${notes * NOTE_XP} XP from notes` : 'Write one after any reel'),
+      puzzle
+    ].join('');
 
     const rows = WEEK.reels.map(r => {
       const a = S.answers[r.id];
-      const st = !a ? '<span class="st st-open">•</span>'
-               : a.right ? '<span class="st st-right">✓</span>'
-               : '<span class="st st-wrong">✕</span>';
-      return `<div class="report-row">${st}<span class="text-white/85">${esc(r.hook)}</span></div>`;
+      return `<button class="report-row${a ? (a.right ? ' is-right' : ' is-wrong') : ''}" data-goto="${esc(r.id)}">
+        <span class="st">${a ? (a.right ? '✓' : '✕') : ''}</span><span>${esc(r.hook)}</span><span class="go">›</span></button>`;
     }).join('');
+
+    const next = landingCard();
+    const nextName = next === 'end' ? '' : next.startsWith('recall-') || next.startsWith('say-') ? "Today's warm-up"
+      : next.startsWith('deep-') ? 'Go deeper' : next === 'puzzle' ? 'The weekly puzzle'
+      : next === 'intro' ? "This week's plan" : (reelById(next) || {}).hook || '';
 
     return `
     <article class="reel" data-id="end" data-index="${i}">
       ${backdrop({ gradient: 'linear-gradient(150deg,#052e16 0%,#065f46 48%,#0f766e 100%)', blobA: 'rgba(110,231,183,.35)', blobB: 'rgba(0,0,0,.45)' })}
       <div class="relative z-20 px-5 pr-7 content-pad">
-        <div class="eyebrow">End of this week's feed</div>
+        <div class="eyebrow">Your week · ${esc(WEEK.title)}</div>
         <h2 class="reel-hook" id="endHeadline">${esc(headline)}</h2>
-        <div class="mt-2 space-y-1.5" id="endRows">${rows}</div>
-        ${bonusLine}
-        ${notesLine()}
-        <p class="reel-body mt-4">Missed ones come back in the daily warm-ups.</p>
-        <p class="reel-body mt-2">The feed is a start. This week's reading is <b class="text-amber-300">${esc(WEEK.reference)}</b>.</p>
+        <p class="reel-body">${esc(sub)}</p>
+        <div class="kpis">${tiles}</div>
+        ${nextName ? `<button class="board-link" data-jump>Keep going ↓<small>Next: ${esc(nextName)}</small></button>` : ''}
+        <div class="eyebrow" style="margin-top:22px">Every reel · tap one to go back</div>
+        <div class="mt-1" id="endRows">${rows}</div>
         <a href="${esc(WEEK.lesson)}" target="_blank" rel="noopener noreferrer"
-           class="mt-4 inline-block text-[13px] font-semibold text-white/75 underline decoration-white/30">Open this week's lesson ↗</a>
+           class="mt-5 inline-block text-[13px] font-semibold text-white/75 underline decoration-white/30">Read the whole lesson: ${esc(WEEK.reference)} ↗</a>
         ${boardLinkHtml()}
         ${rewardsHtml()}
       </div>
@@ -999,7 +1149,13 @@ const TreasureUp = (function () {
     const recall = S.daily.ids.map(reelById).filter(Boolean);
     recall.forEach((r, n) => cards.push(i => recallHtml(r, n + 1, recall.length, i)));
     if (S.daily.say && (WEEK.sayings || []).some(x => x.id === S.daily.say)) cards.push(sayRecallHtml);
-    WEEK.reels.forEach(r => cards.push(i => reelHtml(r, i)));
+    WEEK.reels.forEach((r, n) => {
+      cards.push(i => reelHtml(r, i));
+      if (!WEEK.reels.slice(n + 1).some(x => x.section === r.section)) {   // the section's last reel
+        deepItems().filter(d => d.section === r.section).forEach(d => cards.push(i => deepHtml(d, i)));
+      }
+    });
+    fridayItems().forEach(d => cards.push(i => deepHtml(d, i)));
     if (WEEK.puzzle) cards.push(puzzleCardHtml);
     cards.push(endHtml);
 
@@ -1013,13 +1169,14 @@ const TreasureUp = (function () {
   const warmupsLeft = () =>
     S.daily.ids.filter(id => !S.daily.done[id]).map(id => 'recall-' + id)
       .concat(S.daily.say && !S.daily.sayDone ? ['say-' + S.daily.say] : []);
+  // After the warm-up: today's part of the plan (anything left from earlier
+  // days first), then anything else left, since reading ahead is fine.
   function landingCard() {
     const warm = warmupsLeft();
     if (warm.length) return warm[0];
     if (!WEEK.reels.some(r => S.answers[r.id])) return 'intro';
-    const next = WEEK.reels.find(r => !S.answers[r.id]);
-    if (next) return next.id;
-    return WEEK.puzzle && puzzleState().status !== 'won' ? 'puzzle' : 'end';
+    const next = todayItems().find(x => !x.done) || weekPlan().flat().flatMap(entryItems).find(x => !x.done);
+    return next ? next.card : 'end';
   }
   function goToCard(id, smooth) {
     const el = document.querySelector('.reel[data-id="' + id + '"]');
@@ -1029,7 +1186,7 @@ const TreasureUp = (function () {
   function keepGoingHtml() {
     if (warmupsLeft().length) return '';
     const next = landingCard();
-    const where = next === 'puzzle' ? 'the weekly puzzle' : next === 'end' ? 'your week' : 'your next reel';
+    const where = next === 'end' ? 'your week' : todayItems().some(x => x.card === next) ? "today's reading" : 'the rest of the week';
     return `<button class="board-link" data-jump>Keep going ↓<small>On to ${where}</small></button>`;
   }
 
@@ -1119,6 +1276,7 @@ const TreasureUp = (function () {
   function answer(quiz, picked) {
     const id = quiz.dataset.quiz;
     const kind = quiz.dataset.kind;
+    if (kind === 'deep') return answerDeep(quiz, id, picked);
     const r = reelById(id);
     if (!r) return;
     const n = Number(quiz.dataset.n);
@@ -1143,6 +1301,8 @@ const TreasureUp = (function () {
       redrawCard(id, reelHtml(r, Number(card.dataset.index)));
       refreshEnd();
       refreshPuzzleCard();
+      refreshDeep(r.section);
+      refreshIntro();
     } else {
       if (S.daily.done[id]) return;
       S.daily.done[id] = { right, picked };
@@ -1154,6 +1314,158 @@ const TreasureUp = (function () {
       const n = S.daily.ids.indexOf(id) + 1;
       redrawCard('recall-' + id, recallHtml(r, n, S.daily.ids.length, Number(card.dataset.index)));
     }
+    renderHud();
+    save();
+  }
+
+  /* ---------------- the week's plan and Go deeper ---------------- */
+
+  // A suggested pace for the week, Monday to Sunday: the lesson's sections
+  // one a day, Friday's deep dive (the children's part of the lesson and a
+  // magazine piece), Saturday's puzzle, and Sunday for church and a family
+  // game. Nothing is locked: reading ahead is fine.
+  const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  const deepItems = () => WEEK.deep || [];
+  const fridayItems = () => deepItems().filter(d => d.day === 'friday');
+  function weekPlan() {
+    const n = WEEK.sections.length, days = DAY_NAMES.map(() => []);
+    WEEK.sections.forEach((_, i) => days[n <= 5 ? i : Math.floor(i * 5 / n)].push({ kind: 'section', i }));
+    if (fridayItems().length) days[n <= 4 ? 4 : 5].push({ kind: 'friday' });
+    if (WEEK.puzzle) days[5].push({ kind: 'puzzle' });
+    days[6].push({ kind: 'family' });
+    return days;
+  }
+  function todayIndex() {
+    const start = weekStart(WEEK.dates);
+    return start ? Math.max(0, Math.min(6, dayDiff(start, dayKey()))) : 0;
+  }
+  // The cards one part of the plan asks for, and whether each is done.
+  function entryItems(e) {
+    if (e.kind === 'section') {
+      return WEEK.reels.filter(r => r.section === e.i).map(r => ({ card: r.id, done: !!S.answers[r.id] }))
+        .concat(deepItems().filter(d => d.section === e.i).map(d => ({ card: 'deep-' + d.id, done: !!S.deep[d.id] })));
+    }
+    if (e.kind === 'friday') return fridayItems().map(d => ({ card: 'deep-' + d.id, done: !!S.deep[d.id] }));
+    if (e.kind === 'puzzle') return [{ card: 'puzzle', done: !!S.puzzle && S.puzzle.week === WEEK.title && S.puzzle.status === 'won' }];
+    return [];
+  }
+  const entryName = e => e.kind === 'section' ? WEEK.sections[e.i]
+    : e.kind === 'friday' ? "Deep dive: the children's lesson and a magazine piece"
+    : e.kind === 'puzzle' ? 'The weekly puzzle' : 'Church, then a family game';
+  // Today's part: anything unfinished from earlier days, then today's.
+  function todayEntries() {
+    const plan = weekPlan(), t = todayIndex();
+    const behind = plan.slice(0, t).flat().filter(e => entryItems(e).some(x => !x.done));
+    return behind.concat(plan[t].filter(e => e.kind !== 'family'));
+  }
+  const todayItems = () => todayEntries().flatMap(entryItems);
+
+  function todayHtml() {
+    const t = todayIndex(), entries = todayEntries(), items = entries.flatMap(entryItems);
+    const done = items.filter(x => x.done).length;
+    const now = entries.find(e => entryItems(e).some(x => !x.done));
+    const behind = now && weekPlan()[t].indexOf(now) < 0;
+    let head, sub;
+    if (!items.length) {
+      head = t === 6 ? 'Church day' : 'Catch up, or read ahead';
+      sub = t === 6 ? 'Go to church, then play Scripture Showdown or a live game with the family.' : 'Nothing new is planned for today.';
+    } else if (!now) {
+      head = "Today's reading is done";
+      sub = 'Keep going if you like, or come back tomorrow.';
+    } else {
+      head = entryName(now);
+      sub = `${behind ? 'Catching up first · ' : ''}${done} of ${items.length} done today`;
+    }
+    const warm = warmupsLeft().length;
+    return `
+      <div class="today">
+        <div class="eyebrow" style="color:var(--gold)">Today · ${DAY_NAMES[t]}</div>
+        <div class="today-head">${esc(head)}</div>
+        <div class="today-sub">${esc(sub)}</div>
+        ${items.length ? `<div class="today-bar"><div style="width:${Math.round(done / items.length * 100)}%"></div></div>` : ''}
+        ${now || warm ? `<button class="board-link" data-jump>${warm ? "Start with today's warm-up ↓" : "Start today's reading ↓"}</button>` : ''}
+      </div>`;
+  }
+
+  function weekMapHtml() {
+    const t = todayIndex();
+    const rows = weekPlan().map((entries, d) => (entries.length ? entries : [null]).map(e => {
+      const items = e ? entryItems(e) : [], done = items.filter(x => x.done).length;
+      const all = items.length && done === items.length;
+      const mark = all ? '✓' : done ? done + '/' + items.length : '';
+      return `<div class="wm-row${d === t ? ' now' : ''}${all ? ' done' : ''}">
+        <span class="wm-day">${DAY_NAMES[d].slice(0, 3)}</span>
+        <span class="wm-name">${esc(e ? entryName(e) : 'Catch up, or read ahead')}</span>
+        <span class="wm-mark">${mark}</span></div>`;
+    }).join('')).join('');
+    return `<div class="week-map"><div class="eyebrow">This week</div>${rows}</div>`;
+  }
+
+  function refreshIntro() {
+    const el = document.querySelector('.reel[data-id="intro"]');
+    if (el) redrawCard('intro', introHtml(Number(el.dataset.index)));
+  }
+  function refreshDeep(section) {
+    deepItems().filter(d => d.section === section).forEach(d => {
+      const el = document.querySelector('.reel[data-id="deep-' + d.id + '"]');
+      if (el) redrawCard('deep-' + d.id, deepHtml(d, Number(el.dataset.index)));
+    });
+  }
+
+  // Go deeper: a longer reading for one section (the one the lesson points
+  // to), or one of Friday's pieces, with a question only the reading
+  // answers. A section's reading opens once its reels are answered.
+  function deepHtml(d, i) {
+    const friday = d.day === 'friday';
+    const left = friday ? 0 : WEEK.reels.filter(r => r.section === d.section && !S.answers[r.id]).length;
+    const web = /^https:|^lesson$/.test(d.read);
+    const url = d.read === 'lesson' ? WEEK.lesson : web ? d.read : readLink(d.read);
+    const name = web ? sourceLabel(d.read) : d.read;
+    const a = S.deep[d.id];
+    return `
+    <article class="reel" data-id="deep-${esc(d.id)}" data-index="${i}">
+      ${backdrop({ gradient: 'linear-gradient(160deg,#0b1024 0%,#1e3a8a 62%,#3b1d6e 100%)', blobA: 'rgba(147,197,253,.3)', blobB: 'rgba(0,0,0,.45)' })}
+      <div class="relative z-20 px-5 pr-7 content-pad">
+        <div class="eyebrow">${friday ? 'Friday deep dive' : 'Go deeper · ' + esc(WEEK.sections[d.section])}</div>
+        <h2 class="reel-hook">${friday ? esc(d.title) : 'Read ' + esc(d.read)}</h2>
+        <p class="reel-body">${esc(d.intro)}</p>
+        ${url ? `<a class="deep-open" href="${esc(url)}" target="_blank" rel="noopener noreferrer">Open ${esc(name)} ↗</a>` : ''}
+        ${left ? `<p class="reel-body mt-4" style="color:rgba(255,255,255,.62)">Answer this part's ${left === 1 ? 'last reel' : left + ' reels'} first, then the question opens.</p>`
+               : deepQuizHtml(d, a ? a.picked : null)}
+      </div>
+    </article>`;
+  }
+
+  function deepQuizHtml(d, picked) {
+    const done = picked != null;
+    const buttons = choicesFor(d, 'deep|' + d.id).map(c => {
+      const right = c === d.right;
+      const cls = done ? (right ? ' is-right' : c === picked ? ' is-wrong' : '') : '';
+      const mark = done ? (right ? '✓' : c === picked ? '✕' : '') : '';
+      return `<button class="choice${cls}" data-choice="${esc(c)}" ${done ? 'disabled' : ''}>
+                <span class="mark">${mark}</span><span>${esc(c)}</span></button>`;
+    }).join('');
+    const why = !done ? '' : `<p class="quiz-why">${picked === d.right ? '<b class="ok">Right.</b> ' : '<b class="no">Not quite.</b> '}${esc(d.why)}</p>`;
+    return `
+      <div class="quiz bonus${done ? ' done' : ''}" data-quiz="${esc(d.id)}" data-kind="deep">
+        <div class="eyebrow" style="color:var(--gold)">Find it in the reading · +${XP.bonus} XP</div>
+        <p class="quiz-q">${esc(d.q)}</p>
+        <div class="quiz-choices">${buttons}</div>
+        ${why}
+      </div>`;
+  }
+
+  function answerDeep(quiz, id, picked) {
+    const d = deepItems().find(x => x.id === id);
+    if (!d || S.deep[id]) return;                  // first try only
+    const right = picked === d.right;
+    S.deep[id] = { right, picked, day: dayKey() };
+    markStudied();
+    if (right) grantXp(XP.bonus, 'Went deeper');
+    const card = quiz.closest('.reel');
+    redrawCard('deep-' + id, deepHtml(d, Number(card.dataset.index)));
+    refreshEnd();
+    refreshIntro();
     renderHud();
     save();
   }
@@ -1603,11 +1915,6 @@ const TreasureUp = (function () {
       </div>`;
   }
 
-  function notesLine() {
-    const n = WEEK.reels.filter(r => S.notes[r.id]).length;
-    return `<p class="reel-body mt-2"><b class="text-amber-300">Notes:</b> you wrote ${n} this week.</p>`;
-  }
-
   function saveNote(id) {
     const r = reelById(id);
     const text = $('note-' + id).value.trim();
@@ -1616,7 +1923,7 @@ const TreasureUp = (function () {
     if (words.length < NOTE_MIN_WORDS) { msg.textContent = 'Write at least ' + NOTE_MIN_WORDS + ' words (' + words.length + ' so far).'; return; }
     if (new Set(words.map(w => w.toLowerCase())).size < 6) { msg.textContent = 'Use your own words: say what it means to you.'; return; }
     const old = S.notes[id] || {};
-    S.notes[id] = { text, day: old.day || dayKey(), hook: r.hook, ref: r.verse.ref, rewarded: !!old.rewarded };
+    S.notes[id] = { text, day: old.day || dayKey(), at: Date.now(), hook: r.hook, ref: r.verse.ref, rewarded: !!old.rewarded };
     noteEditing.delete(id);
     markStudied();
     if (!S.notes[id].rewarded) { S.notes[id].rewarded = true; grantXp(NOTE_XP, 'Wrote a note'); }
@@ -2236,8 +2543,9 @@ const TreasureUp = (function () {
   // Scores: 500 for a right answer plus up to 500 more for speed. Nothing
   // here changes anyone's XP.
   // Which Firebase project a copy of the app talks to, by where it's
-  // served: the real app and the test site each have their own. Anywhere
-  // else (a file on disk, the private preview, the tests) uses the Local
+  // served: the real app and the test site each have their own. The tests
+  // serve the test site's path from localhost to reach the test project.
+  // Anywhere else (a file on disk, the private preview) uses the Local
   // version.
   const FIREBASE_PROJECTS = {
     '/TreasureUp/': {
@@ -2254,8 +2562,46 @@ const TreasureUp = (function () {
     }
   };
   const FIREBASE_CONFIG = Object.keys(FIREBASE_PROJECTS)
-    .filter(path => location.hostname.endsWith('github.io') && location.pathname.startsWith(path))
+    .filter(path => (location.hostname.endsWith('github.io') || (location.hostname === 'localhost' && path === '/TreasureUp-test/')) &&
+                    location.pathname.startsWith(path))
     .map(path => FIREBASE_PROJECTS[path])[0] || null;
+
+  // Firebase loads on first use (the live game, or the family screen) and
+  // is shared by both. It waits until it knows who is signed in, so a
+  // signed-in parent is never swapped for a new anonymous account.
+  const FB_SDK = 'https://www.gstatic.com/firebasejs/10.12.2/';
+  let fbReady = null;
+  function loadScript(src) {
+    return new Promise((ok, no) => {
+      const s = document.createElement('script');
+      s.src = src; s.onload = ok; s.onerror = () => no(new Error("Couldn't connect (no internet?)"));
+      document.head.appendChild(s);
+    });
+  }
+  function fbInit() {
+    if (!FIREBASE_CONFIG) return Promise.reject(new Error('This needs the online app.'));
+    if (!fbReady) {
+      fbReady = (async () => {
+        if (!window.firebase || !window.firebase.firestore) {
+          await loadScript(FB_SDK + 'firebase-app-compat.js');
+          await loadScript(FB_SDK + 'firebase-auth-compat.js');
+          await loadScript(FB_SDK + 'firebase-firestore-compat.js');
+        }
+        if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+        await new Promise(ok => { const off = firebase.auth().onAuthStateChanged(() => { off(); ok(); }); });
+      })();
+      fbReady.catch(() => { fbReady = null; });   // let the next try load again
+    }
+    return fbReady;
+  }
+  // The signed-in user, or a new anonymous one (live-game players and
+  // children don't have accounts).
+  async function fbUser() {
+    await fbInit();
+    const auth = firebase.auth();
+    return auth.currentUser || (await auth.signInAnonymously()).user;
+  }
+  const tsMs = v => v && typeof v.toMillis === 'function' ? v.toMillis() : v;
   const LIVE_SECONDS = 20, LIVE_QUESTIONS = 10;
   const LIVE_COLORS = ['#e11d48', '#2563eb', '#ca8a04'];
 
@@ -2309,42 +2655,30 @@ const TreasureUp = (function () {
     };
   }
 
-  function FirebaseLive(config) {
-    // Same SDK and pattern as Storehouse: compat scripts loaded on first
-    // use, anonymous sign-in, Firestore for the live updates. Firestore
-    // stamps the question start and every answer with the server's clock,
-    // so speed points are fair whatever each phone's clock says.
-    const SDK = 'https://www.gstatic.com/firebasejs/10.12.2/';
-    let db, FV, uid = null;
-    const load = src => new Promise((ok, no) => {
-      const s = document.createElement('script');
-      s.src = src; s.onload = ok; s.onerror = () => no(new Error("Couldn't load the live game (no internet?)"));
-      document.head.appendChild(s);
-    });
-    const ms = v => v && typeof v.toMillis === 'function' ? v.toMillis() : v;
+  function FirebaseLive() {
+    // Anonymous sign-in is enough to play (a signed-in family member plays
+    // as themselves). Firestore stamps the question start and every answer
+    // with the server's clock, so speed points are fair whatever each
+    // phone's clock says. The uid is read fresh each time, since signing
+    // in or out on the family screen changes it.
+    let db, FV;
+    const ms = tsMs;
+    const me = () => firebase.auth().currentUser;
     const gameRef = c => db.collection('live').doc(c);
     return {
       kind: 'firebase',
-      uid: () => uid,
+      uid: () => (window.firebase && firebase.apps.length && me() ? me().uid : null),
       async init() {
-        if (uid) return uid;
-        if (!window.firebase || !window.firebase.firestore) {
-          await load(SDK + 'firebase-app-compat.js');
-          await load(SDK + 'firebase-auth-compat.js');
-          await load(SDK + 'firebase-firestore-compat.js');
-        }
-        if (!firebase.apps.length) firebase.initializeApp(config);
+        const u = await fbUser();
         db = firebase.firestore();
         FV = firebase.firestore.FieldValue;
-        const auth = firebase.auth();
-        uid = (auth.currentUser || (await auth.signInAnonymously()).user).uid;
-        return uid;
+        return u.uid;
       },
       async createGame(c, game) {
         try {
           await db.runTransaction(async t => {
             if ((await t.get(gameRef(c))).exists) throw new Error('taken');
-            t.set(gameRef(c), Object.assign({}, game, { host: uid, qStart: null, created: FV.serverTimestamp() }));
+            t.set(gameRef(c), Object.assign({}, game, { host: me().uid, qStart: null, created: FV.serverTimestamp() }));
           });
           return true;
         } catch (e) { if (e.message === 'taken') return false; throw e; }
@@ -2363,12 +2697,13 @@ const TreasureUp = (function () {
       },
       async join(c, name) {
         if (!(await gameRef(c).get()).exists) return 'No game with that code.';
-        const me = gameRef(c).collection('players').doc(uid);
-        if ((await me.get()).exists) await me.update({ name });
-        else await me.set({ name, score: 0, last: 0 });
+        const mine = gameRef(c).collection('players').doc(me().uid);
+        if ((await mine.get()).exists) await mine.update({ name });
+        else await mine.set({ name, score: 0, last: 0 });
         return null;
       },
       async answer(c, qi, choice) {
+        const uid = me().uid;
         await gameRef(c).collection('answers').doc(qi + '_' + uid).set({ uid, qi, choice, at: FV.serverTimestamp() });
       },
       async setScores(c, scores) {
@@ -2386,7 +2721,7 @@ const TreasureUp = (function () {
   }
 
   let LIVE = null;
-  const liveConn = () => LIVE || (LIVE = FIREBASE_CONFIG ? FirebaseLive(FIREBASE_CONFIG) : LocalLive());
+  const liveConn = () => LIVE || (LIVE = FIREBASE_CONFIG ? FirebaseLive() : LocalLive());
 
   // Questions are named by id ("isa13-babylon:q", "isa25-refuge:b1") so
   // every device looks up the same checked question from its own copy.
@@ -2612,6 +2947,7 @@ const TreasureUp = (function () {
     openLive();
     let name = '';
     try { name = localStorage.getItem('treasureup.live.name') || ''; } catch (e) {}
+    if (!name && F) name = F.name.slice(0, 16);
     liveBody(`
       <div class="clue" style="max-width:420px">
         <p class="clue-q">Join a live game</p>
@@ -2682,6 +3018,1066 @@ const TreasureUp = (function () {
     }
   }
 
+  /* ---------------- family: accounts, progress, chat ---------------- */
+
+  // A family is optional. Without one, everything stays on this device
+  // exactly as before. With one:
+  //   - Parents and other grown-ups sign in with Google or an email link.
+  //     Children don't sign in: a parent makes a one-time link, and opening
+  //     it on the child's phone or tablet joins that device as the child.
+  //   - Each person's progress is saved to the family, so a new device
+  //     picks up where the old one left off, and everyone sees how the
+  //     week is going.
+  //   - One family chat. Everyone in it sees every message; there are no
+  //     private messages, links or photos. A parent can hide a message:
+  //     everyone sees that it was hidden, and parents can still read it.
+  // firestore.rules is what actually enforces all of this.
+  const FAM_KEY = 'treasureup.family';        // this device's place in a family
+  const INVITE_DAYS = 7;
+  const LINKS = /(https?:|www\.|[a-z0-9-]+\.(com|net|org|io|ly|gg|tv|me|co|app|us|xyz|link|site|info|biz)([^a-z]|$))/i;
+  let F = null;       // { fid, uid, pid, name, role, family }: pid is whose progress this device saves
+  let fam = null;     // the family screen while it's open
+  let famQueue = Promise.resolve(), famUid, famAuthOff = null, famLatestOff = null;
+  let famLatest = { at: 0, mine: true };
+  const LOST_KEY = 'treasureup.lostFamily';  // why this device is no longer in its family, for the family screen
+  let syncTimer = null, syncChain = Promise.resolve(), syncFails = 0, backupOff = null;
+  let pendingAdopt = null, adoptTimer = null, claimAsked = false;
+
+  function loadFam() {
+    try { const raw = localStorage.getItem(FAM_KEY); if (raw) return JSON.parse(raw); } catch (e) {}
+    return null;
+  }
+  function saveFam() {
+    try { F ? localStorage.setItem(FAM_KEY, JSON.stringify(F)) : localStorage.removeItem(FAM_KEY); } catch (e) {}
+    famButtons();
+  }
+  // One family button on the main page: 👪 to sign in or join, then 💬.
+  function famButtons() {
+    $('famBtn').hidden = !!F;
+    $('chatBtn').hidden = !F;
+  }
+  const store = (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} };
+  const stored = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+
+  const fs = () => firebase.firestore();
+  const TS = () => firebase.firestore.FieldValue.serverTimestamp();
+  const famDoc = fid => fs().collection('families').doc(fid);
+  const famCol = (fid, name) => famDoc(fid).collection(name);
+  const authUser = () => (window.firebase && firebase.apps.length ? firebase.auth().currentUser : null);
+  const realAccount = u => !!u && !u.isAnonymous;
+  const appUrl = () => location.origin + location.pathname;
+  const inviteUrl = token => appUrl() + '?invite=' + F.fid + '.' + token;
+  function newId(n) {
+    const abc = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+    return Array.from(crypto.getRandomValues(new Uint8Array(n)), b => abc[b % abc.length]).join('');
+  }
+
+  // On boot: a device already in a family connects in the background to
+  // save progress and watch for new messages. A join link or an email
+  // sign-in link opens the family screen.
+  function familyBoot() {
+    famButtons();
+    let note = null;
+    try { note = sessionStorage.getItem('treasureup.adopted'); sessionStorage.removeItem('treasureup.adopted'); } catch (e) {}
+    if (note) toast('👪 ' + note.split('|')[0], note.split('|')[1] || '');
+    const q = new URLSearchParams(location.search);
+    if (q.get('invite') || (q.get('mode') === 'signIn' && q.get('oobCode'))) openFam();
+    else if (F && FIREBASE_CONFIG) setTimeout(() => famConnect(), 600);
+    // Save before the app goes to the background. Coming back, or the
+    // internet coming back, reconnects (the first try may have been offline).
+    document.addEventListener('visibilitychange', () => {
+      if (!F || !FIREBASE_CONFIG) return;
+      if (document.visibilityState === 'hidden') syncNow();
+      else if (!authUser()) famConnect();
+      else queueSync(500);
+    });
+    window.addEventListener('online', () => { if (F && FIREBASE_CONFIG) famConnect(); });
+  }
+
+  // Everything that depends on who's signed in runs through here, one at
+  // a time: on opening the screen, and again whenever the account changes.
+  function famConnect() {
+    famQueue = famQueue.then(famSync).catch(e => {
+      if (fam) { fam.busy = null; fam.err = friendly(e); renderFam(); }
+    });
+    return famQueue;
+  }
+  // Run an action in turn with the syncs; its errors go back to the caller.
+  function inQueue(fn) {
+    const p = famQueue.then(fn);
+    famQueue = p.catch(() => {});
+    return p;
+  }
+  async function famSync() {
+    if (!FIREBASE_CONFIG) return;
+    await fbInit();
+    if (!famAuthOff) famUid = authUser() ? authUser().uid : null;
+    if (!famAuthOff) famAuthOff = firebase.auth().onAuthStateChanged(u => { if ((u && u.uid) !== famUid) famConnect(); });
+    const q = new URLSearchParams(location.search);
+    // Coming back from an email sign-in link.
+    if (firebase.auth().isSignInWithEmailLink(location.href)) {
+      const email = stored('treasureup.signinEmail');
+      if (!email) { if (fam) { fam.busy = null; fam.needEmail = true; renderFam(); } return; }  // opened on another device: ask
+      await signInWithLink(email);
+    }
+    const u = authUser();
+    famUid = u && u.uid;
+    // A device's place in the family belongs to the account that joined.
+    // Someone else signing in on purpose is fine; otherwise the device lost
+    // its sign-in (browser data cleared, or the account deleted), and the
+    // family screen says so and how to get back in.
+    if (F && (!u || u.uid !== F.uid)) {
+      if (realAccount(u)) { leaveLocally(); }
+      else lostFamily('signin');
+    }
+    if (!F && u) await findMyFamily(u);
+    if (F) await checkMembership();
+    if (F) { watchLatest(); if (claimProgress()) { watchBackup(); await syncNow(); } }
+    const raw = q.get('invite') || stored('treasureup.pendingInvite');
+    if (raw && fam) await loadInvite(raw);
+    famUid = authUser() ? authUser().uid : null;
+    if (fam) { fam.busy = null; fam.err = null; renderFam(); }
+  }
+
+  // A parent on a new phone: the account remembers which family it's in.
+  async function findMyFamily(u) {
+    const snap = await fs().collection('users').doc(u.uid).get();
+    const fid = snap.exists && snap.data().fid;
+    if (!fid) return;
+    try {
+      const [m, f] = await Promise.all([famCol(fid, 'members').doc(u.uid).get(), famDoc(fid).get()]);
+      if (!m.exists) return;
+      const d = m.data();
+      F = { fid, uid: u.uid, pid: d.pid, name: d.name, role: d.role, family: f.data().name };
+      saveFam();
+      store(LOST_KEY, null);
+    } catch (e) { if (e.code !== 'permission-denied') throw e; }   // not in it any more
+  }
+
+  async function checkMembership() {
+    try {
+      const m = await famCol(F.fid, 'members').doc(F.uid).get();
+      if (!m.exists) throw Object.assign(new Error('gone'), { code: 'permission-denied' });
+      const d = m.data();
+      Object.assign(F, { name: d.name, role: d.role, pid: d.pid });
+      delete F.pending;
+      saveFam();
+    } catch (e) {
+      if (e.code !== 'permission-denied') throw e;
+      if (F.pending) { F = null; saveFam(); return; }   // a join that never went through
+      // Refused because this device is no longer signed in as the member
+      // (its sign-in was cleared), or because a parent removed it.
+      const u = authUser();
+      lostFamily(u && u.uid === F.uid ? 'removed' : 'signin');
+    }
+  }
+  // A listener or a save was refused: find out whether this device is still in the family.
+  function recheckMembership(e) {
+    if (e && e.code && e.code !== 'permission-denied') return;
+    famQueue = famQueue.then(() => F && checkMembership()).catch(() => {});
+  }
+  // This device is no longer in its family: say why, here and on the family screen.
+  function lostFamily(reason) {
+    store(LOST_KEY, JSON.stringify({ family: F.family, name: F.name, role: F.role, reason }));
+    toast('👪 ' + F.family, reason === 'removed' ? 'A parent took this device out of the family' : 'This device lost its place in the family. Open 👪 to get back in');
+    leaveLocally();
+  }
+  // Its progress stays on the device, still marked as that person's.
+  function leaveLocally() {
+    stopFamWatch();
+    if (famLatestOff) { famLatestOff(); famLatestOff = null; }
+    if (backupOff) { backupOff(); backupOff = null; }
+    clearTimeout(syncTimer); syncTimer = null;
+    pendingAdopt = null;
+    F = null; saveFam();
+    $('chatDot').hidden = true;
+  }
+
+  /* ----- progress: whose it is, saved to the family, merged across devices ----- */
+
+  // Progress lives on the device (S). S.owner says whose it is: a family
+  // member's pid, or null for progress not linked to anyone (a device used
+  // before it joined a family). A device only ever saves or loads its
+  // owner's family copy, so a different person signing in never mixes two
+  // people's progress: the other person's is set aside on the device (its
+  // own slot) and comes back when they do.
+  const slotKey = owner => STORE_KEY + '@' + (owner || 'local');
+  const syncKey = pid => 'treasureup.synced@' + pid;
+  const hasProgress = s => s.xp > 0 || Object.keys(s.answers || {}).length > 0 ||
+    Object.keys(s.notes || {}).length > 0 || (s.history || []).length > 0;
+  // The same progress always gives the same text, so two copies compare.
+  function canon(v) {
+    if (Array.isArray(v)) return '[' + v.map(canon).join(',') + ']';
+    if (v && typeof v === 'object') {
+      return '{' + Object.keys(v).filter(k => v[k] !== undefined).sort().map(k => JSON.stringify(k) + ':' + canon(v[k])).join(',') + '}';
+    }
+    return JSON.stringify(v === undefined ? null : v);
+  }
+
+  // Restart the app with another person's progress on this device, setting
+  // the current progress aside in its own slot.
+  function switchProgress(to, name, note) {
+    try {
+      localStorage.setItem(slotKey(S.owner), JSON.stringify(S));
+      const raw = localStorage.getItem(slotKey(to));
+      localStorage.setItem(STORE_KEY, JSON.stringify(Object.assign(raw ? JSON.parse(raw) : {}, { owner: to, ownerName: name })));
+      localStorage.removeItem(slotKey(to));
+      if (note) sessionStorage.setItem('treasureup.adopted', note);
+    } catch (e) { toast("👪 Couldn't switch", 'This device is out of storage space'); return; }
+    location.reload();
+  }
+
+  // Before anything is saved to the family, the progress on this device
+  // must be the signed-in person's. True when it is; otherwise it asks.
+  function claimProgress() {
+    if (S.owner === F.pid) return true;
+    if (!hasProgress(S)) { S.owner = F.pid; S.ownerName = F.name; saveLocal(); return true; }
+    if (stored(slotKey(F.pid))) { switchProgress(F.pid, F.name); return false; }   // they've used this device before
+    if (fam) { fam.claim = true; renderFam(); }
+    else if (!claimAsked) { claimAsked = true; toast('👪 One question first', 'Open 👪 to finish setting up this device'); }
+    return false;
+  }
+  function claimAnswer(yes) {
+    fam.claim = false;
+    if (!yes) return switchProgress(F.pid, F.name);
+    S.owner = F.pid; S.ownerName = F.name;
+    save();
+    watchBackup();
+    renderFam();
+  }
+
+  // Saving to the family. The family keeps one copy per person. Each
+  // device remembers the last progress of its own that the family's copy
+  // is known to include. If only this device changed since, it saves; if
+  // only the family's copy changed (another device), this device takes it;
+  // if both changed, they're merged, so nothing done on either is lost.
+  const synced = () => (F ? stored(syncKey(F.pid)) : null);
+  function setSynced(json) { store(syncKey(F.pid), json); store('treasureup.savedAt', String(Date.now())); }
+
+  function queueSync(ms) {
+    if (!F || syncTimer) return;
+    syncTimer = setTimeout(syncNow, ms == null ? 3000 : ms);
+  }
+  function syncNow() {
+    clearTimeout(syncTimer); syncTimer = null;
+    syncChain = syncChain.then(syncProgress).then(() => { syncFails = 0; }, syncFailed);
+    return syncChain;
+  }
+  async function syncProgress() {
+    const u = authUser();
+    if (!F || F.pending || !u || u.uid !== F.uid || S.owner !== F.pid) return;
+    const ref = famCol(F.fid, 'backup').doc(F.pid), sumRef = famCol(F.fid, 'progress').doc(F.pid);
+    const mine = canon(S), base = synced();
+    let wrote = null, take = null;
+    await fs().runTransaction(async t => {
+      wrote = take = null;
+      const snap = await t.get(ref);
+      const theirs = snap.exists ? snap.data().state : null;
+      if (theirs === mine) return;
+      let next;
+      if (theirs == null || theirs === base) next = S;                                   // only this device changed
+      else if (mine === base) { take = theirs; return; }                                  // only the family's copy changed
+      else next = mergeProgress(JSON.parse(theirs), S, base ? JSON.parse(base) : null);    // both changed
+      next = Object.assign({}, next, { owner: F.pid, ownerName: F.name });
+      wrote = canon(next);
+      t.set(ref, { xp: next.xp, state: wrote, by: F.uid, updated: TS() });
+      t.set(sumRef, summaryOf(next));
+    });
+    if (take) { adopt(take, mine, 'Progress synced|From your other device'); return; }
+    setSynced(mine);                   // the family's copy now includes everything here
+    if (wrote && wrote !== mine) adopt(wrote, mine, 'Progress merged|With your other device');
+    if ($('famPeople')) renderPeople();
+  }
+  function syncFailed(e) {
+    if (e && e.code === 'permission-denied') return recheckMembership(e);   // most likely taken out of the family
+    // No connection, or Firestore busy: try again, less often each time.
+    syncFails++;
+    clearTimeout(syncTimer);
+    syncTimer = setTimeout(syncNow, Math.min(300000, 15000 * Math.pow(2, syncFails - 1)));
+    if ($('famPeople')) renderPeople();
+  }
+
+  // Another device saved: catch up without waiting for a restart.
+  function watchBackup() {
+    if (backupOff) backupOff();
+    if (!F || S.owner !== F.pid) return;
+    backupOff = famCol(F.fid, 'backup').doc(F.pid).onSnapshot(snap => {
+      if (!snap.metadata.hasPendingWrites && snap.exists && snap.data().state !== synced()) queueSync(300);
+    }, recheckMembership);
+  }
+
+  // Put the family's copy on this device: restart the app with it once
+  // nothing is being used (a game, the TV board, typed text). If this
+  // device's progress changed in the meantime, sync again instead (merge).
+  function adopt(json, from, note) {
+    pendingAdopt = { json, from, note };
+    tryAdopt();
+  }
+  function tryAdopt() {
+    clearTimeout(adoptTimer);
+    const a = pendingAdopt;
+    if (!a || !F) return;
+    if (canon(S) !== a.from) { pendingAdopt = null; queueSync(0); return; }
+    const typing = [...document.querySelectorAll('textarea, input.field')].some(t => t.value.trim() && !t.readOnly);
+    const busy = ['play', 'live', 'board', 'parent'].some(id => !$(id).hidden) || typing;
+    if (busy) { adoptTimer = setTimeout(tryAdopt, 10000); return; }
+    try {
+      localStorage.setItem(STORE_KEY, a.json);
+      store(syncKey(F.pid), a.json);
+      sessionStorage.setItem('treasureup.adopted', a.note);
+    } catch (e) { return; }
+    location.reload();
+  }
+
+  // Two copies of one person's progress that both changed since they last
+  // agreed (base): keep everything from both. The family's copy (theirs)
+  // wins where both did the same thing; XP is the family's plus what this
+  // device earned since base, not counting anything the family's copy
+  // already has.
+  function mergeProgress(R, L, B) {
+    B = B || {};
+    const has = (o, k) => !!o && Object.prototype.hasOwnProperty.call(o, k);
+    const M = JSON.parse(JSON.stringify(R));
+    let gained = Math.max(0, (L.xp || 0) - (B.xp || 0));
+    for (const k in L.answers || {}) if (!has(B.answers, k) && has(R.answers, k) && L.answers[k].right) gained -= XP.firstTry;
+    for (const k in L.bonus || {}) if (!has(B.bonus, k) && has(R.bonus, k) && L.bonus[k].right) gained -= XP.bonus;
+    for (const k in L.deep || {}) if (!has(B.deep, k) && has(R.deep, k) && L.deep[k].right) gained -= XP.bonus;
+    for (const k in L.notes || {}) {
+      if (L.notes[k].rewarded && !(has(B.notes, k) && B.notes[k].rewarded) && has(R.notes, k) && R.notes[k].rewarded) gained -= NOTE_XP;
+    }
+    M.xp = (R.xp || 0) + Math.max(0, gained);
+    for (const key of ['answers', 'bonus', 'deep', 'sayings', 'recall', 'sayRecall']) M[key] = Object.assign({}, L[key] || {}, R[key] || {});
+    // Notes: the later edit wins.
+    M.notes = Object.assign({}, L.notes || {}, R.notes || {});
+    for (const k in L.notes || {}) if (!has(R.notes, k) || (L.notes[k].at || 0) > (R.notes[k].at || 0)) M.notes[k] = L.notes[k];
+    // Verse Word: the day's game that got further.
+    M.words = Object.assign({}, L.words || {}, R.words || {});
+    for (const d in L.words || {}) {
+      const a = L.words[d], b = (R.words || {})[d];
+      if (b && (a.guesses || []).length > (b.guesses || []).length) M.words[d] = a;
+    }
+    // Streak: whichever studied more recently.
+    if ((L.lastStudy || '') > (R.lastStudy || '')) Object.assign(M, { lastStudy: L.lastStudy, streak: L.streak, freezes: L.freezes });
+    else if (L.lastStudy === R.lastStudy) M.streak = Math.max(L.streak || 0, R.streak || 0);
+    // Today's warm-up: both sets of answers.
+    if (L.daily && (!R.daily || L.daily.day > R.daily.day)) M.daily = L.daily;
+    else if (L.daily && R.daily && L.daily.day === R.daily.day) {
+      M.daily = Object.assign({}, R.daily, { done: Object.assign({}, L.daily.done, R.daily.done), sayDone: R.daily.sayDone != null ? R.daily.sayDone : L.daily.sayDone });
+    }
+    // The weekly puzzle: the one that got further this week.
+    const pzAhead = (a, b) => {
+      if (!a) return false;
+      if (!b) return true;
+      if (a.week !== b.week) return a.week === WEEK.title;
+      if ((a.status === 'won') !== (b.status === 'won')) return a.status === 'won';
+      return (a.solved || []).length > (b.solved || []).length;
+    };
+    if (pzAhead(L.puzzle, R.puzzle)) M.puzzle = L.puzzle;
+    M.climbDay = [L.climbDay, R.climbDay].filter(Boolean).sort().pop() || null;
+    if ((L.history || []).length > (R.history || []).length) M.history = L.history;
+    return M;
+  }
+
+  // What the whole family sees about one person.
+  function summaryOf(s) {
+    const vals = Object.values(s.answers || {});
+    return {
+      name: F.name, role: F.role === 'kid' ? 'kid' : 'grownup', xp: s.xp || 0, streak: s.streak || 0,
+      lastStudy: s.lastStudy || '', week: WEEK.title, right: vals.filter(a => a.right).length, answered: vals.length, updated: TS()
+    };
+  }
+
+  /* ----- the new-message dot ----- */
+
+  function watchLatest() {
+    if (famLatestOff) famLatestOff();
+    famLatestOff = famCol(F.fid, 'messages').orderBy('at', 'desc').limit(1).onSnapshot(q => {
+      const d = q.docs[0];
+      const m = d ? d.data({ serverTimestamps: 'estimate' }) : null;
+      famLatest = { at: m ? tsMs(m.at) : 0, mine: !m || m.uid === F.uid };
+      updateFamDot();
+    }, recheckMembership);
+  }
+  function updateFamDot() {
+    const reading = fam && fam.tab === 'chat' && F && !fam.invite;
+    if (reading && famLatest.at) store('treasureup.chatSeen', String(famLatest.at));
+    const unread = !!F && !famLatest.mine && famLatest.at > (Number(stored('treasureup.chatSeen')) || 0);
+    $('chatDot').hidden = !unread;
+    const tabDot = $('famChatDot');
+    if (tabDot) tabDot.hidden = !unread;
+  }
+
+  /* ----- the family screen ----- */
+
+  function openFam(tab) {
+    if (!fam) fam = { tab: tab || 'people', busy: FIREBASE_CONFIG ? 'Connecting…' : null, err: null, members: [], progress: [],
+                      messages: [], hidden: {}, invites: [], unsub: [], watching: null, link: null, confirm: null, sent: null };
+    $('fam').hidden = false;
+    renderFam();
+    if (FIREBASE_CONFIG) famConnect();
+  }
+  function closeFam() {
+    if (!fam) return;
+    stopFamWatch();
+    fam = null;
+    $('fam').hidden = true;
+    $('famBody').innerHTML = '';   // its lists refresh from background saves only while it's open
+    store('treasureup.pendingInvite', null);
+    if (new URLSearchParams(location.search).get('invite')) history.replaceState(null, '', location.pathname);
+  }
+  function stopFamWatch() {
+    if (!fam) return;
+    fam.unsub.forEach(f => { try { f(); } catch (e) {} });
+    fam.unsub = []; fam.watching = null;
+  }
+
+  function friendly(e) {
+    const c = (e && e.code) || '';
+    if (c === 'unavailable' || /internet|network/i.test((e && e.message) || '')) return "Couldn't connect. Check the internet and try again.";
+    if (c === 'permission-denied') return "That isn't allowed. A parent may need to send a new link.";
+    if (c === 'auth/invalid-action-code' || c === 'auth/expired-action-code') return 'That sign-in link has expired or was already used. Ask for a new one.';
+    if (c === 'auth/invalid-email') return "That email address doesn't look right.";
+    if (c === 'auth/too-many-requests') return 'Too many tries. Wait a few minutes and try again.';
+    return (e && e.message) || 'Something went wrong.';
+  }
+  // A short message under the current form, without redrawing it.
+  function famSay(msg) { const el = $('famNote'); if (el) el.textContent = msg || ''; }
+
+  function renderFam() {
+    if (!fam) return;
+    $('famTitle').textContent = F && !fam.invite ? F.family : '';
+    const body = $('famBody');
+    const put = html => { body.innerHTML = `<div class="fam-wrap">${html}</div>`; };
+    if (!FIREBASE_CONFIG) return put(`
+      <p class="board-help">Family needs the online app: open Treasure Up from its web address, not a saved file or preview.</p>`);
+    if (fam.busy) return put(`<p class="live-sub">${esc(fam.busy)}</p>`);
+    if (fam.err) return put(`<p class="parent-msg">${esc(fam.err)}</p>
+      <div class="board-actions"><button class="btn" data-fam="retry">Try again</button></div>`);
+    if (fam.needEmail) return put(`
+      <p class="clue-q" style="font-size:22px">Finish signing in</p>
+      <label for="famEmail">Type the email address the link was sent to</label>
+      <input id="famEmail" class="field" type="email" autocomplete="email">
+      <div class="board-actions"><button class="btn" data-fam="finish">Sign in</button></div>
+      <p id="famNote" class="parent-msg"></p>`);
+    if (fam.invite) return put(inviteHtml());
+    if (F && fam.claim) return put(claimHtml());
+    if (F) { put(memberHtml()); famWatch(); renderPeople(); renderLink(); renderPending(); renderChat(true); updateFamDot(); return; }
+    const u = authUser();
+    put(realAccount(u) ? startHtml(u) : signInHtml());
+  }
+
+  // Whose is the progress already on this device?
+  function claimHtml() {
+    const kid = F.role === 'kid', L = levelFor(S.xp), name = esc(F.name);
+    const day = S.lastStudy ? new Date(S.lastStudy + 'T12:00:00').toLocaleDateString([], { month: 'short', day: 'numeric' }) : '';
+    const whose = S.owner && S.ownerName ? esc(S.ownerName) + "'s progress" : 'progress';
+    const it = kid ? name + "'s" : 'yours';
+    return `
+      <p class="clue-q" style="font-size:22px">One question first</p>
+      <p class="board-help">This device already has ${whose} on it: Level ${L}, ${S.xp} XP${day ? ', last studied ' + esc(day) : ''}. Is it ${it}?</p>
+      <div class="board-actions" style="flex-direction:column;align-items:stretch">
+        <button class="btn" data-fam="claim-yes">Yes, it's ${it}</button>
+        <button class="btn ghost" data-fam="claim-no">${kid ? 'No, start ' + name + ' fresh' : 'No, keep it apart'}</button>
+      </div>
+      <p class="fam-note">${kid
+        ? `If it isn't, it stays on this device, set apart, and ${name} starts fresh here (or picks up ${name}'s progress saved in the family).`
+        : "If it isn't, it stays on this device, set apart from your account, and comes back when you sign out."}</p>`;
+  }
+
+  // Why this device is no longer in its family, and how to get back in.
+  function lostHtml() {
+    let l = null;
+    try { l = JSON.parse(stored(LOST_KEY)); } catch (e) {}
+    if (!l) return '';
+    const name = esc(l.name), family = esc(l.family);
+    const why = l.reason === 'removed' ? `A parent took this device out of ${family}.` : `This device lost its place in ${family}: its sign-in was cleared.`;
+    const how = l.role !== 'kid' ? 'Sign in again below to get back in.'
+      : l.reason === 'removed' ? `If that was a mistake, a parent can add ${name} back from the family screen, and ${name}'s saved progress comes too.`
+      : `To get back in, ask a parent to tap "Link another device" under ${name} and open that link here. ${name}'s saved progress comes too.`;
+    return `<div class="fam-box" style="margin:0 0 14px">${why} ${how}</div>`;
+  }
+
+  function signInOptions(email) {
+    if (fam.sent) return `
+      <div class="fam-box"><b>Check ${esc(fam.sent)}</b> for a sign-in link from Treasure Up, and open it on this device.
+        It can take a minute; look in spam if it isn't there.</div>`;
+    return `
+      <div class="board-actions"><button class="btn" data-fam="google">Continue with Google</button></div>
+      <label for="famEmail">Or get a sign-in link by email</label>
+      <input id="famEmail" class="field" type="email" autocomplete="email" placeholder="you@example.com" value="${esc(email || '')}">
+      <div class="board-actions"><button class="btn ghost" data-fam="email">Email me a link</button></div>`;
+  }
+
+  function signInHtml() {
+    return `${lostHtml()}
+      <p class="clue-q" style="font-size:22px">Study together as a family</p>
+      <p class="board-help">See how everyone's week is going, and talk about it in a family chat that parents can see all of.</p>
+      <p class="fam-note" style="margin-top:14px">Grown-ups sign in here.</p>
+      ${signInOptions('')}
+      <p id="famNote" class="parent-msg"></p>
+      <p class="fam-note">Kids: ask a parent to add you. They'll send a link to open on this phone or tablet.</p>`;
+  }
+
+  function startHtml(u) {
+    return `
+      <p class="clue-q" style="font-size:22px">Start your family</p>
+      <p class="board-help">You're signed in as ${esc(u.email || 'a Google account')}. You'll be the family's first parent: you add everyone else, and you can hide chat messages.</p>
+      <label for="famNewFamily">Family name</label>
+      <input id="famNewFamily" class="field" maxlength="40" placeholder="The Smith Family">
+      <label for="famMyName">Your name, as the family will see it</label>
+      <input id="famMyName" class="field" maxlength="24" placeholder="Dad">
+      <div class="board-actions"><button class="btn" data-fam="start">Start the family</button></div>
+      <p id="famNote" class="parent-msg"></p>
+      <p class="fam-note">Joining someone else's family? Open the link they sent you.
+        <button class="fam-link" data-fam="signout">Sign out</button></p>`;
+  }
+
+  /* ----- joining with a link ----- */
+
+  async function loadInvite(raw) {
+    const m = /^([A-Za-z0-9]{20})\.([A-Za-z0-9]{20,40})$/.exec(raw || '');
+    if (!m) { fam.invite = { problem: 'gone' }; return; }
+    const u = await fbUser();
+    let d = null;
+    try { const snap = await famCol(m[1], 'invites').doc(m[2]).get(); d = snap.exists ? snap.data() : null; }
+    catch (e) { if (e.code !== 'permission-denied') throw e; }
+    // Already joined with it (a used link is soon deleted, so a missing one
+    // for this device's own family counts too).
+    if ((d && d.usedBy === u.uid) || (!d && F && F.fid === m[1])) { fam.invite = null; clearInvite(); return; }
+    const gone = !d || d.usedBy || tsMs(d.expires) < Date.now();
+    fam.invite = { fid: m[1], token: m[2], data: d, problem: gone ? 'gone' : null };
+  }
+  function clearInvite() {
+    store('treasureup.pendingInvite', null);
+    if (fam) fam.invite = null;
+    if (new URLSearchParams(location.search).get('invite')) history.replaceState(null, '', location.pathname);
+  }
+
+  function inviteHtml() {
+    const inv = fam.invite, d = inv.data, u = authUser();
+    const done = `<div class="board-actions"><button class="btn ghost" data-fam="dismiss">Close</button></div>`;
+    if (inv.problem) return `
+      <p class="clue-q" style="font-size:22px">This link doesn't work any more</p>
+      <p class="board-help">It has been used already or has expired. Ask a parent for a new one.</p>${done}`;
+    const head = `<p class="clue-q" style="font-size:22px">Join ${esc(d.family)}</p>`;
+    if (d.role === 'kid') {
+      if (F && F.fid === inv.fid && F.pid === d.kidId) return head + `<p class="board-help">This device is already joined as ${esc(d.name)}.</p>${done}`;
+      if (F) return head + `<p class="board-help">This device is already in ${esc(F.family)} as ${esc(F.name)}. A parent can take it out of that family first.</p>${done}`;
+      if (realAccount(u)) return head + `
+        <p class="board-help">This link makes this device ${esc(d.name)}'s. It's signed in as ${esc(u.email || 'a grown-up')} right now.
+          Open the link on ${esc(d.name)}'s own phone or tablet, or sign out here first and then join.</p>
+        <div class="board-actions"><button class="btn" data-fam="signout">Sign out first</button></div>
+        <p id="famNote" class="parent-msg"></p>`;
+      return head + `
+        <p class="board-help">This phone or tablet will save ${esc(d.name)}'s progress to the family, and ${esc(d.name)} can use the family chat. Parents can read every message.</p>
+        <div class="board-actions"><button class="btn" data-fam="join">Join as ${esc(d.name)}</button></div>
+        <p id="famNote" class="parent-msg"></p>`;
+    }
+    if (F && F.role === 'kid') return head + `<p class="board-help">This device is ${esc(F.name)}'s. Open the link on your own phone.</p>${done}`;
+    if (F) return head + `<p class="board-help">This device is already in ${esc(F.family)}.</p>${done}`;
+    const as = `as ${esc(d.name)}${d.role === 'parent' ? ', a parent' : ''}`;
+    if (realAccount(u) && u.emailVerified && (u.email || '').toLowerCase() === d.email) return head + `
+      <p class="board-help">You're signed in as ${esc(u.email)}. You'll join ${as}.</p>
+      <div class="board-actions"><button class="btn" data-fam="join">Join ${esc(d.family)}</button></div>
+      <p id="famNote" class="parent-msg"></p>`;
+    if (realAccount(u)) return head + `
+      <p class="board-help">This invite is for ${esc(d.email)}, but you're signed in as ${esc(u.email || 'another account')}.</p>
+      <div class="board-actions"><button class="btn" data-fam="signout">Sign out</button></div>
+      <p class="fam-note">If ${esc(d.email)} isn't the right address, ask for a new invite with the right one.</p>`;
+    return head + `
+      <p class="board-help">You'll join ${as}. Sign in with <b>${esc(d.email)}</b>:</p>
+      ${signInOptions(d.email)}
+      <p id="famNote" class="parent-msg"></p>`;
+  }
+
+  async function joinFamily() {
+    const { fid, token, data: d } = fam.invite;
+    const u = await fbUser();
+    const pid = d.role === 'kid' ? d.kidId : u.uid;
+    const b = fs().batch();
+    b.set(famCol(fid, 'members').doc(u.uid), { name: d.name, role: d.role, pid, invite: token, joined: TS() });
+    b.update(famCol(fid, 'invites').doc(token), { usedBy: u.uid });
+    b.set(fs().collection('users').doc(u.uid), { fid });
+    // Remembered before it's sent, so a phone closed mid-join finishes it
+    // (or forgets it, if it never reached the family) next time.
+    F = { fid, uid: u.uid, pid, name: d.name, role: d.role, family: d.family, pending: true };
+    saveFam();
+    try { await b.commit(); } catch (e) { F = null; saveFam(); throw e; }
+    delete F.pending;
+    saveFam();
+    store(LOST_KEY, null);
+    clearInvite();
+    toast('👪 Welcome to ' + d.family, 'Joined as ' + d.name);
+    watchLatest();
+    if (claimProgress()) { watchBackup(); await syncNow(); }
+  }
+
+  async function startFamily() {
+    const family = $('famNewFamily').value.trim(), name = $('famMyName').value.trim();
+    if (!family) return famSay('Give the family a name.'), false;
+    if (!name) return famSay('Type your name, as the family will see it.'), false;
+    const u = authUser();
+    const ref = fs().collection('families').doc();
+    const b = fs().batch();
+    b.set(ref, { name: family, createdBy: u.uid, created: TS() });
+    b.set(ref.collection('members').doc(u.uid), { name, role: 'parent', pid: u.uid, invite: '', joined: TS() });
+    b.set(fs().collection('users').doc(u.uid), { fid: ref.id });
+    await b.commit();
+    F = { fid: ref.id, uid: u.uid, pid: u.uid, name, role: 'parent', family };
+    saveFam();
+    store(LOST_KEY, null);
+    watchLatest();
+    if (claimProgress()) { watchBackup(); await syncNow(); }
+    return true;
+  }
+
+  /* ----- signing in (grown-ups) ----- */
+
+  async function googleSignIn() {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
+    try { await firebase.auth().signInWithPopup(provider); }
+    catch (e) {
+      if (e.code === 'auth/popup-blocked' || e.code === 'auth/operation-not-supported-in-this-environment') return firebase.auth().signInWithRedirect(provider);
+      if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') return;
+      throw e;
+    }
+  }
+
+  async function emailLink() {
+    const email = ($('famEmail').value || '').trim().toLowerCase();
+    if (!/^[^@ ]+@[^@ ]+\.[^@ ]+$/.test(email)) return famSay("That email address doesn't look right.");
+    const inv = fam.invite && fam.invite.token ? fam.invite.fid + '.' + fam.invite.token : '';
+    await firebase.auth().sendSignInLinkToEmail(email, { url: appUrl() + (inv ? '?invite=' + inv : ''), handleCodeInApp: true });
+    store('treasureup.signinEmail', email);
+    if (inv) store('treasureup.pendingInvite', inv);
+    fam.sent = email;
+    renderFam();
+  }
+
+  async function finishEmail() {
+    const email = ($('famEmail').value || '').trim().toLowerCase();
+    if (!email) return famSay('Type your email address.');
+    await signInWithLink(email);
+    fam.needEmail = false;
+    fam.busy = 'Connecting…'; renderFam();
+    famConnect();
+  }
+
+  // Finish an email sign-in link, then take its codes out of the address
+  // (a used link can't be used twice), keeping any join link.
+  async function signInWithLink(email) {
+    const drop = () => {
+      const q = new URLSearchParams(location.search);
+      ['apiKey', 'oobCode', 'mode', 'lang', 'continueUrl', 'tenantId'].forEach(k => q.delete(k));
+      const rest = q.toString();
+      history.replaceState(null, '', location.pathname + (rest ? '?' + rest : ''));
+    };
+    try { await firebase.auth().signInWithEmailLink(email, location.href); }
+    catch (e) { if (/action-code/.test(e.code || '')) drop(); throw e; }
+    store('treasureup.signinEmail', null);
+    drop();
+  }
+
+  // Their progress goes with their account: the device goes back to what
+  // it had before they signed in (or starts fresh), and theirs is set
+  // aside on the device for when they sign in again.
+  async function famSignOut() {
+    await syncNow();
+    const owner = S.owner;
+    leaveLocally();
+    if (fam) fam.sent = null;
+    await firebase.auth().signOut();   // the auth listener redraws
+    if (owner) switchProgress(null, null);
+  }
+
+  /* ----- a member's view: People and Chat ----- */
+
+  function memberHtml() {
+    const tab = (id, label) => `<button class="fam-tab${fam.tab === id ? ' on' : ''}" data-fam="tab" data-tab="${id}">${label}</button>`;
+    const u = authUser();
+    return `
+      <div class="fam-tabs">${tab('people', 'People')}${tab('chat', 'Chat<span id="famChatDot" class="hud-dot" hidden></span>')}</div>
+      ${fam.tab === 'chat' ? `
+        <div id="chatList" class="chat-list"></div>
+        <div class="chat-form">
+          <textarea id="chatText" class="field" maxlength="500" rows="2" placeholder="Message the family"></textarea>
+          <button class="btn" data-fam="send">Send</button>
+        </div>
+        <p id="famNote" class="parent-msg"></p>
+        <p class="fam-note">Everyone in the family sees every message, and parents can hide any message. Text and emoji only: no links or photos.</p>`
+      : `
+        <div id="famPeople"></div>
+        ${F.role === 'parent' ? addHtml() : ''}
+        <p class="fam-note" style="margin-top:22px">${realAccount(u)
+          ? `Signed in as ${esc(u.email || 'Google')} · <button class="fam-link" data-fam="signout">Sign out</button>`
+          : `This device is ${esc(F.name)}'s.`}</p>`}`;
+  }
+
+  function famWatch() {
+    if (!fam || fam.watching === F.fid) return;
+    stopFamWatch();
+    fam.watching = F.fid;
+    const on = (ref, cb) => fam.unsub.push(ref.onSnapshot(cb, famLost));
+    on(famDoc(F.fid), s => {
+      if (!s.exists || !F) return;
+      F.family = s.data().name; saveFam();
+      fam.createdBy = s.data().createdBy;
+      if (!fam.invite) $('famTitle').textContent = F.family;
+      renderPeople();
+    });
+    on(famCol(F.fid, 'members'), q => {
+      fam.members = q.docs.map(d => Object.assign({ uid: d.id }, d.data({ serverTimestamps: 'estimate' })));
+      const mine = fam.members.find(m => m.uid === F.uid);
+      if (mine && mine.role !== F.role) { F.role = mine.role; saveFam(); stopFamWatch(); renderFam(); return; }
+      renderPeople();
+    });
+    on(famCol(F.fid, 'progress'), q => { fam.progress = q.docs.map(d => Object.assign({ pid: d.id }, d.data())); renderPeople(); });
+    on(famCol(F.fid, 'messages').orderBy('at', 'desc').limit(100), q => {
+      fam.messages = q.docs.map(d => { const m = d.data({ serverTimestamps: 'estimate' }); return Object.assign(m, { id: d.id, at: tsMs(m.at) }); }).reverse();
+      renderChat(false);
+    });
+    if (F.role === 'parent') {
+      // All of the family's links, not just unused ones: a listener on
+      // "usedBy == null" sometimes missed a link being used (seen in tests).
+      // Used and expired links are tidied away from here.
+      on(famCol(F.fid, 'invites'), q => {
+        const all = q.docs.map(d => { const i = d.data(); return Object.assign(i, { id: d.id, expires: tsMs(i.expires) }); });
+        fam.invites = all.filter(i => !i.usedBy && i.expires > Date.now());
+        if (fam.link && !fam.invites.some(i => i.id === fam.link.token)) { fam.link = null; renderLink(); }   // used or cancelled
+        all.filter(i => i.usedBy || i.expires < Date.now() - 86400000).forEach(i => famCol(F.fid, 'invites').doc(i.id).delete().catch(() => {}));
+        renderPending();
+      });
+      on(famCol(F.fid, 'hidden'), q => { fam.hidden = {}; q.docs.forEach(d => { fam.hidden[d.id] = d.data().text; }); renderChat(false); });
+    }
+  }
+  // A listener was refused: either this device was taken out of the
+  // family, or its role changed (a parent-only list). Find out which.
+  function famLost() {
+    if (!fam || !F) return;
+    stopFamWatch();
+    famQueue = famQueue.then(() => F && checkMembership()).catch(() => {}).then(() => renderFam());
+  }
+
+  // People, one row each; a child's devices are listed under them.
+  function people() {
+    const by = new Map();
+    fam.members.forEach(m => {
+      const p = by.get(m.pid) || { pid: m.pid, name: m.name, role: m.role, devices: [] };
+      p.devices.push({ uid: m.uid, joined: tsMs(m.joined) || 0 });
+      by.set(m.pid, p);
+    });
+    const prog = new Map(fam.progress.map(g => [g.pid, g]));
+    const order = { kid: 0, parent: 1, adult: 2 };
+    return [...by.values()].map(p => Object.assign(p, {
+      prog: prog.get(p.pid) || null,
+      founder: !!fam.createdBy && p.devices.some(d => d.uid === fam.createdBy),
+      devices: p.devices.sort((a, b) => a.joined - b.joined)
+    })).sort((a, b) => (order[a.role] - order[b.role]) || a.name.localeCompare(b.name));
+  }
+
+  function renderPeople() {
+    const el = $('famPeople');
+    if (!el || !F || !fam) return;
+    const ps = people();
+    const total = ps.reduce((n, p) => n + (p.prog && p.prog.week === WEEK.title ? p.prog.right || 0 : 0), 0);
+    el.innerHTML = `
+      <div class="fam-total">Together this week
+        <b>${total} right answer${total === 1 ? '' : 's'}</b>
+        <small>${esc(WEEK.title)}</small></div>
+      ${ps.map(personHtml).join('')}
+      ${takenOutHtml()}
+      <p class="fam-note">${esc(savedLine())}</p>`;
+  }
+
+  // Whether this device's progress has reached the family.
+  function savedLine() {
+    if (S.owner !== F.pid) return 'This device saves to the family once the question about its progress is answered.';
+    const at = Number(stored('treasureup.savedAt')) || 0;
+    if (canon(S) === synced()) return "This device's progress is saved to the family" + (at ? ' (' + when(at) + ').' : '.');
+    return "Some progress on this device isn't saved to the family yet" + (at ? ' (last saved ' + when(at) + ')' : '') +
+      '. It saves by itself when there’s a connection.';
+  }
+
+  function personHtml(p) {
+    const g = p.prog, parent = F.role === 'parent', me = p.pid === F.pid;
+    const L = g ? levelFor(g.xp) : 0;
+    const streak = g && g.lastStudy && dayDiff(g.lastStudy, dayKey()) <= 1 ? g.streak : 0;
+    const week = !g ? "Hasn't played on a linked device yet"
+      : g.week === WEEK.title ? `This week: ${g.right} of ${WEEK.reels.length} right` : 'This week: not started';
+    const confirm = (key, label, ask) => `<button class="fam-link${fam.confirm === key ? ' warn' : ''}" data-fam="confirm" data-key="${esc(key)}">${fam.confirm === key ? ask : label}</button>`;
+    const acts = [];
+    let devices = '';
+    // Parents see every device joined as a child, so one nobody recognizes stands out.
+    if (parent && p.role === 'kid') {
+      devices = `<div class="fam-devices">${p.devices.map(d => `
+        <div class="fam-device"><span>📱 Device joined ${esc(d.joined ? when(d.joined) : 'just now')}</span>
+          ${confirm('dev:' + d.uid, 'Remove', p.devices.length === 1 ? 'Tap again: ' + esc(p.name) + ' leaves the family' : 'Tap again to remove this device')}</div>`).join('')}</div>`;
+      acts.push(`<button class="fam-link" data-fam="device" data-pid="${esc(p.pid)}">Link another device</button>`);
+    }
+    // Whoever started the family stays a parent.
+    if (parent && !me && p.role !== 'kid' && !p.founder) {
+      acts.push(p.role === 'adult'
+        ? `<button class="fam-link" data-fam="role" data-pid="${esc(p.pid)}" data-role="parent">Make a parent</button>`
+        : `<button class="fam-link" data-fam="role" data-pid="${esc(p.pid)}" data-role="adult">Not a parent</button>`);
+      acts.push(confirm('person:' + p.pid, 'Remove', 'Tap again to take ' + esc(p.name) + ' out of the family'));
+    }
+    return `
+      <div class="fam-person">
+        <div class="fp-top">
+          <span class="fp-name">${esc(p.name)}${p.role === 'parent' ? '<span class="fam-role">Parent</span>' : ''}${me ? ' <span class="fam-you">(you)</span>' : ''}</span>
+          ${g ? `<span class="fp-lv">Level ${L} · ${esc(LEVEL_TITLES[L - 1])}</span>` : ''}
+        </div>
+        <div class="fp-sub">${g ? `${g.xp} XP · 🔥 ${streak} · ` : ''}${esc(week)}</div>
+        ${devices}
+        ${acts.length ? `<div class="fam-actions">${acts.join('')}</div>` : ''}
+      </div>`;
+  }
+
+  // People whose saved progress is still in the family after they were
+  // taken out: a parent can bring a child back with it, or delete it.
+  function takenOutHtml() {
+    if (F.role !== 'parent') return '';
+    const inFamily = new Set(fam.members.map(m => m.pid));
+    const gone = fam.progress.filter(g => !inFamily.has(g.pid));
+    if (!gone.length) return '';
+    return `<div class="eyebrow" style="margin-top:22px">Taken out of the family</div>` + gone.map(g => {
+      const kid = g.role ? g.role === 'kid' : g.pid.length < 20;
+      const key = 'saved:' + g.pid;
+      return `
+        <div class="fam-person">
+          <div class="fp-top"><span class="fp-name">${esc(g.name)}</span><span class="fp-lv">${g.xp} XP saved</span></div>
+          <div class="fp-sub">${kid ? `Adding ${esc(g.name)} back brings this progress with them.` : 'Inviting them again by email brings this progress back.'}</div>
+          <div class="fam-actions">
+            ${kid ? `<button class="fam-link" data-fam="device" data-pid="${esc(g.pid)}">Add ${esc(g.name)} back</button>` : ''}
+            <button class="fam-link${fam.confirm === key ? ' warn' : ''}" data-fam="confirm" data-key="${esc(key)}">${fam.confirm === key ? 'Tap again to delete it for good' : 'Delete saved progress'}</button>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  function addHtml() {
+    const kind = (v, label, sub, on) => `
+      <label><input type="radio" name="famKind" value="${v}"${on ? ' checked' : ''}><span>${label}<small>${sub}</small></span></label>`;
+    return `
+      <div class="eyebrow" style="margin-top:24px">Add someone</div>
+      <div class="fam-kinds">
+        ${kind('kid', 'A child', 'Joins with a link opened on their own phone or tablet. No email needed.', true)}
+        ${kind('adult', 'A grown-up', 'A grandparent, friend or roommate. Signs in with their email.', false)}
+        ${kind('parent', 'Another parent', 'Signs in with their email. Can add people and hide messages.', false)}
+      </div>
+      <label for="famNewName">First name</label>
+      <input id="famNewName" class="field" maxlength="24" autocomplete="off">
+      <div id="famEmailRow" hidden>
+        <label for="famNewEmail">Their email address</label>
+        <input id="famNewEmail" class="field" type="email" autocomplete="off">
+      </div>
+      <div class="board-actions"><button class="btn" data-fam="invite">Make a join link</button></div>
+      <p id="famNote" class="parent-msg"></p>
+      <div id="famLink"></div>
+      <div id="famPending"></div>`;
+  }
+
+  async function makeInvite(role, name, email, kidId) {
+    const token = newId(24);
+    await famCol(F.fid, 'invites').doc(token).set({
+      role, name, email: role === 'kid' ? '' : email, kidId: role === 'kid' ? kidId || newId(16) : '',
+      family: F.family, createdBy: F.uid, usedBy: null,
+      expires: firebase.firestore.Timestamp.fromMillis(Date.now() + INVITE_DAYS * 86400000)
+    });
+    fam.link = { token, name, role, email };
+    renderLink();
+  }
+
+  async function inviteFromForm() {
+    const role = (document.querySelector('input[name="famKind"]:checked') || {}).value || 'kid';
+    const name = $('famNewName').value.trim();
+    const email = role === 'kid' ? '' : $('famNewEmail').value.trim().toLowerCase();
+    if (!name) return famSay('Type their first name.');
+    if (role !== 'kid' && !/^[^@ ]+@[^@ ]+\.[^@ ]+$/.test(email)) return famSay('Type their email address: they sign in with it.');
+    famSay('');
+    await makeInvite(role, name, email);
+    $('famNewName').value = ''; $('famNewEmail').value = '';
+  }
+
+  function renderLink() {
+    const el = $('famLink');
+    if (!el || !fam) return;
+    const l = fam.link;
+    if (!l) { el.innerHTML = ''; return; }
+    const url = inviteUrl(l.token), who = esc(l.name);
+    const mail = 'mailto:' + encodeURIComponent(l.email) +
+      '?subject=' + encodeURIComponent('Join ' + F.family + ' on Treasure Up') +
+      '&body=' + encodeURIComponent(F.name + ' added you to ' + F.family + ' on Treasure Up.\n\nOpen this link and sign in with ' + l.email + ':\n' + url +
+                                    '\n\nThe link works once, for ' + INVITE_DAYS + ' days.');
+    el.innerHTML = `
+      <div class="fam-box">
+        <b>${l.role === 'kid' ? `Open this link on ${who}'s phone or tablet.` : `Send this to ${who}. They'll sign in with ${esc(l.email)}.`}</b>
+        <div class="fam-note" style="margin-top:2px">It works once, for ${INVITE_DAYS} days.</div>
+        <input id="famLinkText" class="field" readonly value="${esc(url)}">
+        <div class="board-actions">
+          ${navigator.share ? '<button class="btn" data-fam="share">Share</button>' : ''}
+          <button class="btn ghost" data-fam="copy">Copy link</button>
+          ${l.role !== 'kid' ? `<a class="btn ghost" href="${esc(mail)}" style="text-decoration:none">Email it</a>` : ''}
+        </div>
+      </div>`;
+  }
+
+  function renderPending() {
+    const el = $('famPending');
+    if (!el || !fam) return;
+    const list = fam.invites.filter(i => i.expires > Date.now()).sort((a, b) => a.expires - b.expires);
+    const until = ms => new Date(ms).toLocaleDateString([], { month: 'short', day: 'numeric' });
+    el.innerHTML = !list.length ? '' : `
+      <div class="eyebrow" style="margin-top:22px">Waiting to join</div>
+      ${list.map(i => `
+        <div class="fam-person">
+          <div class="fp-top"><span class="fp-name">${esc(i.name)}${i.role === 'parent' ? '<span class="fam-role">Parent</span>' : ''}</span>
+            <span class="fp-lv">Link works until ${until(i.expires)}</span></div>
+          <div class="fp-sub">${i.role === 'kid' ? 'A link for their phone or tablet' : 'Signs in with ' + esc(i.email)}</div>
+          <div class="fam-actions">
+            <button class="fam-link" data-fam="showlink" data-token="${esc(i.id)}">Show the link</button>
+            <button class="fam-link" data-fam="cancel" data-token="${esc(i.id)}">Cancel it</button>
+          </div>
+        </div>`).join('')}`;
+  }
+
+  // Remove a device or a person, or delete saved progress: the first tap
+  // asks, the second does it.
+  async function confirmAction(key) {
+    if (fam.confirm !== key) { fam.confirm = key; renderPeople(); return; }
+    fam.confirm = null;
+    const [what, id] = [key.slice(0, key.indexOf(':')), key.slice(key.indexOf(':') + 1)];
+    const b = fs().batch();
+    if (what === 'dev') b.delete(famCol(F.fid, 'members').doc(id));
+    if (what === 'person') { const p = people().find(x => x.pid === id); if (p) p.devices.forEach(d => b.delete(famCol(F.fid, 'members').doc(d.uid))); }
+    if (what === 'saved') { b.delete(famCol(F.fid, 'progress').doc(id)); b.delete(famCol(F.fid, 'backup').doc(id)); }
+    await b.commit();
+  }
+
+  async function setRole(pid, role) {
+    const p = people().find(x => x.pid === pid);
+    if (!p) return;
+    const b = fs().batch();
+    p.uids.forEach(uid => b.update(famCol(F.fid, 'members').doc(uid), { role }));
+    await b.commit();
+  }
+
+  /* ----- chat ----- */
+
+  function when(ms) {
+    if (!ms) return '';
+    const d = new Date(ms);
+    const t = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    return dayKey(d) === dayKey() ? t : d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ', ' + t;
+  }
+
+  function msgHtml(m) {
+    const parent = F.role === 'parent', orig = m.hidden && parent ? fam.hidden[m.id] : null;
+    return `
+      <div class="msg${m.uid === F.uid ? ' mine' : ''}${m.hidden ? ' gone' : ''}">
+        <div class="mh"><b>${esc(m.name)}</b><span>${esc(when(m.at))}</span>
+          ${parent ? `<button class="fam-link" data-fam="${m.hidden ? 'unhide' : 'hide'}" data-mid="${esc(m.id)}">${m.hidden ? 'Unhide' : 'Hide'}</button>` : ''}</div>
+        <div class="mt">${m.hidden ? 'Hidden by a parent' : esc(m.text)}</div>
+        ${orig != null ? `<div class="orig">${esc(orig)}</div>` : ''}
+      </div>`;
+  }
+
+  function renderChat(first) {
+    const el = $('chatList');
+    if (!el || !fam) return;
+    const sc = $('fam');
+    const nearBottom = sc.scrollHeight - sc.scrollTop - sc.clientHeight < 160;
+    el.innerHTML = fam.messages.length ? fam.messages.map(msgHtml).join('')
+      : '<p class="fam-note">No messages yet. Say hello, or share something you learned this week.</p>';
+    if (first || nearBottom) sc.scrollTop = sc.scrollHeight;
+    updateFamDot();
+  }
+
+  async function sendMsg() {
+    const box = $('chatText'), text = box.value.trim();
+    if (!text) return;
+    if (LINKS.test(text)) return famSay("Links can't be sent in the family chat.");
+    famSay('');
+    box.value = '';
+    try { await famCol(F.fid, 'messages').add({ uid: F.uid, name: F.name, text, at: TS(), hidden: false }); }
+    catch (e) { box.value = text; famSay("Couldn't send. Check the internet and try again."); }
+  }
+
+  // Hiding blanks the message for everyone and keeps its text where only
+  // parents can read it; unhiding puts it back.
+  async function hideMsg(mid, hide) {
+    const m = fam.messages.find(x => x.id === mid);
+    if (!m || m.hidden === hide) return;
+    const b = fs().batch();
+    if (hide) {
+      b.set(famCol(F.fid, 'hidden').doc(mid), { text: m.text, by: F.uid, at: TS() });
+      b.update(famCol(F.fid, 'messages').doc(mid), { hidden: true, text: '' });
+    } else {
+      if (fam.hidden[mid] == null) return;
+      b.update(famCol(F.fid, 'messages').doc(mid), { hidden: false, text: fam.hidden[mid] });
+      b.delete(famCol(F.fid, 'hidden').doc(mid));
+    }
+    await b.commit();
+  }
+
+  async function famAction(el) {
+    const act = el.dataset.fam;
+    try {
+      if (act === 'retry') { fam.err = null; fam.busy = 'Connecting…'; renderFam(); return famConnect(); }
+      if (act === 'dismiss') { clearInvite(); return renderFam(); }
+      if (act === 'google') return await googleSignIn();
+      if (act === 'email') return await emailLink();
+      if (act === 'finish') return await finishEmail();
+      if (act === 'signout') return await inQueue(famSignOut);
+      if (act === 'start') {
+        el.disabled = true;
+        if (await inQueue(startFamily)) renderFam(); else el.disabled = false;
+        return;
+      }
+      if (act === 'join') { el.disabled = true; await inQueue(joinFamily); return renderFam(); }
+      if (act === 'claim-yes' || act === 'claim-no') return claimAnswer(act === 'claim-yes');
+      if (act === 'tab') { fam.tab = el.dataset.tab; return renderFam(); }
+      if (act === 'invite') return await inviteFromForm();
+      if (act === 'device') {        // another device for a child, or a child taken out coming back
+        const p = people().find(x => x.pid === el.dataset.pid) || fam.progress.find(g => g.pid === el.dataset.pid);
+        if (!p) return;
+        await makeInvite('kid', p.name, '', el.dataset.pid);
+        $('famLink').scrollIntoView({ block: 'center', behavior: reduceMotion() ? 'auto' : 'smooth' });
+        return;
+      }
+      if (act === 'showlink') {
+        const i = fam.invites.find(x => x.id === el.dataset.token);
+        if (i) { fam.link = { token: i.id, name: i.name, role: i.role, email: i.email }; renderLink(); }
+        return;
+      }
+      if (act === 'cancel') {
+        if (fam.link && fam.link.token === el.dataset.token) { fam.link = null; renderLink(); }
+        return await famCol(F.fid, 'invites').doc(el.dataset.token).delete();
+      }
+      if (act === 'copy') {
+        const url = $('famLinkText').value;
+        try { await navigator.clipboard.writeText(url); famSay('Link copied.'); }
+        catch (e) { $('famLinkText').select(); famSay('Select the link and copy it.'); }
+        return;
+      }
+      if (act === 'share') {
+        const l = fam.link;
+        try { await navigator.share({ title: 'Join ' + F.family + ' on Treasure Up', text: l.role === 'kid' ? 'Open this on ' + l.name + "'s phone or tablet:" : 'Open this and sign in with ' + l.email + ':', url: inviteUrl(l.token) }); }
+        catch (e) {}
+        return;
+      }
+      if (act === 'role') return await setRole(el.dataset.pid, el.dataset.role);
+      if (act === 'confirm') return await confirmAction(el.dataset.key);
+      if (act === 'send') return await sendMsg();
+      if (act === 'hide' || act === 'unhide') return await hideMsg(el.dataset.mid, act === 'hide');
+    } catch (e) {
+      el.disabled = false;
+      if ($('famNote')) famSay(friendly(e));
+      else toast('👪 Family', friendly(e));
+    }
+  }
+
   /* ---------------- wiring ---------------- */
 
   let observer = null;
@@ -2717,6 +4113,8 @@ const TreasureUp = (function () {
       const clip = e.target.closest('button.clip');
       if (clip) { playClip(clip); return; }
       if (e.target.closest('[data-jump]')) { goToCard(landingCard(), true); return; }
+      const back = e.target.closest('[data-goto]');
+      if (back) { goToCard(back.dataset.goto, true); return; }
       if (e.target.closest('[data-board]')) { openBoard(); return; }
       const g = e.target.closest('[data-game]');
       if (g) { startGame(g.dataset.game); return; }
@@ -2763,6 +4161,21 @@ const TreasureUp = (function () {
       if (e.key === 'Enter' && e.target.closest('#liveCode, #liveName')) joinLive();
     });
 
+    // Family: people, join links and the chat.
+    $('famBtn').addEventListener('click', () => openFam('people'));
+    $('chatBtn').addEventListener('click', () => openFam('chat'));
+    $('famExit').addEventListener('click', closeFam);
+    $('fam').addEventListener('click', e => {
+      const el = e.target.closest('[data-fam]');
+      if (el && !el.disabled) famAction(el);
+    });
+    $('fam').addEventListener('change', e => {
+      if (e.target.name === 'famKind') $('famEmailRow').hidden = e.target.value === 'kid';
+    });
+    $('fam').addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey && e.target.id === 'chatText') { e.preventDefault(); sendMsg(); }
+    });
+
     // Family board and parent screen.
     $('board').addEventListener('click', boardClick);
     $('boardExit').addEventListener('click', closeBoard);
@@ -2781,8 +4194,8 @@ const TreasureUp = (function () {
         if (e.key === 'Backspace') { e.preventDefault(); wordKey('back'); return; }
         if (/^[a-z]$/i.test(e.key)) { wordKey(e.key.toUpperCase()); return; }
       }
-      if (e.key === 'Escape') { closeParent(); closeBoard(); closeGames(); if (!$('play').hidden) closePlay(); if (!$('live').hidden) closeLive(); return; }
-      if (!$('board').hidden || !$('parent').hidden || !$('games').hidden || !$('play').hidden || !$('live').hidden) return;
+      if (e.key === 'Escape') { closeParent(); closeBoard(); closeGames(); closeFam(); if (!$('play').hidden) closePlay(); if (!$('live').hidden) closeLive(); return; }
+      if (!$('board').hidden || !$('parent').hidden || !$('games').hidden || !$('play').hidden || !$('live').hidden || !$('fam').hidden) return;
       if (e.target.closest && e.target.closest('textarea, input')) return;
       if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
       e.preventDefault();
@@ -2807,6 +4220,14 @@ const TreasureUp = (function () {
     WEEK = week;
     S = load();
     P = loadParent();
+    F = loadFam();
+    // Progress saved before it had an owner: a device already in a family
+    // was saving it as that person's, and the family's copy matched it.
+    if (S.owner === undefined) {
+      S.owner = F ? F.pid : null;
+      S.ownerName = F ? F.name : null;
+      if (F && !stored(syncKey(F.pid))) store(syncKey(F.pid), canon(S));
+    }
 
     // A new week: keep a one-line summary of the last one for the year trail.
     const weekNum = Number((/\/(\d+)\?/.exec(WEEK.lesson) || [])[1]) || null;
@@ -2825,6 +4246,8 @@ const TreasureUp = (function () {
     Object.keys(S.recall).forEach(id => { if (!live.has(id)) delete S.recall[id]; });
     const sayIds = new Set((WEEK.sayings || []).map(x => x.id));
     Object.keys(S.sayings || {}).forEach(id => { if (!sayIds.has(id)) delete S.sayings[id]; });
+    const deepIds = new Set((WEEK.deep || []).map(d => d.id));
+    Object.keys(S.deep || {}).forEach(id => { if (!deepIds.has(id)) delete S.deep[id]; });
 
     rollDay();
     renderFeed();
@@ -2838,6 +4261,8 @@ const TreasureUp = (function () {
     // …/#host on the TV, …/#join (or #join-1234 with the code) on a phone.
     else if (location.hash === '#host') hostLive();
     else if (/^#join(-\d{4})?$/.test(location.hash)) joinForm(location.hash.slice(6));
+
+    familyBoot();
   }
 
   // The app holds several weeks and opens on the one whose dates include
@@ -2879,6 +4304,17 @@ const TreasureUp = (function () {
        lesson                    link to the lesson page
        sections                  the lesson's section headings, in order
 
+     deep (Go deeper): one per section, plus Friday's pieces.
+       id, section (index) or day: "friday" with a title
+       read      what he reads: a passage ("Isaiah 14:12–17", the one the
+                 lesson points to), "lesson", or a Gospel Library page
+       intro     a sentence or two on why it's worth reading
+       q, right, wrong, why, source, find   as for a bonus: answerable only
+                 from the reading, and `find` must be inside `read`
+       A section's reading opens once its reels are answered. The cover
+       plans the week: a section a day, Friday's deep dive, Saturday's
+       puzzle, Sunday's family game.
+
      Each reel:
        id        unique and stable. Changing it resets that reel's answer.
        section   index into `sections`
@@ -2900,8 +4336,9 @@ const TreasureUp = (function () {
                  /study/… link). `find` is the exact words that settle it:
                  they must be in the source and nowhere in the app. For a web
                  page, write `why` in your own words, no “quotes”.
-       media     optional, at most 4 pieces a week, only where a picture or
-                 clip shows something the words can't.
+       media     optional. A picture on any reel it truly fits (a picture of
+                 Jesus Christ never goes on a reel about Satan); at most 2
+                 clips a week, only where they show something the words can't.
                  image: { src: "media/….jpg", alt, credit, link }
                         link = its Media Library or Wikimedia Commons page
                  video: { youtube, start, end, title, channel, previewed }
@@ -2994,6 +4431,68 @@ WEEKS.push({
     { word: "STAYED", clue: "whose mind is ____ on thee", ref: "Isaiah 26:3" }
   ],
 
+  // Go deeper: one reading per section, the one this week's lesson points
+  // to, with a question only the reading answers. Friday's deep dive adds
+  // the children's part of the lesson and a magazine piece.
+  deep: [
+    {
+      id: "deep39-pride", section: 0, read: "Isaiah 14:12–17",
+      intro: "Isaiah shows where pride ends up. The one who wanted to sit above the stars is brought down, and people stare at him. Read what they say.",
+      q: "In Isaiah 14:16, what do people ask when they see the fallen one up close?",
+      right: "Is this really the one who made the earth shake?",
+      wrong: ["Where did his great army go?", "When will he come back to rule?"],
+      why: "Verse 16: “Is this the man that made the earth to tremble.” Pride looks big for a while, then it looks small.",
+      source: "Isaiah 14:16", find: "Is this the man that made the earth to tremble"
+    },
+    {
+      id: "deep39-feast", section: 1, read: "Isaiah 25:6–9",
+      intro: "Around the promise that death will be swallowed up, Isaiah describes a feast the Lord makes for all people. Read the whole scene, up to the moment the people see the One they waited for.",
+      q: "In Isaiah 25:9, what do the people say they will do now that their Lord has come?",
+      right: "Be glad and rejoice in His salvation",
+      wrong: ["Ask Him why He took so long", "Build Him a palace in Babylon"],
+      why: "They say, “we will be glad and rejoice in his salvation.” The waiting was worth it.",
+      source: "Isaiah 25:9", find: "we will be glad and rejoice in his salvation"
+    },
+    {
+      id: "deep39-wall", section: 2, read: "Isaiah 30:12–14",
+      intro: "The people told the prophets to stop warning them. Isaiah answers with a picture: a high wall with a crack in it. Read what happens to the wall.",
+      q: "In Isaiah 30:13, how does the cracked wall fall?",
+      right: "All at once, suddenly",
+      wrong: ["Slowly, one stone a year", "It never falls; it only leans"],
+      why: "Verse 13: its “breaking cometh suddenly at an instant.” Ignoring warnings can look safe right up until it isn't.",
+      source: "Isaiah 30:13", find: "whose breaking cometh suddenly at an instant"
+    },
+    {
+      id: "deep39-book", section: 3, read: "Isaiah 29:18–24",
+      intro: "Right after the sealed book, Isaiah tells what the book will do once it comes out. The lesson compares these verses with the title page of the Book of Mormon.",
+      q: "In Isaiah 29:18, who will hear the words of the book?",
+      right: "The deaf",
+      wrong: ["Only the learned", "Only the kings"],
+      why: "Verse 18: “In that day shall the deaf hear the words of the book.” People who couldn't hear God's word before would understand it.",
+      source: "Isaiah 29:18", find: "shall the deaf hear the words of the book"
+    },
+    {
+      id: "deep39-kids", day: "friday", title: "From the children's part of the lesson", read: "lesson",
+      intro: "This week's lesson has ideas for kids too. One is about the “marvellous work and a wonder” (Isaiah 29:14): finding things that stand for the Lord's marvelous works in our day.",
+      q: "Which three things does the lesson suggest to stand for the Lord's marvelous works in the latter days?",
+      right: "The Book of Mormon, a temple, and the First Vision",
+      wrong: ["A rainbow, a dove, and an ark", "A crown, a sword, and a throne"],
+      why: "It suggests a copy of the Book of Mormon, a picture of a temple, or a picture of the First Vision. Each is part of what the Lord restored.",
+      source: "https://www.churchofjesuschrist.org/study/manual/come-follow-me-for-home-and-church-old-testament-2026/39?lang=eng",
+      find: "a copy of the Book of Mormon, a picture of a temple, or a picture of the First Vision"
+    },
+    {
+      id: "deep39-ftsoy", day: "friday", title: "From For the Strength of Youth", read: "https://www.churchofjesuschrist.org/study/ftsoy/2026/09/what-do-we-know-about-the-prophet-isaiah?lang=eng",
+      intro: "A short article lists what we know about the prophet Isaiah. One fact is a key for reading him: his prophecies point to more than one time.",
+      q: "According to the article, which times do Isaiah's prophecies refer to?",
+      right: "His own day, Jesus's day, our day, and the Second Coming",
+      wrong: ["Only his own day in Jerusalem", "Only the end of the world"],
+      why: "It says they refer to his own day, Jesus Christ's day, the latter days (our day) and the Restoration, and the Second Coming. One verse can be about more than one time.",
+      source: "https://www.churchofjesuschrist.org/study/ftsoy/2026/09/what-do-we-know-about-the-prophet-isaiah?lang=eng",
+      find: "the latter days and the Restoration, and the Second Coming and Millennium"
+    }
+  ],
+
   reels: [
 
     {
@@ -3054,6 +4553,14 @@ WEEKS.push({
         source: "Isaiah 14:3",
         find: "rest from thy sorrow, and from thy fear"
       },
+      media: {
+        image: {
+          src: "media/milky-way-inferno-cone.jpg",
+          alt: "Thousands of stars and the Milky Way filling the night sky above a lone tree",
+          credit: "The Milky Way from Inferno Cone, Craters of the Moon. Photo: NPS / Jacob W. Frank, public domain",
+          link: "https://commons.wikimedia.org/wiki/File:Milky_Way_From_Inferno_Cone_(4fc3421b-c931-4347-a4f6-7b5806c41456).jpg"
+        }
+      },
       gradient: "linear-gradient(165deg,#020617 0%,#1e1b4b 55%,#4338ca 100%)",
       blobA: "rgba(129,140,248,.45)", blobB: "rgba(0,0,0,.55)"
     },
@@ -3080,6 +4587,14 @@ WEEKS.push({
         why: "“Go, get thee unto this treasurer, even unto Shebna” (Isaiah 22:15). Hilkiah was Eliakim's father (verse 20).",
         source: "Isaiah 22:15",
         find: "Shebna"
+      },
+      media: {
+        image: {
+          src: "media/cornerstone.jpg",
+          alt: "The cornerstone at the base of a stone building's corner",
+          credit: "Cornerstone, from the Church Media Library",
+          link: "https://www.churchofjesuschrist.org/media/image/photo-cornerstone-temple-e6dbc64?lang=eng"
+        }
       },
       gradient: "linear-gradient(150deg,#1c1917 0%,#44403c 40%,#d97706 108%)",
       blobA: "rgba(251,191,36,.4)", blobB: "rgba(0,0,0,.5)"
@@ -3160,6 +4675,14 @@ WEEKS.push({
         find: "That means He can comfort and protect us when things are hard"
       }
       ],
+      media: {
+        image: {
+          src: "media/stilling-the-storm-henninger.jpg",
+          alt: "Painting of Jesus Christ standing in a small boat on a stormy sea while His frightened disciples hold on",
+          credit: "Stilling the Storm, by Ted Henninger",
+          link: "https://www.churchofjesuschrist.org/media/image/jesus-calms-the-storm-5c4cb06?lang=eng"
+        }
+      },
       gradient: "linear-gradient(150deg,#082f49 0%,#0369a1 50%,#38bdf8 100%)",
       blobA: "rgba(125,211,252,.45)", blobB: "rgba(0,0,0,.4)"
     },
@@ -3222,6 +4745,14 @@ WEEKS.push({
         source: "Isaiah 30:8",
         find: "for the time to come for ever and ever"
       },
+      media: {
+        image: {
+          src: "media/isaiah-henninger.jpg",
+          alt: "Painting of the prophet Isaiah, an old man with a long white beard",
+          credit: "Isaiah, by Ted Henninger",
+          link: "https://www.churchofjesuschrist.org/media/image/isaiah-4e7875b?lang=eng"
+        }
+      },
       gradient: "linear-gradient(150deg,#0f172a 0%,#334155 45%,#0e7490 100%)",
       blobA: "rgba(34,211,238,.4)", blobB: "rgba(0,0,0,.5)"
     },
@@ -3241,6 +4772,14 @@ WEEKS.push({
         wrong: ["Farmers were better at languages", "The professor was too busy"],
         why: "Isaiah says “the wisdom of their wise men shall perish.” The credit goes to God."
       },
+      media: {
+        image: {
+          src: "media/charles-anthon-brady.jpg",
+          alt: "Old photograph of Charles Anthon, the New York professor Martin Harris showed the characters to in 1828",
+          credit: "Professor Charles Anthon. Photo: Mathew Brady, public domain",
+          link: "https://commons.wikimedia.org/wiki/File:Charles_Anthon_-_Brady-Handy_edit.jpg"
+        }
+      },
       gradient: "linear-gradient(150deg,#4c1d95 0%,#a21caf 50%,#fbbf24 112%)",
       blobA: "rgba(240,171,252,.5)", blobB: "rgba(0,0,0,.4)"
     },
@@ -3259,6 +4798,14 @@ WEEKS.push({
         right: "When you turn to the right or the left",
         wrong: ["Only after you've done everything right", "Only when you're at church"],
         why: "The verse says “when ye turn to the right hand, and when ye turn to the left.” He speaks up when you start to drift."
+      },
+      media: {
+        image: {
+          src: "media/forest-path.jpg",
+          alt: "A narrow dirt path winding through misty spring woods",
+          credit: "Trail through the spring woods. Photo: National Park Service, public domain",
+          link: "https://commons.wikimedia.org/wiki/File:Trail_through_the_Spring_Woods_(fe523b5b-2ef8-40fe-98c0-64302233d24c).jpg"
+        }
       },
       gradient: "linear-gradient(150deg,#0f172a 0%,#1e40af 50%,#60a5fa 100%)",
       blobA: "rgba(147,197,253,.45)", blobB: "rgba(0,0,0,.45)"
@@ -3297,6 +4844,14 @@ WEEKS.push({
         find: "Jesus Christ is the Master Potter"
       }
       ],
+      media: {
+        image: {
+          src: "media/desert-wildflowers.jpg",
+          alt: "Yellow and purple wildflowers blooming across a dry, sandy desert wash",
+          credit: "Wildflowers in a desert wash, Joshua Tree National Park. Photo: NPS / Carmen Aurrecoechea, public domain",
+          link: "https://commons.wikimedia.org/wiki/File:Wildflowers_in_a_desert_wash_(52830431529).jpg"
+        }
+      },
       gradient: "linear-gradient(150deg,#78350f 0%,#be185d 55%,#fb7185 100%)",
       blobA: "rgba(253,164,175,.45)", blobB: "rgba(0,0,0,.4)"
     }
@@ -3383,6 +4938,66 @@ WEEKS.push({
     { word: "FORGET", clue: "yet will I not ____ thee", ref: "Isaiah 49:15" }
   ],
 
+  // Go deeper: one reading per section (see week 39 for how it works).
+  deep: [
+    {
+      id: "deep40-fire", section: 0, read: "Isaiah 43:1–5",
+      intro: "Isaiah 43 opens with “Fear not: for I have redeemed thee.” Then come promises about water and fire. The hymn How Firm a Foundation borrows these words.",
+      q: "In Isaiah 43:2, what does the Lord promise when you walk through fire?",
+      right: "You won't be burned",
+      wrong: ["The fire will go out first", "You'll never have to go near fire"],
+      why: "Verse 2: “when thou walkest through the fire, thou shalt not be burned.” He doesn't promise no fire. He promises to be with you in it.",
+      source: "Isaiah 43:2", find: "thou shalt not be burned"
+    },
+    {
+      id: "deep40-in-vain", section: 1, read: "Isaiah 49:1–6",
+      intro: "Here the Lord's servant speaks. The lesson asks what helps when your service feels like it was for nothing. Read verse 4 closely.",
+      q: "In Isaiah 49:4, the servant feels his work was in vain. What does he still believe?",
+      right: "His work is with his God",
+      wrong: ["He should quit and rest", "No one will ever see it"],
+      why: "Verse 4: “yet surely my judgment is with the LORD, and my work with my God.” God sees work that nobody else notices.",
+      source: "Isaiah 49:4", find: "my work with my God"
+    },
+    {
+      id: "deep40-grasshoppers", section: 2, read: "Isaiah 40:21–23",
+      intro: "After the nations are a drop in a bucket, Isaiah keeps going. He describes how the people of the earth look from where God sits.",
+      q: "In Isaiah 40:22, what do the people of the earth look like from God's throne?",
+      right: "Grasshoppers",
+      wrong: ["Giants", "Stars"],
+      why: "Verse 22: “the inhabitants thereof are as grasshoppers.” Even the strongest rulers are small next to Him.",
+      source: "Isaiah 40:22", find: "the inhabitants thereof are as grasshoppers"
+    },
+    {
+      id: "deep40-springs", section: 3, read: "Isaiah 49:8–12",
+      intro: "Just before the verses about the palms of His hands, the Lord describes bringing His people home after hard times. Read how He leads them.",
+      q: "In Isaiah 49:10, where does the Lord guide the people He has mercy on?",
+      right: "By springs of water",
+      wrong: ["Through a burning desert with no rest", "Back to Babylon"],
+      why: "Verse 10: “even by the springs of water shall he guide them.” After the furnace comes cool water.",
+      source: "Isaiah 49:10", find: "by the springs of water shall he guide them"
+    },
+    {
+      id: "deep40-kids", day: "friday", title: "From the children's part of the lesson", read: "lesson",
+      intro: "The children's part of this week's lesson starts with “Prepare ye the way of the LORD” (Isaiah 40:3). It suggests clearing a path or straightening something crooked, then asks who prepared the way.",
+      q: "Which two people does the lesson suggest showing pictures of, because they prepared the way of the Lord?",
+      right: "John the Baptist and Joseph Smith",
+      wrong: ["Moses and Aaron", "Peter and Paul"],
+      why: "It suggests pictures of John the Baptist and Joseph Smith. John prepared the way for Jesus in His day; Joseph Smith helped prepare the way in ours.",
+      source: "https://www.churchofjesuschrist.org/study/manual/come-follow-me-for-home-and-church-old-testament-2026/40?lang=eng",
+      find: "pictures of John the Baptist and Joseph Smith"
+    },
+    {
+      id: "deep40-ftsoy", day: "friday", title: "From For the Strength of Youth", read: "https://www.churchofjesuschrist.org/study/ftsoy/2026/10/strength-training-with-isaiah?lang=eng",
+      intro: "An article called Strength Training with Isaiah gathers Isaiah's verses about getting spiritually strong, including this week's eagles verse.",
+      q: "According to the article, where does spiritual strength come from?",
+      right: "Heavenly Father and Jesus Christ",
+      wrong: ["Your own willpower alone", "Never making mistakes"],
+      why: "It says Heavenly Father and Jesus Christ are your strength, and that there is no other source of spiritual strength.",
+      source: "https://www.churchofjesuschrist.org/study/ftsoy/2026/10/strength-training-with-isaiah?lang=eng",
+      find: "There is no other source of spiritual strength"
+    }
+  ],
+
   reels: [
 
     {
@@ -3418,6 +5033,14 @@ WEEKS.push({
         find: "John the son of Zacharias"
       }
       ],
+      media: {
+        image: {
+          src: "media/christus-consolator-bloch.jpg",
+          alt: "Painting of Jesus Christ with His arms open wide, surrounded by people who are hurting",
+          credit: "Christus Consolator, by Carl Heinrich Bloch",
+          link: "https://www.churchofjesuschrist.org/media/image/christ-the-consolator-carl-bloch-1800ee8?lang=eng"
+        }
+      },
       gradient: "linear-gradient(150deg,#0c4a6e 0%,#0369a1 50%,#7dd3fc 115%)",
       blobA: "rgba(125,211,252,.45)", blobB: "rgba(0,0,0,.45)"
     },
@@ -3480,6 +5103,14 @@ WEEKS.push({
         source: "https://www.churchofjesuschrist.org/study/friend/2026/10/come-follow-me/23-weekly-scripture-fun?lang=eng",
         find: "Draw a picture of a peaceful river"
       },
+      media: {
+        image: {
+          src: "media/quillayute-river.jpg",
+          alt: "A calm green river reflecting the forest along its banks",
+          credit: "Quillayute River, Olympic National Park. Photo: NPS / D. Archuleta, public domain",
+          link: "https://commons.wikimedia.org/wiki/File:Green_quillayute_river_summer_calm_reflections_d_archuleta_2015_(23104417456).jpg"
+        }
+      },
       gradient: "linear-gradient(150deg,#134e4a 0%,#0f766e 45%,#5eead4 115%)",
       blobA: "rgba(94,234,212,.4)", blobB: "rgba(0,0,0,.45)"
     },
@@ -3526,6 +5157,14 @@ WEEKS.push({
         wrong: ["Keeps quiet about Him", "Only listens to other people"],
         why: "“Ye are my witnesses”: a witness shares what they know firsthand."
       },
+      media: {
+        image: {
+          src: "media/one-by-one-rane.jpg",
+          alt: "Painting of the resurrected Jesus Christ letting people in ancient America feel the wounds in His hands, one by one",
+          credit: "One by One, by Walter Rane",
+          link: "https://www.churchofjesuschrist.org/media/image/christ-nephites-rane-ca72ab5?lang=eng"
+        }
+      },
       gradient: "linear-gradient(155deg,#312e81 0%,#4f46e5 50%,#a5b4fc 115%)",
       blobA: "rgba(165,180,252,.45)", blobB: "rgba(0,0,0,.45)"
     },
@@ -3552,6 +5191,14 @@ WEEKS.push({
         why: "The lesson says these words can refer to Jesus Christ, to the house of Israel, and to King Cyrus.",
         source: "lesson",
         find: "These words can refer to Jesus Christ"
+      },
+      media: {
+        image: {
+          src: "media/cyrus-cylinder.jpg",
+          alt: "The Cyrus Cylinder, a clay record made in King Cyrus's name after he took Babylon, covered in wedge-shaped writing",
+          credit: "The Cyrus Cylinder, British Museum. Photo: Daderot, public domain (CC0)",
+          link: "https://commons.wikimedia.org/wiki/File:Cyrus_Cylinder,_Babylon,_Iraq,_mid_500s_BC,_cuneiform_on_clay_-_British_Museum_-_DSC01316.jpg"
+        }
       },
       gradient: "linear-gradient(150deg,#422006 0%,#a16207 50%,#fde68a 115%)",
       blobA: "rgba(253,230,138,.4)", blobB: "rgba(0,0,0,.5)"
@@ -3580,6 +5227,14 @@ WEEKS.push({
         source: "Isaiah 40:26",
         find: "he calleth them all by names"
       },
+      media: {
+        image: {
+          src: "media/blue-marble.jpg",
+          alt: "The whole Earth seen from space, a blue and white ball against black",
+          credit: "The Blue Marble, Earth from Apollo 17, 1972. Photo: NASA, public domain",
+          link: "https://commons.wikimedia.org/wiki/File:The_Blue_Marble,_AS17-148-22727.jpg"
+        }
+      },
       gradient: "linear-gradient(165deg,#020617 0%,#1e3a8a 55%,#60a5fa 110%)",
       blobA: "rgba(96,165,250,.4)", blobB: "rgba(0,0,0,.55)"
     },
@@ -3598,6 +5253,14 @@ WEEKS.push({
         right: "Something people made can't save them",
         wrong: ["Wood is holy", "Idols just need better carvers"],
         why: "He prays to his own carving, “Deliver me.” It can't."
+      },
+      media: {
+        image: {
+          src: "media/baal-figure-ugarit.jpg",
+          alt: "A small ancient metal idol of Baal with one arm raised, found at Ugarit in Syria",
+          credit: "Figure of Baal from Ugarit, 1300s–1100s BC, Louvre. Photo: Jastrow, public domain",
+          link: "https://commons.wikimedia.org/wiki/File:Baal_Ugarit_Louvre_AO17329.jpg"
+        }
       },
       gradient: "linear-gradient(150deg,#431407 0%,#9a3412 50%,#fdba74 115%)",
       blobA: "rgba(253,186,116,.4)", blobB: "rgba(0,0,0,.5)"
@@ -3618,6 +5281,14 @@ WEEKS.push({
         wrong: ["Babylon was being humble", "Babylon was telling the truth"],
         why: "Only the Lord can say “I am God, and there is none else” (Isaiah 46:9)."
       },
+      media: {
+        image: {
+          src: "media/babylon-ruins-1932.jpg",
+          alt: "Black-and-white photo from 1932 of the crumbling brick ruins of ancient Babylon",
+          credit: "Babylon's ruins, 1932. Photo: Matson Collection, Library of Congress, public domain",
+          link: "https://commons.wikimedia.org/wiki/File:Iraq._Babylon_%27the_great.%27_Various_views_of_the_crumbling_ruins._Massive_brick_buildings_LOC_matpc.16072.jpg"
+        }
+      },
       gradient: "linear-gradient(150deg,#450a0a 0%,#7f1d1d 45%,#f87171 115%)",
       blobA: "rgba(248,113,113,.4)", blobB: "rgba(0,0,0,.5)"
     },
@@ -3636,6 +5307,14 @@ WEEKS.push({
         right: "Refines and chooses His people",
         wrong: ["Gives up on them", "Punishes them forever"],
         why: "“I have refined thee… I have chosen thee in the furnace of affliction.”"
+      },
+      media: {
+        image: {
+          src: "media/steel-furnace-slag.jpg",
+          alt: "Glowing slag, the melted junk drained off the top of molten steel, pouring from a steel-mill furnace",
+          credit: "Slag run-off at a steel mill, 1941. Photo: Alfred T. Palmer, public domain",
+          link: "https://commons.wikimedia.org/wiki/File:Slag_runoff_Republic_Steel.jpg"
+        }
       },
       gradient: "linear-gradient(150deg,#1c1917 0%,#b45309 55%,#fbbf24 115%)",
       blobA: "rgba(251,191,36,.45)", blobB: "rgba(0,0,0,.5)"
@@ -3665,6 +5344,12 @@ WEEKS.push({
         find: "will have mercy upon his afflicted"
       },
       media: {
+        image: {
+          src: "media/jesus-shows-wounds-anderson.jpg",
+          alt: "Painting of the resurrected Jesus Christ holding out His hands to show the nail wounds to His disciples",
+          credit: "Jesus Shows His Wounds (Behold My Hands and Feet), by Harry Anderson",
+          link: "https://www.churchofjesuschrist.org/media/image/resurrected-christ-d0f28b0?lang=eng"
+        },
         video: {
           youtube: "YztZZSFLWic",
           start: 2715, end: 2844,

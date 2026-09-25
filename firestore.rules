@@ -1,19 +1,21 @@
 rules_version = '2';
 
-// Treasure Up live game. Paste into Firebase console → Firestore → Rules.
-//
-// A game lives at /live/{code}. The TV that made it is the host: only it
-// changes the game, keeps score, reads answers, and ends it. Anyone signed
-// in (anonymous sign-in is enough) can join with the code. A player can
-// only add themselves, rename themselves, and send one answer per question,
-// only while that question is open, stamped with the server's clock, so
-// speed points can't be faked.
+// Treasure Up. Paste all of this into Firebase console → Firestore → Rules.
+// Two parts: the live game (/live) and families (/users, /families).
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    function signedIn() { return request.auth != null; }
+
+    // ---------------- live game ----------------
+    // A game lives at /live/{code}. The TV that made it is the host: only it
+    // changes the game, keeps score, reads answers, and ends it. Anyone signed
+    // in (anonymous sign-in is enough) can join with the code. A player can
+    // only add themselves, rename themselves, and send one answer per question,
+    // only while that question is open, stamped with the server's clock, so
+    // speed points can't be faked.
     match /live/{code} {
       function game() { return get(/databases/$(database)/documents/live/$(code)).data; }
-      function signedIn() { return request.auth != null; }
       function isHost() { return signedIn() && game().host == request.auth.uid; }
 
       allow read: if signedIn();
@@ -49,6 +51,198 @@ service cloud.firestore {
           && game().qi == request.resource.data.qi
           && request.resource.data.choice is string
           && request.resource.data.at == request.time;
+      }
+    }
+
+    // ---------------- families ----------------
+    // A family is started by a grown-up signed in with Google or an email
+    // link, who becomes its first parent. Everyone else joins with a
+    // one-time invite that a parent makes:
+    //   - an adult's invite names their email, and only works for someone
+    //     signed in with that verified address;
+    //   - a child's invite is a link opened on the child's own phone or
+    //     tablet, which joins that device as the child. No account needed.
+    // Invites work once and expire after a week.
+    //
+    // Members see each other's progress and the family chat. There are no
+    // private messages, and nobody can delete a message. A parent can hide
+    // one: its text is blanked for everyone, so everyone sees it was hidden,
+    // and kept in /hidden, which only parents can read.
+
+    // Which family an account is in, so a parent's new phone can find it.
+    match /users/{uid} {
+      allow read, delete: if signedIn() && request.auth.uid == uid;
+      allow create, update: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['fid'])
+        && request.resource.data.fid is string;
+    }
+
+    match /families/{fid} {
+      function famPath() { return /databases/$(database)/documents/families/$(fid); }
+      function memberPath(uid) { return /databases/$(database)/documents/families/$(fid)/members/$(uid); }
+      function invitePath(t) { return /databases/$(database)/documents/families/$(fid)/invites/$(t); }
+      function messagePath(mid) { return /databases/$(database)/documents/families/$(fid)/messages/$(mid); }
+      function hiddenPath(mid) { return /databases/$(database)/documents/families/$(fid)/hidden/$(mid); }
+      function isMember() { return signedIn() && exists(memberPath(request.auth.uid)); }
+      function me() { return get(memberPath(request.auth.uid)).data; }
+      function isParent() { return isMember() && me().role == 'parent'; }
+      function nameOk(n) { return n is string && n.size() > 0 && n.size() <= 24; }
+      function only(keys) { return request.resource.data.keys().hasOnly(keys); }
+      function founder() { return get(famPath()).data.createdBy; }
+      function changes(keys) { return request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys); }
+
+      allow read: if isMember();
+      // Starting a family takes a real (not anonymous) account, which joins
+      // it as its first parent in the same write.
+      allow create: if signedIn()
+        && request.auth.token.firebase.sign_in_provider != 'anonymous'
+        && only(['name', 'createdBy', 'created'])
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 40
+        && request.resource.data.created == request.time
+        && getAfter(memberPath(request.auth.uid)).data.role == 'parent';
+
+      match /members/{uid} {
+        function founding() {
+          return !exists(famPath())
+            && getAfter(famPath()).data.createdBy == uid
+            && request.resource.data.role == 'parent'
+            && request.resource.data.pid == uid
+            && request.resource.data.invite == '';
+        }
+        function redeeming() {
+          let t = request.resource.data.invite;
+          let inv = get(invitePath(t)).data;
+          return inv.usedBy == null
+            && inv.expires > request.time
+            && getAfter(invitePath(t)).data.usedBy == uid
+            && request.resource.data.role == inv.role
+            && request.resource.data.name == inv.name
+            && (inv.role == 'kid'
+              ? request.resource.data.pid == inv.kidId
+              : request.resource.data.pid == uid
+                && request.auth.token.email_verified == true
+                && request.auth.token.email.lower() == inv.email);
+        }
+        allow read: if isMember();
+        allow create: if signedIn() && request.auth.uid == uid
+          && only(['name', 'role', 'pid', 'invite', 'joined'])
+          && nameOk(request.resource.data.name)
+          && request.resource.data.invite is string
+          && request.resource.data.joined == request.time
+          && (founding() || (request.resource.data.invite.size() >= 20 && redeeming()));
+        // A parent can make another grown-up a parent, or not. A child stays
+        // a child, and whoever started the family stays a parent, so a
+        // family always has one.
+        allow update: if isParent()
+          && uid != founder()
+          && resource.data.role != 'kid'
+          && changes(['role'])
+          && request.resource.data.role in ['parent', 'adult'];
+        // A parent can remove anyone, and anyone can leave, except whoever
+        // started the family.
+        allow delete: if (isParent() || (signedIn() && request.auth.uid == uid)) && uid != founder();
+      }
+
+      match /invites/{token} {
+        // Opening a link reads just that invite; the token is the secret.
+        allow get: if signedIn();
+        allow list, delete: if isParent();
+        allow create: if isParent()
+          && token.size() >= 20
+          && only(['role', 'name', 'email', 'kidId', 'family', 'createdBy', 'expires', 'usedBy'])
+          && request.resource.data.createdBy == request.auth.uid
+          && request.resource.data.usedBy == null
+          && nameOk(request.resource.data.name)
+          && request.resource.data.family == get(famPath()).data.name
+          && request.resource.data.expires > request.time
+          && request.resource.data.expires < request.time + duration.value(8, 'd')
+          && (request.resource.data.role == 'kid'
+            ? request.resource.data.kidId is string && request.resource.data.kidId.size() >= 12
+              && request.resource.data.email == ''
+            : request.resource.data.role in ['adult', 'parent']
+              && request.resource.data.kidId == ''
+              && request.resource.data.email is string
+              && request.resource.data.email == request.resource.data.email.lower()
+              && request.resource.data.email.matches('[^@ ]+@[^@ ]+[.][^@ ]+'));
+        // Joining uses it up: once, by the person joining, in the same write
+        // that adds them to the family.
+        allow update: if signedIn()
+          && resource.data.usedBy == null
+          && changes(['usedBy'])
+          && request.resource.data.usedBy == request.auth.uid
+          && getAfter(memberPath(request.auth.uid)).data.invite == token;
+      }
+
+      match /messages/{mid} {
+        allow read: if isMember();
+        // Text and emoji only: no links. Posted under your own name, stamped
+        // with the server's clock.
+        allow create: if isMember()
+          && only(['uid', 'name', 'text', 'at', 'hidden'])
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.name == me().name
+          && request.resource.data.hidden == false
+          && request.resource.data.at == request.time
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 500
+          && !request.resource.data.text.lower().matches('(?s).*(https?:|www[.]|[a-z0-9-]+[.](com|net|org|io|ly|gg|tv|me|co|app|us|xyz|link|site|info|biz)([^a-z]|$)).*');
+        // Hide: blank the text, keeping it in /hidden. Unhide: put it back.
+        allow update: if isParent() && changes(['hidden', 'text'])
+          && ((resource.data.hidden == false && request.resource.data.hidden == true
+               && request.resource.data.text == ''
+               && getAfter(hiddenPath(mid)).data.text == resource.data.text)
+            || (resource.data.hidden == true && request.resource.data.hidden == false
+               && request.resource.data.text == get(hiddenPath(mid)).data.text
+               && !existsAfter(hiddenPath(mid))));
+      }
+
+      match /hidden/{mid} {
+        allow read: if isParent();
+        allow create: if isParent()
+          && only(['text', 'by', 'at'])
+          && request.resource.data.by == request.auth.uid
+          && request.resource.data.at == request.time
+          && request.resource.data.text == get(messagePath(mid)).data.text
+          && getAfter(messagePath(mid)).data.hidden == true;
+        allow delete: if isParent() && getAfter(messagePath(mid)).data.hidden == false;
+      }
+
+      // Each person's progress: a summary the whole family sees, and the
+      // full copy a new device restores from (only that person and parents
+      // can read it: it holds their notes). Only that person's own devices
+      // write them, and XP never goes backwards, so an old device can't
+      // overwrite newer progress (the app merges instead). A parent can
+      // delete the saved progress of someone taken out of the family.
+      match /progress/{pid} {
+        allow read: if isMember();
+        allow create, update: if isMember() && me().pid == pid
+          && only(['name', 'role', 'xp', 'streak', 'lastStudy', 'week', 'right', 'answered', 'updated'])
+          && request.resource.data.name == me().name
+          && request.resource.data.role == (me().role == 'kid' ? 'kid' : 'grownup')
+          && request.resource.data.xp is int && request.resource.data.xp >= 0 && request.resource.data.xp <= 10000000
+          && request.resource.data.streak is int && request.resource.data.streak >= 0 && request.resource.data.streak <= 5000
+          && request.resource.data.answered is int && request.resource.data.answered <= 100
+          && request.resource.data.right is int && request.resource.data.right >= 0
+          && request.resource.data.right <= request.resource.data.answered
+          && request.resource.data.lastStudy is string && request.resource.data.lastStudy.size() <= 10
+          && request.resource.data.week is string && request.resource.data.week.size() <= 120
+          && request.resource.data.updated == request.time
+          && (resource == null || request.resource.data.xp >= resource.data.xp);
+        allow delete: if isParent();
+      }
+
+      match /backup/{pid} {
+        allow read: if isMember() && (me().pid == pid || me().role == 'parent');
+        allow create, update: if isMember() && me().pid == pid
+          && only(['xp', 'state', 'by', 'updated'])
+          && request.resource.data.by == request.auth.uid
+          && request.resource.data.xp is int && request.resource.data.xp <= 10000000
+          && request.resource.data.state is string && request.resource.data.state.size() < 500000
+          && request.resource.data.updated == request.time
+          && (resource == null || request.resource.data.xp >= resource.data.xp);
+        allow delete: if isParent();
       }
     }
 
