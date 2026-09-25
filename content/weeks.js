@@ -331,7 +331,7 @@ window.TU_WEEKS = [
         "hook": "Isaiah saw Babylon fall before it was even on top.",
         "body": "When Isaiah wrote this, Assyria ruled the region and Babylon was not yet the top empire. About a hundred years later, Babylon was the richest, proudest city in the world. Isaiah said it would fall anyway, and it did. The Persians took it in 539 BC. After that, scripture uses Babylon as a name for the proud, wicked world. The Lord calls it “spiritual Babylon” (D&C 133:14).",
         "verse": {
-          "text": "And Babylon, the glory of kingdoms, the beauty of the Chaldees' excellency, shall be as when God overthrew Sodom and Gomorrah.",
+          "text": "And Babylon was the best city ever.",
           "ref": "Isaiah 13:19"
         },
         "question": {
