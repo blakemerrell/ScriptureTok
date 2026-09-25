@@ -322,6 +322,12 @@ async function main(scripture, week, pages, online) {
         }
       }
       if (!im.alt || im.alt.length < 20) fail(where, 'image needs an alt description he could picture (20+ characters)');
+      // A picture of the Savior never goes on a reel about Satan: next to
+      // that headline it reads as a picture of him. (Found by Blake on the
+      // Lucifer reel, 2026-09-24.)
+      const showsChrist = /\b(Jesus|Christ|Christus|Savior|Saviour|Messiah)\b/i.test((im.alt || '') + ' ' + (im.credit || ''));
+      const aboutSatan = /\b(Lucifer|Satan|devil|adversary)\b/i.test([r.hook, r.body, r.verse && r.verse.text].join(' '));
+      if (showsChrist && aboutSatan) fail(where, `the picture shows Jesus Christ, but this reel is about Satan; next to "${r.hook}" it reads as a picture of him`);
       if (!im.credit) fail(where, 'image needs a credit');
       let host = null;
       try { host = new URL(im.link).host; } catch (e) {}
