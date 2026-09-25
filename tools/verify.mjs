@@ -101,6 +101,18 @@ async function loadScripture() {
   return { verses, books: [...books].sort((a, b) => b.length - a.length) };
 }
 
+// The books the app can link (BOOK_PATHS in index.html), so every
+// reference he reads can be a link to Gospel Library.
+function appBooks() {
+  const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+  const i = html.indexOf('const BOOK_PATHS = {');
+  const j = html.indexOf('\n  };\n', i);
+  if (i < 0 || j < 0) throw new Error('Could not find BOOK_PATHS in index.html');
+  return Object.keys(new Function('return ' + html.slice(html.indexOf('{', i), j) + '}')());
+}
+// The app's other names for a book, as the scripture data names it.
+const BOOK_ALIAS = { 'Psalm': 'Psalms', 'Song of Solomon': "Solomon's Song", 'Solomon’s Song': "Solomon's Song", 'Doctrine and Covenants': 'D&C' };
+
 // ---------- the week ----------
 
 // Every week in index.html, by running its content script with a stand-in
@@ -225,6 +237,39 @@ async function main(scripture, week, pages, online) {
   };
 
   const bookPattern = books.map(b => b.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+
+  // Every reference in text he reads is a link in the app (linkRefs in
+  // index.html), read the same way: each must be a real verse or chapter,
+  // and "verse 12" or "chapter 40" means the chapter of the verse the text
+  // belongs to (`home`), so it needs one.
+  const linkable = APP_BOOKS.slice().sort((a, b) => b.length - a.length).map(b => b.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+  const refRe = new RegExp(`(${linkable}) (\\d+)(?::(\\d+)(?:[–-](\\d+))?)?(?:[–-]\\d+)?|\\b([Vv]erses?|[Cc]hapter) (\\d+)(?:[–-](\\d+))?`, 'g');
+  const listRe = /^(; ?)(\d+)(?::(\d+)(?:[–-]\d+)?)?(?:[–-]\d+)?(?! ?[A-Za-z])/;
+  const exists = (book, ch, v) => verses.has(`${BOOK_ALIAS[book] || book} ${ch}:${v || 1}`);
+  function checkRefs(where, field, text, home) {
+    if (!text) return;
+    const h = /^(.+?) (\d+)/.exec(home || '');
+    const hb = h && APP_BOOKS.includes(h[1]) ? h : null;
+    let m;
+    refRe.lastIndex = 0;
+    while ((m = refRe.exec(text))) {
+      if (m[1] && m.index > 0 && /[A-Za-z0-9]/.test(text[m.index - 1])) continue;
+      if (m[1]) {
+        if (!exists(m[1], m[2], m[3]) || (m[4] && !exists(m[1], m[2], m[4]))) fail(where, `${field}: "${m[0]}" is not a real reference`);
+        let at = m.index + m[0].length;
+        for (let x; (x = listRe.exec(text.slice(at)));) {
+          if (!exists(m[1], x[2], x[3])) fail(where, `${field}: "${m[1]} ${x[0].slice(x[1].length)}" is not a real reference`);
+          at += x[0].length;
+        }
+        refRe.lastIndex = at;
+      } else if (!hb) {
+        fail(where, `${field}: "${m[0]}" has no verse to be read against; write the full reference (like "Isaiah 22:22")`);
+      } else if (/^c/i.test(m[5]) ? !exists(hb[1], m[6]) : !exists(hb[1], hb[2], m[6]) || (m[7] && !exists(hb[1], hb[2], m[7]))) {
+        fail(where, `${field}: "${m[0]}" is not in ${/^c/i.test(m[5]) ? hb[1] : hb[1] + ' ' + hb[2]}`);
+      }
+    }
+  }
+  checkRefs('week', 'reference', week.reference, null);
   const anyRef = new RegExp(`(?:${bookPattern}) \\d+:\\d+(?:[–-]\\d+)?`, 'g');
 
   // Quotes, references and punctuation in one piece of text he reads.
@@ -338,6 +383,12 @@ async function main(scripture, week, pages, online) {
     checkText(where, 'why', q.why, home);
     checkText(where, 'right answer', q.right, home);
     checkText(where, 'wrong answers', (q.wrong || []).join(' | '), home);
+    for (const [f, t] of [['hook', r.hook], ['body', r.body], ['question', q.q], ['why', q.why], ['note prompt', r.note]]) checkRefs(where, f, t, home);
+    for (const b of bonusesOf(r)) {
+      const bh = b.source && textOf(b.source) != null ? b.source : home;
+      checkRefs(where, 'bonus question', b.q, bh);
+      checkRefs(where, 'bonus why', b.why, bh);
+    }
 
     // Bonuses: answerable only from the reading.
     for (const [bn, b] of bonusesOf(r).entries()) {
@@ -418,6 +469,10 @@ async function main(scripture, week, pages, online) {
     } else if (!webSource({ source: d.read }, week)) fail(where, 'read must be a passage, "lesson", or a Gospel Library page');
     checkText(where, 'intro', d.intro, passage);
     checkReading(where, 'question', d);
+    const dh = d.source && textOf(d.source) != null ? d.source : passage;
+    checkRefs(where, 'intro', d.intro, passage);
+    checkRefs(where, 'question', d.q, dh);
+    checkRefs(where, 'why', d.why, dh);
   }
 
   if (clipCount > MEDIA.maxClipsPerWeek) fail('week', `${clipCount} clips (max ${MEDIA.maxClipsPerWeek}); keep it a lesson, not a video feed`);
@@ -472,6 +527,7 @@ async function main(scripture, week, pages, online) {
       if (!x.why) fail(where, 'needs a why');
       else if (x.why.split(/\s+/).length > LIMITS.whyWords) fail(where, `why is over ${LIMITS.whyWords} words`);
       checkText(where, 'why', x.why, x.ref);
+      checkRefs(where, 'why', x.why, x.ref);
     }
   }
 
@@ -504,6 +560,11 @@ async function main(scripture, week, pages, online) {
 }
 
 const scripture = await loadScripture();
+const APP_BOOKS = appBooks();
+{
+  const missing = scripture.books.filter(b => !APP_BOOKS.includes(b));
+  if (missing.length) failures.push(`index.html: BOOK_PATHS has no Gospel Library link for ${missing.join(', ')}`);
+}
 const weeks = loadWeeks();
 const online = args.has('--online') || args.has('--lesson');
 const pages = new Map();

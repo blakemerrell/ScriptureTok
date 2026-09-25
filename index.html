@@ -235,6 +235,9 @@
      at its bottom edge. */
   header { background: linear-gradient(to bottom, rgba(17,14,42,.97) 0%, rgba(17,14,42,.95) 80%, rgba(17,14,42,0) 100%); }
   .credit { font-size: 11px; color: rgba(255,255,255,.55); margin-top: 3px; }
+  /* A scripture reference in text: a link to it in Gospel Library. */
+  .ref-link { color: inherit; text-decoration: underline; text-decoration-color: rgba(252,211,77,.8); text-decoration-thickness: 1.5px; text-underline-offset: 2px; }
+  .ref-link:hover, .ref-link:focus-visible { color: var(--gold); }
   .credit a { color: inherit; text-decoration: underline; text-decoration-color: rgba(255,255,255,.3); }
 
   /* Tap-to-play clip. Nothing loads from YouTube until he taps. */
@@ -890,13 +893,32 @@ const TreasureUp = (function () {
     return L;
   };
 
-  // Where "open scriptures" links go. Add a book here if a verse box
-  // ever quotes one that isn't listed.
+  // Every book of the standard works, as its Gospel Library path, so any
+  // reference anywhere can be a link (tools/verify.mjs checks none is missing).
   const BOOK_PATHS = {
-    'Isaiah': 'ot/isa', 'Genesis': 'ot/gen', 'Exodus': 'ot/ex', 'Psalms': 'ot/ps',
-    '1 Nephi': 'bofm/1-ne', '2 Nephi': 'bofm/2-ne', 'Mosiah': 'bofm/mosiah', 'Alma': 'bofm/alma',
-    'Matthew': 'nt/matt', 'John': 'nt/john', 'Revelation': 'nt/rev',
-    'D&C': 'dc-testament/dc', 'Moses': 'pgp/moses'
+    'Genesis': 'ot/gen', 'Exodus': 'ot/ex', 'Leviticus': 'ot/lev', 'Numbers': 'ot/num', 'Deuteronomy': 'ot/deut',
+    'Joshua': 'ot/josh', 'Judges': 'ot/judg', 'Ruth': 'ot/ruth', '1 Samuel': 'ot/1-sam', '2 Samuel': 'ot/2-sam',
+    '1 Kings': 'ot/1-kgs', '2 Kings': 'ot/2-kgs', '1 Chronicles': 'ot/1-chr', '2 Chronicles': 'ot/2-chr',
+    'Ezra': 'ot/ezra', 'Nehemiah': 'ot/neh', 'Esther': 'ot/esth', 'Job': 'ot/job', 'Psalms': 'ot/ps', 'Psalm': 'ot/ps',
+    'Proverbs': 'ot/prov', 'Ecclesiastes': 'ot/eccl', 'Song of Solomon': 'ot/song', "Solomon's Song": 'ot/song',
+    'Solomon’s Song': 'ot/song', 'Isaiah': 'ot/isa',
+    'Jeremiah': 'ot/jer', 'Lamentations': 'ot/lam', 'Ezekiel': 'ot/ezek', 'Daniel': 'ot/dan', 'Hosea': 'ot/hosea',
+    'Joel': 'ot/joel', 'Amos': 'ot/amos', 'Obadiah': 'ot/obad', 'Jonah': 'ot/jonah', 'Micah': 'ot/micah',
+    'Nahum': 'ot/nahum', 'Habakkuk': 'ot/hab', 'Zephaniah': 'ot/zeph', 'Haggai': 'ot/hag', 'Zechariah': 'ot/zech',
+    'Malachi': 'ot/mal',
+    'Matthew': 'nt/matt', 'Mark': 'nt/mark', 'Luke': 'nt/luke', 'John': 'nt/john', 'Acts': 'nt/acts',
+    'Romans': 'nt/rom', '1 Corinthians': 'nt/1-cor', '2 Corinthians': 'nt/2-cor', 'Galatians': 'nt/gal',
+    'Ephesians': 'nt/eph', 'Philippians': 'nt/philip', 'Colossians': 'nt/col', '1 Thessalonians': 'nt/1-thes',
+    '2 Thessalonians': 'nt/2-thes', '1 Timothy': 'nt/1-tim', '2 Timothy': 'nt/2-tim', 'Titus': 'nt/titus',
+    'Philemon': 'nt/philem', 'Hebrews': 'nt/heb', 'James': 'nt/james', '1 Peter': 'nt/1-pet', '2 Peter': 'nt/2-pet',
+    '1 John': 'nt/1-jn', '2 John': 'nt/2-jn', '3 John': 'nt/3-jn', 'Jude': 'nt/jude', 'Revelation': 'nt/rev',
+    '1 Nephi': 'bofm/1-ne', '2 Nephi': 'bofm/2-ne', 'Jacob': 'bofm/jacob', 'Enos': 'bofm/enos', 'Jarom': 'bofm/jarom',
+    'Omni': 'bofm/omni', 'Words of Mormon': 'bofm/w-of-m', 'Mosiah': 'bofm/mosiah', 'Alma': 'bofm/alma',
+    'Helaman': 'bofm/hel', '3 Nephi': 'bofm/3-ne', '4 Nephi': 'bofm/4-ne', 'Mormon': 'bofm/morm',
+    'Ether': 'bofm/ether', 'Moroni': 'bofm/moro',
+    'Doctrine and Covenants': 'dc-testament/dc', 'D&C': 'dc-testament/dc',
+    'Moses': 'pgp/moses', 'Abraham': 'pgp/abr', 'Joseph Smith—Matthew': 'pgp/js-m',
+    'Joseph Smith—History': 'pgp/js-h', 'Articles of Faith': 'pgp/a-of-f'
   };
 
   /* ---------------- state ---------------- */
@@ -1013,11 +1035,59 @@ const TreasureUp = (function () {
   // `chapterOnly` opens the top of the chapter instead, for bonus questions,
   // so the link doesn't point straight at the answer.
   function readLink(ref, chapterOnly) {
-    const m = /^(.+?) (\d+):(\d+)/.exec(ref || '');
-    if (!m || !BOOK_PATHS[m[1]]) return null;
-    return 'https://www.churchofjesuschrist.org/study/scriptures/' + BOOK_PATHS[m[1]] +
-      '/' + m[2] + '?lang=eng' + (chapterOnly ? '' : '&id=p' + m[3] + '#p' + m[3]);
+    const m = /^(.+?) (\d+)(?::(\d+))?/.exec(ref || '');
+    return m ? scriptureUrl(m[1], m[2], chapterOnly ? null : m[3]) : null;
   }
+  // A chapter, or a verse in it, in Gospel Library. Null for a book it doesn't know.
+  function scriptureUrl(book, chapter, verse) {
+    if (!BOOK_PATHS[book]) return null;
+    return 'https://www.churchofjesuschrist.org/study/scriptures/' + BOOK_PATHS[book] + '/' + chapter +
+      '?lang=eng' + (verse ? '&id=p' + verse + '#p' + verse : '');
+  }
+  const isRef = s => !!readLink(s);
+
+  // Every scripture reference in a piece of text, as a link to Gospel Library:
+  // "Isaiah 28:16", "D&C 133:14", "1 Peter 2:6", "Isaiah 22", lists like
+  // "Isaiah 13–14; 22; 24–30; 35", and "verse 22" or "chapter 40", which mean
+  // `home`'s chapter (the verse the text belongs to), the same way
+  // tools/verify.mjs reads them when it checks quotes. Returns safe HTML.
+  const BOOK_ALT = Object.keys(BOOK_PATHS).sort((a, b) => b.length - a.length)
+    .map(b => b.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+  const REF_RE = new RegExp('(' + BOOK_ALT + ') (\\d+)(?::(\\d+)(?:[–-]\\d+)?)?(?:[–-]\\d+)?' +
+    '|\\b([Vv]erses?|[Cc]hapter) (\\d+)(?:[–-]\\d+)?', 'g');
+  const LIST_RE = /^(; ?)(\d+)(?::(\d+)(?:[–-]\d+)?)?(?:[–-]\d+)?(?! ?[A-Za-z])/;
+  const refA = (href, label) => `<a class="ref-link" href="${esc(href)}" target="_blank" rel="noopener noreferrer">${esc(label)}</a>`;
+  function linkRefs(text, home) {
+    const t = String(text == null ? '' : text);
+    const h = /^(.+?) (\d+)/.exec(home || '');
+    const hb = h && BOOK_PATHS[h[1]] ? h[1] : null;
+    let out = '', at = 0, m;
+    REF_RE.lastIndex = 0;
+    while ((m = REF_RE.exec(t))) {
+      if (m[1] && m.index > 0 && /[A-Za-z0-9]/.test(t[m.index - 1])) continue;   // part of another word
+      const href = m[1] ? scriptureUrl(m[1], m[2], m[3])
+        : !hb ? null : /^c/i.test(m[4]) ? scriptureUrl(hb, m[5]) : scriptureUrl(hb, h[2], m[5]);
+      if (!href) continue;
+      out += esc(t.slice(at, m.index)) + refA(href, m[0]);
+      at = m.index + m[0].length;
+      for (let x; m[1] && (x = LIST_RE.exec(t.slice(at)));) {      // the rest of a list, same book
+        out += esc(x[1]) + refA(scriptureUrl(m[1], x[2], x[3]), x[0].slice(x[1].length));
+        at += x[0].length;
+      }
+      REF_RE.lastIndex = at;
+    }
+    return out + esc(t.slice(at));
+  }
+  // The verse a reel's question belongs to: a bonus's own verse, or the reel's.
+  const homeOf = (r, b) => b && isRef(b.source) ? b.source : r.verse.ref;
+  // The same for a game's question id: "reelId:q" or "reelId:b0".
+  function homeOfId(id) {
+    const [rid, part] = String(id).split(':'), r = reelById(rid);
+    return !r ? null : part && part[0] === 'b' ? homeOf(r, bonusesOf(r)[Number(part.slice(1))]) : r.verse.ref;
+  }
+  // A Go-deeper reading's passage, and the verse its question belongs to.
+  const deepPassage = d => isRef(d.read) ? d.read : null;
+  const deepHome = d => isRef(d.source) ? d.source : deepPassage(d);
 
   // Answer order is shuffled so the right one isn't always first. Seeded,
   // so a reel shows the same order every time; recall uses a different seed
@@ -1089,11 +1159,12 @@ const TreasureUp = (function () {
   // index `n`); `picked` is the choice he already made, if any.
   function quizHtml(r, kind, picked, n) {
     const q = kind === 'bonus' ? bonusesOf(r)[n] : r.question;
+    const home = kind === 'bonus' ? homeOf(r, q) : r.verse.ref;
     const seed = kind === 'bonus' ? r.id + '|bonus' + n : r.id;
     const choices = choicesFor(q, seed);
     const done = picked != null;
     const where = kind === 'bonus' ? sourceLabel(q.source) : '';
-    const label = kind === 'bonus' ? 'Bonus · find it in ' + where + ' · +' + XP.bonus + ' XP'
+    const label = kind === 'bonus' ? 'Bonus · find it in ' + refA(sourceLink(q.source), where) + ' · +' + XP.bonus + ' XP'
       : 'Quick check · +' + XP.firstTry + ' XP if right';
     const findLink = kind === 'bonus' && !done
       ? `<a class="find-link" href="${esc(sourceLink(q.source))}" target="_blank" rel="noopener noreferrer">Open ${esc(where)} ↗</a>`
@@ -1110,7 +1181,7 @@ const TreasureUp = (function () {
     let why = '';
     if (done) {
       const ok = picked === q.right;
-      why = `<p class="quiz-why">${ok ? '<b class="ok">Right.</b> ' : '<b class="no">Not quite.</b> '}${esc(q.why)}` +
+      why = `<p class="quiz-why">${ok ? '<b class="ok">Right.</b> ' : '<b class="no">Not quite.</b> '}${linkRefs(q.why, home)}` +
             (!ok && kind === 'reel' ? `<br><span class="text-white/55 text-[12px]">You'll see this one again in a warm-up.</span>` : '') +
             `</p>`;
     }
@@ -1118,7 +1189,7 @@ const TreasureUp = (function () {
     return `
       <div class="quiz${done ? ' done' : ''}${kind === 'bonus' ? ' bonus' : ''}" data-quiz="${esc(r.id)}" data-kind="${kind}"${kind === 'bonus' ? ` data-n="${n}"` : ''}>
         <div class="eyebrow" style="color:var(--gold)">${label}</div>
-        <p class="quiz-q">${esc(q.q)}</p>
+        <p class="quiz-q">${linkRefs(q.q, home)}</p>
         ${findLink}
         <div class="quiz-choices">${buttons}</div>
         ${why}
@@ -1153,14 +1224,14 @@ const TreasureUp = (function () {
       <div class="relative z-20 px-5 pr-7 content-pad">
         ${pic}
         <div class="eyebrow">${esc(WEEK.sections[r.section])}</div>
-        <h2 class="reel-hook">${esc(r.hook)}</h2>
-        <p class="reel-body">${esc(r.body)}</p>
+        <h2 class="reel-hook">${linkRefs(r.hook, r.verse.ref)}</h2>
+        <p class="reel-body">${linkRefs(r.body, r.verse.ref)}</p>
         ${media.video && (media.video.previewed === true || window.TU_NO_EMBED) ? clipHtml(media.video) : ''}
 
         <div class="mt-4 rounded-2xl bg-black/35 backdrop-blur-sm ring-1 ring-white/15 px-4 py-3">
           <p class="verse-text font-medium text-white/95">“${esc(r.verse.text)}”</p>
           <div class="mt-2 flex items-center justify-between gap-3">
-            <span class="text-[11px] font-bold tracking-wide text-amber-300">${esc(r.verse.ref)}</span>
+            <span class="text-[11px] font-bold tracking-wide text-amber-300">${linkRefs(r.verse.ref)}</span>
             ${link ? `<a href="${esc(link)}" target="_blank" rel="noopener noreferrer"
                          class="text-[11px] font-semibold text-white/60 underline decoration-white/30 shrink-0">read the chapter ↗</a>` : ''}
           </div>
@@ -1183,7 +1254,7 @@ const TreasureUp = (function () {
       <div class="home-in">
         <div class="eyebrow">Come, Follow Me · ${esc(WEEK.dates)}</div>
         <h1 class="reel-hook" style="font-size:clamp(28px,4.4vh,38px)">${esc(WEEK.title)}</h1>
-        <p class="text-[15px] font-bold text-amber-300">${esc(WEEK.reference)}</p>
+        <p class="text-[15px] font-bold text-amber-300">${linkRefs(WEEK.reference)}</p>
         ${todayHtml()}
         ${weekMapHtml()}
         ${weekStatsHtml()}
@@ -1535,8 +1606,8 @@ const TreasureUp = (function () {
       ${backdrop({ gradient: 'linear-gradient(160deg,#0b1024 0%,#1e3a8a 62%,#3b1d6e 100%)', blobA: 'rgba(147,197,253,.3)', blobB: 'rgba(0,0,0,.45)' })}
       <div class="relative z-20 px-5 pr-7 content-pad">
         <div class="eyebrow">${friday ? 'Friday deep dive' : 'Go deeper · ' + esc(WEEK.sections[d.section])}</div>
-        <h2 class="reel-hook">${friday ? esc(d.title) : 'Read ' + esc(d.read)}</h2>
-        <p class="reel-body">${esc(d.intro)}</p>
+        <h2 class="reel-hook">${friday ? esc(d.title) : 'Read ' + linkRefs(d.read)}</h2>
+        <p class="reel-body">${linkRefs(d.intro, deepPassage(d))}</p>
         ${url ? `<a class="deep-open" href="${esc(url)}" target="_blank" rel="noopener noreferrer">Open ${esc(name)} ↗</a>` : ''}
         ${left ? `<p class="reel-body mt-4" style="color:rgba(255,255,255,.62)">Answer this part's ${left === 1 ? 'last reel' : left + ' reels'} first, then the question opens.</p>`
                : deepQuizHtml(d, a ? a.picked : null)}
@@ -1553,11 +1624,11 @@ const TreasureUp = (function () {
       return `<button class="choice${cls}" data-choice="${esc(c)}" ${done ? 'disabled' : ''}>
                 <span class="mark">${mark}</span><span>${esc(c)}</span></button>`;
     }).join('');
-    const why = !done ? '' : `<p class="quiz-why">${picked === d.right ? '<b class="ok">Right.</b> ' : '<b class="no">Not quite.</b> '}${esc(d.why)}</p>`;
+    const why = !done ? '' : `<p class="quiz-why">${picked === d.right ? '<b class="ok">Right.</b> ' : '<b class="no">Not quite.</b> '}${linkRefs(d.why, deepHome(d))}</p>`;
     return `
       <div class="quiz bonus${done ? ' done' : ''}" data-quiz="${esc(d.id)}" data-kind="deep">
         <div class="eyebrow" style="color:var(--gold)">Find it in the reading · +${XP.bonus} XP</div>
-        <p class="quiz-q">${esc(d.q)}</p>
+        <p class="quiz-q">${linkRefs(d.q, deepHome(d))}</p>
         <div class="quiz-choices">${buttons}</div>
         ${why}
       </div>`;
@@ -1751,7 +1822,7 @@ const TreasureUp = (function () {
     if (!notes.length) return '<p class="text-[13px] text-white/60 mt-1">No notes yet.</p>';
     return notes.map(n => `
       <div class="journal-item">
-        <div class="text-[12px] text-white/55">${esc(n.day)} · ${esc(n.ref)} · ${esc(n.hook)}</div>
+        <div class="text-[12px] text-white/55">${esc(n.day)} · ${linkRefs(n.ref)} · ${esc(n.hook)}</div>
         <p class="text-[14px] mt-1" style="white-space:pre-wrap">${esc(n.text)}</p>
       </div>`).join('');
   }
@@ -1874,10 +1945,10 @@ const TreasureUp = (function () {
         <div class="clue">
           ${t.id === dd ? '<div class="dd-banner">Daily Double · worth double</div>' : ''}
           <div class="eyebrow">${esc(cols[t.col].name)} · ${worthOf(t, dd)}${t.bonus ? ' · from the reading' : ''}</div>
-          <p class="clue-q">${esc(t.q.q)}</p>
+          <p class="clue-q">${shown ? linkRefs(t.q.q, homeOfId(t.id)) : esc(t.q.q)}</p>
           <div class="quiz clue-choices${shown ? ' done' : ''}"><div class="quiz-choices">${choices}</div></div>
           ${shown
-            ? `<p class="quiz-why"><b class="ok">Answer:</b> ${esc(t.q.right)}. ${esc(t.q.why)}</p>
+            ? `<p class="quiz-why"><b class="ok">Answer:</b> ${esc(t.q.right)}. ${linkRefs(t.q.why, homeOfId(t.id))}</p>
                <p class="board-help" style="margin-top:16px">Who got it? (${worthOf(t, dd)} points)</p>
                <div class="board-actions">${g.players.map((p, n) => `<button class="btn" data-award="${n}">${esc(p.name)}</button>`).join('')}
                  <button class="btn ghost" data-award="-1">Nobody</button></div>`
@@ -1991,19 +2062,19 @@ const TreasureUp = (function () {
     if (n && !noteEditing.has(r.id)) {
       return `
         <div class="note-box">
-          <div class="eyebrow">Your note · ${esc(r.verse.ref)}</div>
+          <div class="eyebrow">Your note · ${linkRefs(r.verse.ref)}</div>
           <p class="note-text">${esc(n.text)}</p>
           <div class="note-actions">
             ${link ? `<a class="note-btn" href="${esc(link)}" target="_blank" rel="noopener noreferrer" data-note-copy="${esc(r.id)}">Put it in my scriptures ↗</a>` : ''}
             <button class="note-btn ghost" data-note-edit="${esc(r.id)}">Edit</button>
           </div>
-          <p class="note-help">Copies your note and opens ${esc(r.verse.ref)} in Gospel Library. Select the verse, add a note, and paste.</p>
+          <p class="note-help">Copies your note and opens ${linkRefs(r.verse.ref)} in Gospel Library. Select the verse, add a note, and paste.</p>
         </div>`;
     }
     return `
       <div class="note-box">
         <div class="eyebrow" style="color:var(--gold)">Write a note · +${NOTE_XP} XP</div>
-        <label class="note-q" for="note-${esc(r.id)}">${esc(r.note || 'What does this mean for you? Write it in your own words.')}</label>
+        <label class="note-q" for="note-${esc(r.id)}">${linkRefs(r.note || 'What does this mean for you? Write it in your own words.', r.verse.ref)}</label>
         <textarea id="note-${esc(r.id)}" class="field note-input" rows="3" maxlength="600" placeholder="At least ${NOTE_MIN_WORDS} words">${esc(n ? n.text : '')}</textarea>
         <p class="note-msg" data-note-msg="${esc(r.id)}"></p>
         <div class="note-actions"><button class="note-btn" data-note-save="${esc(r.id)}">Save note</button></div>
@@ -2165,7 +2236,7 @@ const TreasureUp = (function () {
       const g = groups[gi];
       return `<div class="pz-solved pz-c${gi}"><b>${esc(WEEK.sections[g.section])}</b>
         <span>${g.tiles.map(t => esc(t.text)).join(' · ')}</span>
-        ${done ? `<small>${g.tiles.map(t => esc(t.ref)).join(' · ')}</small>` : ''}</div>`;
+        ${done ? `<small>${g.tiles.map(t => linkRefs(t.ref)).join(' · ')}</small>` : ''}</div>`;
     }).join('');
 
     if (done) {
@@ -2282,12 +2353,12 @@ const TreasureUp = (function () {
       return `<button class="choice${cls}" data-say-pick="${esc(c)}"${shown ? ' disabled' : ''}><span class="mark">${mark}</span><span>${esc(c)}</span></button>`;
     }).join('');
     const why = shown
-      ? `<p class="quiz-why">${sayPicked === x.speaker ? '<b class="ok">Right.</b> ' : '<b class="no">Not quite.</b> '}${esc(x.why)}</p>
+      ? `<p class="quiz-why">${sayPicked === x.speaker ? '<b class="ok">Right.</b> ' : '<b class="no">Not quite.</b> '}${linkRefs(x.why, x.ref)}</p>
          <div class="board-actions"><button class="btn" data-say="next">${sayIdx + 1 < list.length ? 'Next line' : 'See how you did'}</button></div>`
       : '';
     body.innerHTML = `
       <div class="clue">
-        <div class="eyebrow">Line ${sayIdx + 1} of ${list.length}${shown ? ' · ' + esc(x.ref) : ''}</div>
+        <div class="eyebrow">Line ${sayIdx + 1} of ${list.length}${shown ? ' · ' + linkRefs(x.ref) : ''}</div>
         <p class="say-quote">${esc(x.text)}</p>
         <div class="quiz${shown ? ' done' : ''}"><div class="quiz-choices">${buttons}</div></div>
         ${why}
@@ -2386,7 +2457,7 @@ const TreasureUp = (function () {
       ${n === 2 ? '<button class="vw-key wide" data-vk="back" aria-label="Delete">⌫</button>' : ''}</div>`).join('');
     const n = st.guesses.length, done = st.status !== 'playing';
     const blank = done ? esc(w.word) : Array(L).fill('_').join(' ');
-    const verse = `<p class="vw-clue">“${esc(w.clue).replace('____', '<b>' + blank + '</b>')}” <span class="text-white/55 text-[13px]">${esc(w.ref)}</span></p>`;
+    const verse = `<p class="vw-clue">“${esc(w.clue).replace('____', '<b>' + blank + '</b>')}” <span class="text-white/55 text-[13px]">${done ? linkRefs(w.ref) : esc(w.ref)}</span></p>`;
     const hints = done ? verse
       : (n >= 2 ? `<p class="vw-clue">Hint: it's in <b>${esc(w.ref.replace(/:.*/, ''))}</b></p>` : '')
         + (n >= 4 ? verse : `<p class="board-help" style="text-align:center;margin:0 auto 12px">${n < 2 ? 'A hint after 2 guesses' : 'Another hint after 4 guesses'}</p>`);
@@ -2442,8 +2513,8 @@ const TreasureUp = (function () {
 
   function climbQuestions() {
     const seed = WEEK.title + '|' + dayKey();
-    const easy = shuffled(WEEK.reels.map(r => ({ q: r.question, src: r.verse.ref })), seed + '|easy');
-    const hard = shuffled(WEEK.reels.flatMap(r => bonusesOf(r).map(b => ({ q: b, src: b.source }))), seed + '|hard');
+    const easy = shuffled(WEEK.reels.map(r => ({ q: r.question, src: r.verse.ref, home: r.verse.ref })), seed + '|easy');
+    const hard = shuffled(WEEK.reels.flatMap(r => bonusesOf(r).map(b => ({ q: b, src: b.source, home: homeOf(r, b) }))), seed + '|hard');
     const qs = easy.slice(0, 5).concat(hard.slice(0, 5));
     for (const x of easy.slice(5)) if (qs.length < CLIMB_VALUES.length) qs.push(x);
     return qs.slice(0, CLIMB_VALUES.length);
@@ -2489,7 +2560,7 @@ const TreasureUp = (function () {
       <div class="clue">
         <div class="climb-ladder">${ladder}</div>
         <div class="eyebrow">Question ${c.at + 1} of ${c.qs.length} · for ${CLIMB_VALUES[c.at].toLocaleString('en-US')}</div>
-        <p class="clue-q">${esc(cur.q.q)}</p>
+        <p class="clue-q">${shown ? linkRefs(cur.q.q, cur.home) : esc(cur.q.q)}</p>
         ${shown ? '' : `<div class="lifelines">
           <button class="lifeline${c.used.half ? ' used' : ''}" data-life="half">50:50</button>
           <a class="lifeline${c.used.read ? ' used' : ''}" data-life="read" href="${esc(sourceLink(cur.src))}" target="_blank" rel="noopener noreferrer">Read it ↗</a>
@@ -2497,7 +2568,7 @@ const TreasureUp = (function () {
         </div>`}
         ${c.askParent === c.at ? '<p class="parent-msg" style="margin-bottom:12px">Ask a parent! Talk it through together, then choose.</p>' : ''}
         <div class="quiz${shown ? ' done' : ''}"><div class="quiz-choices">${choices}</div></div>
-        ${shown ? `<p class="quiz-why">${right ? '<b class="ok">Right.</b> ' : '<b class="no">Not quite.</b> '}${esc(cur.q.why)}</p>
+        ${shown ? `<p class="quiz-why">${right ? '<b class="ok">Right.</b> ' : '<b class="no">Not quite.</b> '}${linkRefs(cur.q.why, cur.home)}</p>
           <div class="board-actions"><button class="btn" data-climb="next">${right && c.at + 1 < c.qs.length ? 'Next question' : 'See how you did'}</button></div>` : ''}
       </div>`;
   }
@@ -2952,7 +3023,7 @@ const TreasureUp = (function () {
       const counts = {};
       if (g.state === 'reveal') lv.answers.forEach(a => { counts[a.choice] = (counts[a.choice] || 0) + 1; });
       const board = g.state === 'reveal' ? `
-        <p class="quiz-why" style="margin-top:14px"><b class="ok">Answer:</b> ${esc(q.right)}. ${esc(q.why)}</p>
+        <p class="quiz-why" style="margin-top:14px"><b class="ok">Answer:</b> ${esc(q.right)}. ${linkRefs(q.why, homeOfId(id))}</p>
         <div class="grid gap-2" style="margin-top:14px">${players.slice(0, 5).map((p, i) =>
           `<div class="score-row"><span>${i + 1}. ${esc(p.name)} ${p.last ? `<span style="color:var(--right)">+${fmt(p.last)}</span>` : ''}</span><b>${fmt(p.score)}</b></div>`).join('')}</div>
         <div class="board-actions"><button class="btn" data-host="next">${g.qi + 1 < g.qs.length ? 'Next question' : 'Final scores'}</button></div>` : `
@@ -2963,7 +3034,7 @@ const TreasureUp = (function () {
             <div class="eyebrow">Question ${g.qi + 1} of ${g.qs.length}${g.state === 'question' ? ` · ${lv.answers.length} of ${players.length} answered` : ''}</div>
             ${g.state === 'question' ? `<div class="live-clock" id="liveClock">${Math.max(0, LIVE_SECONDS - Math.floor((Date.now() - (lv.localStart || Date.now())) / 1000))}</div>` : ''}
           </div>
-          <p class="clue-q">${esc(q.q)}</p>
+          <p class="clue-q">${g.state === 'reveal' ? linkRefs(q.q, homeOfId(id)) : esc(q.q)}</p>
           ${choicesHtml(id, g, g.state === 'reveal' ? counts : null)}
           ${board}
         </div>`);
@@ -4170,7 +4241,7 @@ const TreasureUp = (function () {
     // The word itself, not the same letters inside a longer word.
     const m = new RegExp('(^|[^A-Za-z’\'])' + right + '(?![A-Za-z’\'])').exec(r.verse.text);
     const at = m.index + m[1].length;
-    return { kind: 'blank', ref: r.verse.ref, before: r.verse.text.slice(0, at), after: r.verse.text.slice(at + right.length),
+    return { kind: 'blank', ref: r.verse.ref, home: r.verse.ref, before: r.verse.text.slice(0, at), after: r.verse.text.slice(at + right.length),
              right, choices: shuffled([right].concat(wrong), r.id + '|blankc') };
   }
   // Put a phrase of the verse back in order.
@@ -4180,7 +4251,7 @@ const TreasureUp = (function () {
     const words = wordsOf(phrase);
     let tiles = shuffled(words.map((w, i) => ({ w, i })), r.id + '|order');
     if (tiles.every((t, i) => t.i === i)) tiles = tiles.reverse();
-    return { kind: 'order', ref: r.verse.ref, words, tiles };
+    return { kind: 'order', ref: r.verse.ref, home: r.verse.ref, words, tiles };
   }
   // Match each idea to its verse: the puzzle's tiles for this section.
   function matchStep(section) {
@@ -4194,23 +4265,23 @@ const TreasureUp = (function () {
     if (!list.length) return null;
     const chapters = new Set(WEEK.reels.filter(r => r.section === section).map(r => r.verse.ref.replace(/:.*/, '')));
     const x = list.find(y => chapters.has(y.ref.replace(/:.*/, ''))) || list[hash(WEEK.title + section) % list.length];
-    return { kind: 'say', text: x.text, ref: x.ref, right: x.speaker, choices: shuffled([x.speaker].concat(x.wrong), x.id + '|say'), why: x.why };
+    return { kind: 'say', text: x.text, ref: x.ref, home: x.ref, right: x.speaker, choices: shuffled([x.speaker].concat(x.wrong), x.id + '|say'), why: x.why };
   }
-  const deepStep = d => ({ kind: 'deep', id: d.id, d, q: d.q, right: d.right, why: d.why, choices: choicesFor(d, 'deep|' + d.id) });
+  const deepStep = d => ({ kind: 'deep', id: d.id, d, home: deepHome(d), q: d.q, right: d.right, why: d.why, choices: choicesFor(d, 'deep|' + d.id) });
 
   // A finished part plays again as practice: everything in it, nothing to earn.
   function buildLesson(entry) {
     const steps = [];
     S.daily.ids.filter(id => !S.daily.done[id]).map(reelById).filter(Boolean).forEach(r => steps.push({
-      kind: 'recall', id: r.id, r, q: r.question.q, right: r.question.right, why: r.question.why, choices: choicesFor(r.question, r.id + '|' + S.daily.day) }));
+      kind: 'recall', id: r.id, r, home: r.verse.ref, q: r.question.q, right: r.question.right, why: r.question.why, choices: choicesFor(r.question, r.id + '|' + S.daily.day) }));
     const x = S.daily.say && !S.daily.sayDone && (WEEK.sayings || []).find(y => y.id === S.daily.say);
-    if (x) steps.push({ kind: 'saywarm', text: x.text, ref: x.ref, right: x.speaker, why: x.why, choices: shuffled([x.speaker].concat(x.wrong), x.id + '|' + S.daily.day) });
+    if (x) steps.push({ kind: 'saywarm', text: x.text, ref: x.ref, home: x.ref, right: x.speaker, why: x.why, choices: shuffled([x.speaker].concat(x.wrong), x.id + '|' + S.daily.day) });
     const practice = !!entry && entryItems(entry).every(i => i.done);
     if (entry && entry.kind === 'section') {
       const reels = WEEK.reels.filter(r => r.section === entry.i);
       reels.filter(r => practice || !S.answers[r.id]).forEach(r => {
         steps.push({ kind: 'read', r });
-        steps.push({ kind: 'reel', id: r.id, q: r.question.q, right: r.question.right, why: r.question.why, choices: choicesFor(r.question, r.id) });
+        steps.push({ kind: 'reel', id: r.id, home: r.verse.ref, q: r.question.q, right: r.question.right, why: r.question.why, choices: choicesFor(r.question, r.id) });
         const b = blankStep(r);
         if (b) steps.push(b);
       });
@@ -4284,16 +4355,16 @@ const TreasureUp = (function () {
       const r = step.r, img = r.media && r.media.image;
       html += `<div class="ls-read">
         ${img ? `<img src="${esc(img.src)}" alt="${esc(img.alt)}"><div class="credit" style="margin:-6px 0 10px">Picture: <a href="${esc(img.link)}" target="_blank" rel="noopener noreferrer">${esc(img.credit)}</a></div>` : ''}
-        <div class="ls-prompt">${esc(r.hook)}</div><p class="reel-body">${esc(r.body)}</p>
+        <div class="ls-prompt">${linkRefs(r.hook, r.verse.ref)}</div><p class="reel-body">${linkRefs(r.body, r.verse.ref)}</p>
         ${r.media && r.media.video && (r.media.video.previewed === true || window.TU_NO_EMBED) ? clipHtml(r.media.video) : ''}
-        <div class="ls-verse">“${esc(r.verse.text)}”<span class="ls-ref-row"><span class="ref">${esc(r.verse.ref)}</span>${readLink(r.verse.ref) ? `<a href="${esc(readLink(r.verse.ref))}" target="_blank" rel="noopener noreferrer">read the chapter ↗</a>` : ''}</span></div></div>`;
+        <div class="ls-verse">“${esc(r.verse.text)}”<span class="ls-ref-row"><span class="ref">${linkRefs(r.verse.ref)}</span>${readLink(r.verse.ref) ? `<a href="${esc(readLink(r.verse.ref))}" target="_blank" rel="noopener noreferrer">read the chapter ↗</a>` : ''}</span></div></div>`;
     } else if (step.kind === 'reel' || step.kind === 'recall') {
-      html += `<div class="ls-prompt">${esc(step.q)}</div>${step.kind === 'recall' && !step.retry ? '<p class="ls-hint">From earlier this week. No peeking.</p>' : ''}${opts()}`;
+      html += `<div class="ls-prompt">${step.kind === 'recall' && !L.checked ? esc(step.q) : linkRefs(step.q, step.home)}</div>${step.kind === 'recall' && !step.retry ? '<p class="ls-hint">From earlier this week. No peeking.</p>' : ''}${opts()}`;
     } else if (step.kind === 'blank') {
       const fill = L.checked ? step.right : L.picked || '';
-      html += `<div class="ls-verse" style="margin:6px 0 18px">“${esc(step.before)}<span class="ls-blank">${esc(fill) || '&nbsp;'}</span>${esc(step.after)}”<span class="ref">${esc(step.ref)}</span></div>${opts()}`;
+      html += `<div class="ls-verse" style="margin:6px 0 18px">“${esc(step.before)}<span class="ls-blank">${esc(fill) || '&nbsp;'}</span>${esc(step.after)}”<span class="ref">${L.checked ? linkRefs(step.ref) : esc(step.ref)}</span></div>${opts()}`;
     } else if (step.kind === 'order') {
-      html += `<div class="ls-prompt" style="font-size:18px">From ${esc(step.ref)}</div>
+      html += `<div class="ls-prompt" style="font-size:18px">From ${L.checked ? linkRefs(step.ref) : esc(step.ref)}</div>
         <div class="ls-line">${L.built.map((ti, n) => `<button class="ls-word" data-ls="unt" data-n="${n}"${L.checked ? ' disabled' : ''}>${esc(step.tiles[ti].w)}</button>`).join('')}</div>
         <div class="ls-words">${step.tiles.map((t, ti) => `<button class="ls-word${L.built.includes(ti) ? ' used' : ''}" data-ls="tile" data-i="${ti}"${L.checked ? ' disabled' : ''}>${esc(t.w)}</button>`).join('')}</div>`;
     } else if (step.kind === 'match') {
@@ -4310,10 +4381,10 @@ const TreasureUp = (function () {
     } else if (step.kind === 'deep') {
       const d = step.d, web = /^https:|^lesson$/.test(d.read);
       const url = d.read === 'lesson' ? WEEK.lesson : web ? d.read : readLink(d.read);
-      html += step.retry ? '' : `<div class="ls-prompt">${d.day === 'friday' ? esc(d.title) : 'Read ' + esc(d.read)}</div>
-        <p class="reel-body">${esc(d.intro)}</p>
+      html += step.retry ? '' : `<div class="ls-prompt">${d.day === 'friday' ? esc(d.title) : 'Read ' + linkRefs(d.read)}</div>
+        <p class="reel-body">${linkRefs(d.intro, deepPassage(d))}</p>
         ${url ? `<a class="deep-open" href="${esc(url)}" target="_blank" rel="noopener noreferrer">Open ${esc(web ? sourceLabel(d.read) : d.read)} ↗</a>` : ''}`;
-      html += `<div class="ls-q">${esc(step.q)}</div>${opts()}`;
+      html += `<div class="ls-q">${linkRefs(step.q, step.home)}</div>${opts()}`;
     } else if (step.kind === 'puzzle') {
       const left = reelsLeft();
       html += `<div class="ls-prompt">The weekly puzzle</div>
@@ -4336,7 +4407,8 @@ const TreasureUp = (function () {
       const answer = step.kind === 'order' ? step.words.join(' ') : step.right;
       footHtml = `<div class="ls-say">${L.ok ? ['Nice!', 'Great job!', 'You got it!'][L.at % 3] : 'Correct answer:'}${L.earned ? ` <span class="ls-earn">+${L.earned} XP</span>` : ''}</div>
         ${!L.ok ? `<div class="ls-why" style="font-weight:800;color:#fff">${esc(answer)}</div>` : ''}
-        ${step.why ? `<div class="ls-why">${esc(step.why)}</div>` : ''}
+        ${step.why ? `<div class="ls-why">${linkRefs(step.why, step.home)}</div>` : ''}
+        ${/^say/.test(step.kind) ? `<div class="ls-why">${linkRefs(step.ref)}</div>` : ''}
         ${!L.ok ? `<div class="ls-why">It comes back at the end.</div>` : ''}
         <button class="ls-go" data-ls="next">Continue</button>`;
     } else {

@@ -68,6 +68,12 @@ Each reel:
             Scripture quoted here goes in “curly quotes” followed by
             its reference, e.g. “Thy dead men shall live” (Isaiah 26:19).
             A quote with no reference must come from this reel's verse.
+            Every reference he reads becomes a link to it in Gospel
+            Library: "Isaiah 28:16", "Isaiah 22", "1 Peter 2:6", and
+            "(verse 22)" or "chapter 40", which mean this reel's own
+            chapter (a Go-deeper reading's passage, a saying's verse).
+            The checker fails a reference that isn't real, or a "verse 4"
+            with no verse of its own to be read against.
   verse     { text, ref }: quoted from the scripture text exactly.
             Use … where words are left out.
   question  { q, right, wrong: [two wrong answers], why }
