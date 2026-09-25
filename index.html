@@ -30,8 +30,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 
 <style>
-  /* Core layout lives in plain CSS (not Tailwind) so the feed still
-     scrolls and snaps even if the compiled block above were missing. */
+  /* Core layout lives in plain CSS (not Tailwind) so the page still
+     lays out even if the compiled block above were missing. */
   :root {
     --sat: env(safe-area-inset-top, 0px);
     --sab: env(safe-area-inset-bottom, 0px);
@@ -54,19 +54,34 @@
   ::-webkit-scrollbar { display: none !important; width: 0 !important; }
   * { scrollbar-width: none !important; -ms-overflow-style: none !important; }
 
-  /* The feed: one full-screen card at a time, snapped. */
-  #feed {
+  /* The page: one column, the same on a phone and a tablet. */
+  #home {
     height: 100dvh;
-    overflow-y: scroll;
-    scroll-snap-type: y mandatory;
+    overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior-y: contain;
+    background: linear-gradient(165deg, #1e1b4b 0%, #3b1a6e 38%, #0a0a14 88%);
+  }
+  .home-in { max-width: 600px; margin: 0 auto; padding: calc(var(--sat) + 72px) 20px calc(var(--sab) + 48px); }
+  .home-sec { margin-top: 26px; }
+  .home-win { margin-top: 6px; font-size: 15px; font-weight: 800; color: var(--right); }
+  .lb-help { margin-top: 4px; font-size: 12.5px; color: rgba(255,255,255,.6); }
+  .lb-sec { margin-top: 16px; font-size: 13px; font-weight: 800; color: var(--gold); }
+  .report-row.todo { color: rgba(255,255,255,.55); }
+
+  /* One reel on its own screen, over the page and its top bar. */
+  #view { position: fixed; inset: 0; z-index: 90; background: var(--ink); }
+  #view[hidden] { display: none; }
+  #view .content-pad { max-width: 640px; margin: 0 auto; width: 100%; }
+  .view-back {
+    position: absolute; z-index: 30; top: calc(var(--sat) + 12px); left: 12px;
+    padding: 8px 14px; border-radius: 999px; cursor: pointer;
+    font: inherit; font-size: 14px; font-weight: 800; color: #fff;
+    background: rgba(0,0,0,.55); border: 1px solid rgba(255,255,255,.2); backdrop-filter: blur(6px);
   }
   .reel {
     position: relative;
     height: 100dvh;
-    scroll-snap-align: start;
-    scroll-snap-stop: always;
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
@@ -129,11 +144,9 @@
   #levelTitle { max-width: 72px; line-height: 1.1; }
   #hudRow { gap: 10px; }
   @media (max-width: 380px) { #hudRow { gap: 6px; } }
-  .hint-pos { bottom: calc(var(--sab) + 14px); }
 
   /* The text column. A reel with its question can be taller than a small
-     phone, so it scrolls inside the reel; at the end of it, the next swipe
-     moves the feed on. */
+     phone, so it scrolls inside the reel. */
   .content-pad {
     padding-top: calc(var(--sat) + 68px);   /* clears the HUD */
     padding-bottom: calc(var(--sab) + 40px);
@@ -218,8 +231,9 @@
   }
   .reel-pic .reel-photo { position: relative; display: block; width: 100%; height: 100%; object-fit: contain; }
   .has-photo .credit { margin: 6px 0 10px; }
-  /* Text that scrolls up inside a tall reel fades out under the HUD. */
-  header { background: linear-gradient(to bottom, rgba(5,5,12,.88) 0%, rgba(5,5,12,.6) 65%, rgba(5,5,12,0) 100%); }
+  /* The page scrolls up under the HUD: it gets a solid bar that fades out
+     at its bottom edge. */
+  header { background: linear-gradient(to bottom, rgba(17,14,42,.97) 0%, rgba(17,14,42,.95) 80%, rgba(17,14,42,0) 100%); }
   .credit { font-size: 11px; color: rgba(255,255,255,.55); margin-top: 3px; }
   .credit a { color: inherit; text-decoration: underline; text-decoration-color: rgba(255,255,255,.3); }
 
@@ -436,7 +450,7 @@
   }
   .lifeline:disabled, .lifeline.used { opacity: .35; cursor: default; pointer-events: none; }
 
-  /* ---- Year trail on the first card ---- */
+  /* ---- Year trail on the home page ---- */
   .trail { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; max-width: 340px; }
   .trail i { width: 9px; height: 9px; border-radius: 99px; background: rgba(255,255,255,.12); display: inline-block; }
   .trail i.past { background: rgba(255,255,255,.28); }
@@ -617,7 +631,7 @@
   .dv-status.bad { color: #fda4af; }
   .dv-status ul { margin: 4px 0 0 18px; padding: 0; }
 
-  /* ---- The week's plan on the cover, and the Go-deeper cards ---- */
+  /* ---- The week's plan on the page, and the Go-deeper reading ---- */
   .today { margin-top: 16px; padding: 14px 16px; border-radius: 16px; background: rgba(0,0,0,.35); border: 1.5px solid rgba(252,211,77,.55); }
   .today-head { margin-top: 4px; font-weight: 900; font-size: 19px; line-height: 1.2; }
   .today-sub { margin-top: 3px; font-size: 13px; color: rgba(255,255,255,.72); }
@@ -638,7 +652,7 @@
   .deep-open { display: inline-block; margin-top: 14px; padding: 10px 16px; border-radius: 999px; font-size: 14px; font-weight: 800; color: #1c1406; background: var(--gold); text-decoration: none; }
   .deep-open:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 
-  /* Week report on the last card. */
+  /* Your week and Look back, on the page. */
   .kpis { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
   .kpi { padding: 12px 14px; border-radius: 16px; background: rgba(0,0,0,.3); border: 1px solid rgba(255,255,255,.14); }
   .kpi .k-top { display: flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: rgba(255,255,255,.7); }
@@ -661,13 +675,6 @@
   .report-row.is-wrong .st { background: var(--wrong); border-color: var(--wrong); color: #3b0512; }
   .report-row .go { margin-left: auto; color: rgba(255,255,255,.35); }
 
-  /* Position dots down the right edge. */
-  #rail { position: fixed; right: 6px; top: 50%; transform: translateY(-50%);
-          z-index: 40; display: flex; flex-direction: column;
-          gap: 5px; align-items: center; pointer-events: none; }
-  .rail-dot { width: 4px; height: 4px; border-radius: 999px;
-              background: rgba(255,255,255,.3); transition: all .3s ease; }
-  .rail-dot.on { background: #fff; height: 15px; }
 
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
@@ -719,17 +726,14 @@
   </div>
 </header>
 
-<!-- ==================== THE FEED ==================== -->
-<main id="feed"></main>
+<!-- ==================== THE PAGE ==================== -->
+<main id="home"></main>
 
-<!-- Position rail -->
-<div id="rail"></div>
-
-<!-- Swipe hint, removed after the first scroll -->
-<div id="hint" class="fixed left-0 right-0 hint-pos z-40 flex items-center justify-center gap-1.5 pointer-events-none">
-  <span class="text-white/60 text-xs animate-bounce">︿</span>
-  <span class="text-[10px] font-semibold text-white/60 tracking-wide">swipe up</span>
-</div>
+<!-- One reel, looked back at. -->
+<section id="view" hidden aria-label="Look back">
+  <button id="viewBack" class="view-back" aria-label="Back">‹ Back</button>
+  <div id="viewBody"></div>
+</section>
 
 <!-- ==================== OVERLAYS ==================== -->
 <div id="toasts"></div>
@@ -1077,16 +1081,15 @@ const TreasureUp = (function () {
     return readLink(src, true);
   }
 
-  // One question block. `kind` is 'reel', 'recall' or 'bonus' (with its
+  // One question block on a reel. `kind` is 'reel' or 'bonus' (with its
   // index `n`); `picked` is the choice he already made, if any.
   function quizHtml(r, kind, picked, n) {
     const q = kind === 'bonus' ? bonusesOf(r)[n] : r.question;
-    const seed = kind === 'recall' ? r.id + '|' + S.daily.day : kind === 'bonus' ? r.id + '|bonus' + n : r.id;
+    const seed = kind === 'bonus' ? r.id + '|bonus' + n : r.id;
     const choices = choicesFor(q, seed);
     const done = picked != null;
     const where = kind === 'bonus' ? sourceLabel(q.source) : '';
-    const label = kind === 'recall' ? 'Remember this? · +' + XP.recall + ' XP'
-      : kind === 'bonus' ? 'Bonus · find it in ' + where + ' · +' + XP.bonus + ' XP'
+    const label = kind === 'bonus' ? 'Bonus · find it in ' + where + ' · +' + XP.bonus + ' XP'
       : 'Quick check · +' + XP.firstTry + ' XP if right';
     const findLink = kind === 'bonus' && !done
       ? `<a class="find-link" href="${esc(sourceLink(q.source))}" target="_blank" rel="noopener noreferrer">Open ${esc(where)} ↗</a>`
@@ -1104,7 +1107,6 @@ const TreasureUp = (function () {
     if (done) {
       const ok = picked === q.right;
       why = `<p class="quiz-why">${ok ? '<b class="ok">Right.</b> ' : '<b class="no">Not quite.</b> '}${esc(q.why)}` +
-            (kind === 'recall' ? `<br><span class="text-white/55 text-[12px]">From “${esc(r.hook)}” · ${esc(r.verse.ref)}</span>` : '') +
             (!ok && kind === 'reel' ? `<br><span class="text-white/55 text-[12px]">You'll see this one again in a warm-up.</span>` : '') +
             `</p>`;
     }
@@ -1167,44 +1169,31 @@ const TreasureUp = (function () {
     </article>`;
   }
 
-  function recallHtml(r, n, total, i) {
-    const done = S.daily.done[r.id];
-    return `
-    <article class="reel" data-id="recall-${esc(r.id)}" data-index="${i}">
-      ${backdrop({ gradient: 'linear-gradient(160deg,#0b1020 0%,#1c1433 55%,#2a1b10 100%)', blobA: 'rgba(252,211,77,.22)', blobB: 'rgba(0,0,0,.5)' })}
-      <div class="relative z-20 px-5 pr-7 content-pad">
-        <div class="eyebrow">Warm-up · ${n} of ${total}</div>
-        <h2 class="reel-hook">From earlier this week</h2>
-        <p class="reel-body text-white/70">No peeking at the verse. See what you remember.</p>
-        ${quizHtml(r, 'recall', done == null ? null : done.picked)}
-        ${done != null ? keepGoingHtml() : ''}
-      </div>
-    </article>`;
-  }
+  /* ---------------- home ---------------- */
 
-  function introHtml(i) {
+  // The app is one page: the week, today's lesson, the week map, how the
+  // week is going, and every reel to look back at. A day's work happens in
+  // its lesson; this page is where it starts and where it shows.
+  function homeHtml() {
     return `
-    <article class="reel" data-id="intro" data-index="${i}">
-      ${backdrop({ gradient: 'linear-gradient(155deg,#1e1b4b 0%,#4c1d95 50%,#a16207 118%)', blobA: 'rgba(167,139,250,.45)', blobB: 'rgba(0,0,0,.45)' })}
-      <div class="relative z-20 px-5 pr-7 content-pad">
+      <div class="home-in">
         <div class="eyebrow">Come, Follow Me · ${esc(WEEK.dates)}</div>
-        <h2 class="reel-hook" style="font-size:clamp(28px,4.4vh,38px)">${esc(WEEK.title)}</h2>
+        <h1 class="reel-hook" style="font-size:clamp(28px,4.4vh,38px)">${esc(WEEK.title)}</h1>
         <p class="text-[15px] font-bold text-amber-300">${esc(WEEK.reference)}</p>
         ${todayHtml()}
         ${weekMapHtml()}
-        <p class="reel-body mt-4" style="font-size:13px;color:rgba(255,255,255,.7)">XP only comes from right answers. Questions you miss come back in the daily warm-ups.</p>
+        ${weekStatsHtml()}
+        ${lookBackHtml()}
+        <p class="reel-body mt-6" style="font-size:13px;color:rgba(255,255,255,.7)">XP only comes from right answers. Questions you miss come back in the daily warm-ups.</p>
         <a href="${esc(WEEK.lesson)}" target="_blank" rel="noopener noreferrer"
-           class="mt-5 inline-block text-[13px] font-semibold text-white/75 underline decoration-white/30">Open this week's lesson ↗</a>
+           class="mt-4 inline-block text-[13px] font-semibold text-white/75 underline decoration-white/30">Open this week's lesson ↗</a>
         ${trailHtml()}
-        ${boardLinkHtml()}
         ${rewardsHtml()}
-      </div>
-    </article>`;
+      </div>`;
   }
 
-  // The week's scoreboard: big numbers for how far he's got, then every
-  // reel as a checklist he can tap to go back to.
-  function endHtml(i) {
+  // How the week is going, in big numbers.
+  function weekStatsHtml() {
     const total = WEEK.reels.length;
     const answered = WEEK.reels.filter(r => S.answers[r.id]);
     const right = answered.filter(r => S.answers[r.id].right).length;
@@ -1215,12 +1204,8 @@ const TreasureUp = (function () {
     const pz = S.puzzle && S.puzzle.week === WEEK.title ? S.puzzle : null;
     const left = total - answered.length;
     const done = !left;
-    const headline = !answered.length ? 'Your week starts here'
-      : !done ? `${answered.length} of ${total} reels done`
-      : right === total ? 'A perfect week!' : 'You finished the week!';
-    const sub = !answered.length ? 'Answer a reel and watch these fill up.'
-      : !done ? `${left} to go. Every right answer counts.`
-      : right === total ? `All ${total} right the first time.` : `${right} of ${total} right the first time. Missed ones come back in the warm-ups.`;
+    const finished = !done ? ''
+      : right === total ? `A perfect week! All ${total} right the first time.` : `You finished the week! ${right} of ${total} right the first time.`;
 
     const tile = (icon, label, n, of) => `
       <div class="kpi${of && n >= of ? ' full' : ''}">
@@ -1243,90 +1228,58 @@ const TreasureUp = (function () {
       tile('✅', 'Right first time', right, total),
       allBonus.length ? tile('🔎', 'Bonus finds', found, allBonus.length) : '',
       deep.length ? tile('🧭', 'Went deeper', deepRight, deep.length) : '',
-      word('✏️', 'Notes', String(notes), notes ? `${notes * NOTE_XP} XP from notes` : 'Write one after any reel'),
+      word('✏️', 'Notes', String(notes), notes ? `${notes * NOTE_XP} XP from notes` : 'Write one on a reel below'),
       puzzle
     ].join('');
 
-    const rows = WEEK.reels.map(r => {
-      const a = S.answers[r.id];
-      return `<button class="report-row${a ? (a.right ? ' is-right' : ' is-wrong') : ''}" data-goto="${esc(r.id)}">
-        <span class="st">${a ? (a.right ? '✓' : '✕') : ''}</span><span>${esc(r.hook)}</span><span class="go">›</span></button>`;
-    }).join('');
-
-    const next = landingCard();
-    const nextName = next === 'end' ? '' : next.startsWith('recall-') || next.startsWith('say-') ? "Today's warm-up"
-      : next.startsWith('deep-') ? 'Go deeper' : next === 'puzzle' ? 'The weekly puzzle'
-      : next === 'intro' ? "This week's plan" : (reelById(next) || {}).hook || '';
-
     return `
-    <article class="reel" data-id="end" data-index="${i}">
-      ${backdrop({ gradient: 'linear-gradient(150deg,#052e16 0%,#065f46 48%,#0f766e 100%)', blobA: 'rgba(110,231,183,.35)', blobB: 'rgba(0,0,0,.45)' })}
-      <div class="relative z-20 px-5 pr-7 content-pad">
-        <div class="eyebrow">Your week · ${esc(WEEK.title)}</div>
-        <h2 class="reel-hook" id="endHeadline">${esc(headline)}</h2>
-        <p class="reel-body">${esc(sub)}</p>
+      <div class="home-sec">
+        <div class="eyebrow">Your week</div>
+        ${finished ? `<p class="home-win">${esc(finished)}</p>` : ''}
         <div class="kpis">${tiles}</div>
-        ${nextName ? `<button class="board-link" data-jump>Keep going ↓<small>Next: ${esc(nextName)}</small></button>` : ''}
-        <div class="eyebrow" style="margin-top:22px">Every reel · tap one to go back</div>
-        <div class="mt-1" id="endRows">${rows}</div>
-        <a href="${esc(WEEK.lesson)}" target="_blank" rel="noopener noreferrer"
-           class="mt-5 inline-block text-[13px] font-semibold text-white/75 underline decoration-white/30">Read the whole lesson: ${esc(WEEK.reference)} ↗</a>
-        ${boardLinkHtml()}
-        ${rewardsHtml()}
-      </div>
-    </article>`;
+      </div>`;
   }
 
-  function renderFeed() {
-    // The week cover sits at the very top, one swipe back from wherever
-    // the app opens (see landingCard).
-    const cards = [introHtml];
-    const recall = S.daily.ids.map(reelById).filter(Boolean);
-    recall.forEach((r, n) => cards.push(i => recallHtml(r, n + 1, recall.length, i)));
-    if (S.daily.say && (WEEK.sayings || []).some(x => x.id === S.daily.say)) cards.push(sayRecallHtml);
-    WEEK.reels.forEach((r, n) => {
-      cards.push(i => reelHtml(r, i));
-      if (!WEEK.reels.slice(n + 1).some(x => x.section === r.section)) {   // the section's last reel
-        deepItems().filter(d => d.section === r.section).forEach(d => cards.push(i => deepHtml(d, i)));
-      }
+  // Every reel and reading of the week, by section. One he has answered
+  // opens on its own screen (with its bonus questions and a note); one he
+  // hasn't opens its day's lesson.
+  function lookBackHtml() {
+    const plan = weekPlan();
+    const keyOf = test => { for (let d = 0; d < 7; d++) { const k = plan[d].findIndex(test); if (k >= 0) return d + '.' + k; } return ''; };
+    const row = (a, name, id, key) => `
+      <button class="report-row${a ? (a.right ? ' is-right' : ' is-wrong') : ' todo'}" ${a ? `data-view="${esc(id)}"` : `data-lesson="${key}"`}>
+        <span class="st">${a ? (a.right ? '✓' : '✕') : ''}</span><span>${esc(name)}</span><span class="go">›</span></button>`;
+    const deepRow = (d, key) => row(S.deep[d.id], '🧭 ' + (d.day === 'friday' ? d.title : 'Read ' + d.read), 'deep-' + d.id, key);
+    const parts = WEEK.sections.map((name, i) => {
+      const key = keyOf(e => e.kind === 'section' && e.i === i);
+      return `<div class="lb-sec">${esc(name)}</div>` +
+        WEEK.reels.filter(r => r.section === i).map(r => row(S.answers[r.id], r.hook, r.id, key)).join('') +
+        deepItems().filter(d => d.section === i).map(d => deepRow(d, key)).join('');
     });
-    fridayItems().forEach(d => cards.push(i => deepHtml(d, i)));
-    if (WEEK.puzzle) cards.push(puzzleCardHtml);
-    cards.push(endHtml);
-
-    $('feed').innerHTML = cards.map((make, i) => make(i)).join('');
-    $('rail').innerHTML = cards.map(() => '<div class="rail-dot"></div>').join('');
+    if (fridayItems().length) {
+      const key = keyOf(e => e.kind === 'friday');
+      parts.push(`<div class="lb-sec">Friday deep dive</div>` + fridayItems().map(d => deepRow(d, key)).join(''));
+    }
+    return `
+      <div class="home-sec">
+        <div class="eyebrow">Look back</div>
+        <p class="lb-help">Tap one you've done to read it again, try its bonus, or write a note.</p>
+        ${parts.join('')}
+      </div>`;
   }
 
-  // Where the app opens: today's warm-up if any is left, otherwise the next
-  // reel he hasn't answered, so he never swipes past finished work. A fresh
-  // week opens on its cover; a finished week on the puzzle, then the report.
+  function renderHome() { $('home').innerHTML = homeHtml(); }
+  // Redraw the page after something changed, keeping its place.
+  function refreshHome() {
+    const h = $('home');
+    const top = h.scrollTop;
+    renderHome();
+    h.scrollTop = top;
+  }
+
+  // Today's warm-up questions (and Who said it?) not answered yet.
   const warmupsLeft = () =>
-    S.daily.ids.filter(id => !S.daily.done[id]).map(id => 'recall-' + id)
-      .concat(S.daily.say && !S.daily.sayDone ? ['say-' + S.daily.say] : []);
-  // After the warm-up: today's part of the plan (anything left from earlier
-  // days first), then anything else left, since reading ahead is fine.
-  function landingCard() {
-    const warm = warmupsLeft();
-    if (warm.length) return warm[0];
-    if (!WEEK.reels.some(r => S.answers[r.id])) return 'intro';
-    const next = todayItems().find(x => !x.done) || weekPlan().flat().flatMap(entryItems).find(x => !x.done);
-    return next ? next.card : 'end';
-  }
-  // The app opens on the cover, where today's lesson starts; a finished
-  // week opens on its report.
-  const openingCard = () => landingCard() === 'end' ? 'end' : 'intro';
-  function goToCard(id, smooth) {
-    const el = document.querySelector('.reel[data-id="' + id + '"]');
-    if (el) $('feed').scrollTo({ top: el.offsetTop, behavior: smooth && !reduceMotion() ? 'smooth' : 'auto' });
-  }
-  // Shown on the warm-up card that finishes today's warm-up.
-  function keepGoingHtml() {
-    if (warmupsLeft().length) return '';
-    const next = landingCard();
-    const where = next === 'end' ? 'your week' : todayItems().some(x => x.card === next) ? "today's reading" : 'the rest of the week';
-    return `<button class="board-link" data-jump>Keep going ↓<small>On to ${where}</small></button>`;
-  }
+    S.daily.ids.filter(id => !S.daily.done[id]).concat(S.daily.say && !S.daily.sayDone ? ['say'] : []);
 
   // Redraw one card in place after an answer, keeping its inner scroll.
   function redrawCard(dataId, html) {
@@ -1340,12 +1293,26 @@ const TreasureUp = (function () {
     old.replaceWith(card);
     const pad2 = card.querySelector('.content-pad');
     if (pad2) pad2.scrollTop = top;
-    if (observer) observer.observe(card);
   }
 
-  function refreshEnd() {
-    const end = document.querySelector('.reel[data-id="end"]');
-    if (end) redrawCard('end', endHtml(Number(end.dataset.index)));
+  /* ---------------- looking back at one reel ---------------- */
+
+  // A reel he has answered, on its own screen as it was in its lesson: the
+  // picture, clip, verse and his answer, then its bonus questions and a
+  // note. A Go-deeper reading shows its link and his answer.
+  function openView(id) {
+    const d = /^deep-/.test(id) && deepItems().find(x => 'deep-' + x.id === id);
+    const r = !d && reelById(id);
+    if (!d && !r) return;
+    $('viewBody').innerHTML = d ? deepHtml(d, 0) : reelHtml(r, 0);
+    $('view').hidden = false;
+  }
+  function closeView() {
+    if ($('view').hidden) return;
+    stopClips();
+    $('view').hidden = true;
+    $('viewBody').innerHTML = '';
+    refreshHome();
   }
 
   /* ---------------- HUD ---------------- */
@@ -1385,7 +1352,7 @@ const TreasureUp = (function () {
       unlocked.forEach(r => toast('🎁 Reward unlocked', r.text + ' · show a parent'));
     }
     renderHud();
-    if (P.rewards.length) refreshCards();
+    if (P.rewards.length) refreshHome();
     if (after > before) { if (lesson) lesson.level = after; else levelUp(after); }
   }
 
@@ -1415,7 +1382,7 @@ const TreasureUp = (function () {
 
   /* ---------------- answering ---------------- */
 
-  // Recording an answer, from a card in the feed or a step in a lesson:
+  // Recording an answer, from a step in a lesson or a reel looked back at:
   // the first try only. Each returns false if it was already answered.
   function recordReel(id, picked) {
     const r = reelById(id);
@@ -1454,22 +1421,10 @@ const TreasureUp = (function () {
       S.bonus[key] = { right, picked, day: dayKey() };
       markStudied();
       if (right) grantXp(XP.bonus, 'Found it in the reading');
-      const card = quiz.closest('.reel');
-      redrawCard(id, reelHtml(r, Number(card.dataset.index)));
-      refreshEnd();
+      redrawCard(id, reelHtml(r, 0));
     } else if (kind === 'reel') {
       if (!recordReel(id, picked)) return;
-      const card = quiz.closest('.reel');
-      redrawCard(id, reelHtml(r, Number(card.dataset.index)));
-      refreshEnd();
-      refreshPuzzleCard();
-      refreshDeep(r.section);
-      refreshIntro();
-    } else {
-      if (!recordRecall(id, picked)) return;
-      const card = quiz.closest('.reel');
-      const n = S.daily.ids.indexOf(id) + 1;
-      redrawCard('recall-' + id, recallHtml(r, n, S.daily.ids.length, Number(card.dataset.index)));
+      redrawCard(id, reelHtml(r, 0));
     }
     renderHud();
     save();
@@ -1515,7 +1470,6 @@ const TreasureUp = (function () {
     const behind = plan.slice(0, t).flat().filter(e => entryItems(e).some(x => !x.done));
     return behind.concat(plan[t].filter(e => e.kind !== 'family'));
   }
-  const todayItems = () => todayEntries().flatMap(entryItems);
 
   function todayHtml() {
     const t = todayIndex(), entries = todayEntries(), items = entries.flatMap(entryItems);
@@ -1527,8 +1481,9 @@ const TreasureUp = (function () {
       head = t === 6 ? 'Church day' : 'Catch up, or read ahead';
       sub = t === 6 ? 'Go to church, then play Scripture Showdown or a live game with the family.' : 'Nothing new is planned for today.';
     } else if (!now) {
-      head = "Today's reading is done";
-      sub = 'Keep going if you like, or come back tomorrow.';
+      const next = t < 6 ? weekPlan()[t + 1][0] : null;
+      head = '✓ Done for today';
+      sub = t === 6 ? 'A new week starts tomorrow.' : 'Tomorrow: ' + (next ? entryName(next) : 'catch up, or read ahead');
     } else {
       head = entryName(now);
       sub = `${behind ? 'Catching up first · ' : ''}${done} of ${items.length} done today`;
@@ -1541,8 +1496,7 @@ const TreasureUp = (function () {
         <div class="today-head">${esc(head)}</div>
         <div class="today-sub">${esc(sub)}</div>
         ${items.length ? `<div class="today-bar"><div style="width:${Math.round(done / items.length * 100)}%"></div></div>` : ''}
-        ${now || warm ? `<button class="board-link ls-start" data-lesson="">▶ ${started ? 'Keep going' : "Start today's lesson"}<small>${esc(lessonParts(now))}</small></button>
-          <button class="today-alt" data-jump>or swipe through the reels ↓</button>` : ''}
+        ${now || warm ? `<button class="board-link ls-start" data-lesson="">▶ ${started ? 'Keep going' : "Start today's lesson"}<small>${esc(lessonParts(now))}</small></button>` : ''}
       </div>`;
   }
 
@@ -1551,25 +1505,15 @@ const TreasureUp = (function () {
     const rows = weekPlan().map((entries, d) => (entries.length ? entries : [null]).map((e, k) => {
       const items = e ? entryItems(e) : [], done = items.filter(x => x.done).length;
       const all = items.length && done === items.length;
-      const tag = items.length ? 'button' : 'div';
-      const mark = all ? '✓' : done ? done + '/' + items.length : items.length ? '›' : '';
-      return `<${tag} class="wm-row${d === t ? ' now' : ''}${all ? ' done' : ''}"${items.length ? ` data-lesson="${d}.${k}"` : ''}>
+      const family = e && e.kind === 'family';
+      const tag = items.length || family ? 'button' : 'div';
+      const mark = all ? '✓' : done ? done + '/' + items.length : tag === 'button' ? '›' : '';
+      return `<${tag} class="wm-row${d === t ? ' now' : ''}${all ? ' done' : ''}"${items.length ? ` data-lesson="${d}.${k}"` : family ? ' data-games' : ''}>
         <span class="wm-day">${DAY_NAMES[d].slice(0, 3)}</span>
         <span class="wm-name">${esc(e ? entryName(e) : 'Catch up, or read ahead')}</span>
         <span class="wm-mark">${mark}</span></${tag}>`;
     }).join('')).join('');
     return `<div class="week-map"><div class="eyebrow">This week</div>${rows}</div>`;
-  }
-
-  function refreshIntro() {
-    const el = document.querySelector('.reel[data-id="intro"]');
-    if (el) redrawCard('intro', introHtml(Number(el.dataset.index)));
-  }
-  function refreshDeep(section) {
-    deepItems().filter(d => d.section === section).forEach(d => {
-      const el = document.querySelector('.reel[data-id="deep-' + d.id + '"]');
-      if (el) redrawCard('deep-' + d.id, deepHtml(d, Number(el.dataset.index)));
-    });
   }
 
   // Go deeper: a longer reading for one section (the one the lesson points
@@ -1628,10 +1572,7 @@ const TreasureUp = (function () {
   function answerDeep(quiz, id, picked) {
     const d = deepItems().find(x => x.id === id);
     if (!recordDeep(id, picked)) return;
-    const card = quiz.closest('.reel');
-    redrawCard('deep-' + id, deepHtml(d, Number(card.dataset.index)));
-    refreshEnd();
-    refreshIntro();
+    redrawCard('deep-' + id, deepHtml(d, 0));
     renderHud();
     save();
   }
@@ -1656,7 +1597,7 @@ const TreasureUp = (function () {
   const players = new Set();
 
   // Swap the card for the player only when he taps, so nothing from YouTube
-  // loads while he scrolls. The player plays just start..end inside the
+  // loads before then. The player plays just start..end inside the
   // reel, and the moment the clip ends it is replaced by a "Watched" card,
   // so YouTube's grid of suggested videos never appears.
   async function playClip(el) {
@@ -1675,9 +1616,7 @@ const TreasureUp = (function () {
     const finish = () => {
       if (done) return;
       done = true;
-      clearInterval(timer);
-      players.delete(player);
-      try { player.destroy(); } catch (e) {}
+      player._stop();
       card.classList.add('watched');
       card.querySelector('.clip-play').textContent = '✓';
       card.querySelector('.clip-meta').textContent = 'Watched · tap to watch again';
@@ -1692,6 +1631,7 @@ const TreasureUp = (function () {
       events: { onStateChange: e => { if (e.data === YT.PlayerState.ENDED) finish(); } }
     });
     frame._player = player;
+    player._stop = () => { clearInterval(timer); players.delete(player); try { player.destroy(); } catch (e) {} };
     players.add(player);
     // Backstop in case the end event is late: stop at `end` regardless.
     timer = setInterval(() => {
@@ -1699,14 +1639,8 @@ const TreasureUp = (function () {
     }, 400);
   }
 
-  // A clip on a reel he has swiped away from pauses instead of playing on.
-  function pauseOffscreen(current) {
-    players.forEach(p => {
-      try {
-        if (!current.contains(p.getIframe()) && p.getPlayerState() === YT.PlayerState.PLAYING) p.pauseVideo();
-      } catch (e) {}
-    });
-  }
+  // Closing a screen (or moving on in a lesson) stops its clip.
+  function stopClips() { [...players].forEach(p => p._stop()); }
 
   /* ---------------- family rewards ---------------- */
 
@@ -1751,18 +1685,6 @@ const TreasureUp = (function () {
         ${rows || '<p class="text-[13px] text-white/60 mt-1">No rewards set up yet.</p>'}
         <button class="parent-link" data-parent>Parents: set up rewards</button>
       </div>`;
-  }
-
-  const boardLinkHtml = () => `
-    <button class="board-link" data-board>Scripture Showdown
-      <small>A quiz-show game on this week's questions, for the whole family</small></button>`;
-
-  // Intro and end cards show XP progress toward rewards; redraw both.
-  function refreshCards() {
-    ['intro', 'end'].forEach(id => {
-      const el = document.querySelector('.reel[data-id="' + id + '"]');
-      if (el) redrawCard(id, (id === 'intro' ? introHtml : endHtml)(Number(el.dataset.index)));
-    });
   }
 
   function openParent() {
@@ -1862,7 +1784,7 @@ const TreasureUp = (function () {
       P.rewards = rows.filter(r => r.text);
       saveParent();
       closeParent();
-      refreshCards();
+      refreshHome();
       toast('Rewards saved', P.rewards.length + ' reward' + (P.rewards.length === 1 ? '' : 's'));
     }
   }
@@ -2098,15 +2020,12 @@ const TreasureUp = (function () {
     markStudied();
     if (!S.notes[id].rewarded) { S.notes[id].rewarded = true; grantXp(NOTE_XP, 'Wrote a note'); }
     save();
-    const card = document.querySelector('.reel[data-id="' + id + '"]');
-    redrawCard(id, reelHtml(r, Number(card.dataset.index)));
-    refreshEnd();
+    redrawCard(id, reelHtml(r, 0));
   }
 
   function editNote(id) {
     noteEditing.add(id);
-    const card = document.querySelector('.reel[data-id="' + id + '"]');
-    redrawCard(id, reelHtml(reelById(id), Number(card.dataset.index)));
+    redrawCard(id, reelHtml(reelById(id), 0));
     const box = $('note-' + id);
     if (box) box.focus();
   }
@@ -2162,27 +2081,6 @@ const TreasureUp = (function () {
     return pz.rewarded ? 'Ready' : 'Ready · ' + PUZZLE_XP + ' XP and a streak freeze';
   }
 
-  function puzzleCardHtml(i) {
-    const locked = reelsLeft() > 0;
-    const won = !locked && puzzleState().status === 'won';
-    return `
-    <article class="reel" data-id="puzzle" data-index="${i}">
-      ${backdrop({ gradient: 'linear-gradient(155deg,#0c4a6e 0%,#1e1b4b 55%,#4c1d95 100%)', blobA: 'rgba(125,211,252,.35)', blobB: 'rgba(0,0,0,.45)' })}
-      <div class="relative z-20 px-5 pr-7 content-pad">
-        <div class="eyebrow">Weekly puzzle</div>
-        <h2 class="reel-hook">${locked ? 'Unlock the weekly puzzle' : won ? 'Puzzle solved' : "Sort this week's ideas"}</h2>
-        <p class="reel-body">Sixteen ideas from this week and four lesson sections. Put each idea where it belongs. Solve it for ${PUZZLE_XP} XP and a streak freeze, which saves your streak if you miss a day.</p>
-        <p class="reel-body mt-3 font-bold text-amber-300">${esc(puzzleStatus())}</p>
-        ${locked ? '' : `<button class="board-link" data-game="puzzle">${won ? 'See the solved puzzle' : 'Play the weekly puzzle'}</button>`}
-      </div>
-    </article>`;
-  }
-
-  function refreshPuzzleCard() {
-    const el = document.querySelector('.reel[data-id="puzzle"]');
-    if (el) redrawCard('puzzle', puzzleCardHtml(Number(el.dataset.index)));
-  }
-
   const gameRow = (id, icon, title, desc, status, locked) => `
     <button class="game-row${locked ? ' locked' : ''}" data-game="${id}">
       <span class="gi">${icon}</span>
@@ -2230,7 +2128,7 @@ const TreasureUp = (function () {
   function closePlay() {
     $('play').hidden = true;
     playing = null;
-    refreshPuzzleCard();
+    refreshHome();
     renderHud();
   }
 
@@ -2251,7 +2149,7 @@ const TreasureUp = (function () {
         <div class="pz-wrap">
           <p class="clue-q">Locked for now</p>
           <p class="board-help">Answer all ${WEEK.reels.length} reels this week to unlock the puzzle. ${reelsLeft()} left.</p>
-          <div class="board-actions"><button class="btn" data-pz="exit">Back to the feed</button></div>
+          <div class="board-actions"><button class="btn" data-pz="exit">Back</button></div>
         </div>`;
       return;
     }
@@ -2274,7 +2172,7 @@ const TreasureUp = (function () {
             ? 'Every idea is in its section. You earned ' + PUZZLE_XP + ' XP and a streak freeze ❄️.'
             : "Here's where everything goes. Tomorrow you get a new try."}</p>
           <div style="margin-top:14px">${solvedHtml}</div>
-          <div class="board-actions"><button class="btn" data-pz="exit">Back to the feed</button></div>
+          <div class="board-actions"><button class="btn" data-pz="exit">Back</button></div>
         </div>`;
       return;
     }
@@ -2499,7 +2397,7 @@ const TreasureUp = (function () {
         <p class="pz-msg">${esc(msg)}</p>
         ${st.status === 'playing'
           ? `<div class="vw-kb">${kb}</div>`
-          : '<div class="board-actions" style="justify-content:center"><button class="btn" data-vk="exit">Back to the feed</button></div>'}
+          : '<div class="board-actions" style="justify-content:center"><button class="btn" data-vk="exit">Back</button></div>'}
       </div>`;
   }
 
@@ -2643,32 +2541,7 @@ const TreasureUp = (function () {
 
   /* ----- Who said it? in the daily warm-up ----- */
 
-  // On warm-up days one line comes back too: missed ones first, then the
-  // one longest since it last came back.
-  function sayRecallHtml(i) {
-    const x = WEEK.sayings.find(s => s.id === S.daily.say);
-    const d = S.daily.sayDone;
-    const buttons = shuffled([x.speaker].concat(x.wrong), x.id + '|' + S.daily.day).map(c => {
-      const cls = d ? (c === x.speaker ? ' is-right' : c === d.picked ? ' is-wrong' : '') : '';
-      const mark = d ? (c === x.speaker ? '✓' : c === d.picked ? '✕' : '') : '';
-      return `<button class="choice${cls}" data-sw-pick="${esc(c)}"${d ? ' disabled' : ''}><span class="mark">${mark}</span><span>${esc(c)}</span></button>`;
-    }).join('');
-    return `
-    <article class="reel" data-id="say-${esc(x.id)}" data-index="${i}">
-      ${backdrop({ gradient: 'linear-gradient(160deg,#0b1020 0%,#1c1433 55%,#2a1b10 100%)', blobA: 'rgba(252,211,77,.22)', blobB: 'rgba(0,0,0,.5)' })}
-      <div class="relative z-20 px-5 pr-7 content-pad">
-        <div class="eyebrow">Warm-up · Who said it?</div>
-        <p class="say-quote" style="font-size:clamp(22px,3.4vh,30px)">${esc(x.text)}</p>
-        <div class="quiz${d ? ' done' : ''}">
-          <div class="eyebrow" style="color:var(--gold)">Remember this? · +${SAY_XP} XP</div>
-          <div class="quiz-choices" style="margin-top:8px">${buttons}</div>
-          ${d ? `<p class="quiz-why">${d.right ? '<b class="ok">Right.</b> ' : '<b class="no">Not quite.</b> '}${esc(x.why)}<br><span class="text-white/55 text-[12px]">${esc(x.ref)}</span></p>` : ''}
-        </div>
-        ${d ? keepGoingHtml() : ''}
-      </div>
-    </article>`;
-  }
-
+  // On warm-up days one line comes back too (see rollDay), in the lesson.
   function recordSayWarm(picked) {
     const x = S.daily.say && (WEEK.sayings || []).find(s => s.id === S.daily.say);
     if (!x || S.daily.sayDone) return false;
@@ -2682,14 +2555,7 @@ const TreasureUp = (function () {
     save();
     return true;
   }
-  function answerSayWarm(picked) {
-    if (!recordSayWarm(picked)) return;
-    const x = WEEK.sayings.find(s => s.id === S.daily.say);
-    const card = document.querySelector('.reel[data-id="say-' + x.id + '"]');
-    redrawCard('say-' + x.id, sayRecallHtml(Number(card.dataset.index)));
-  }
-
-  /* ----- the year trail on the first card ----- */
+  /* ----- the year trail on the home page ----- */
 
   // Come, Follow Me 2026 (Old Testament) runs 52 weeks. Each finished week
   // becomes a green dot; the lesson link's number says which week this is.
@@ -3494,7 +3360,7 @@ const TreasureUp = (function () {
     if (!a || !F) return;
     if (canon(S) !== a.from) { pendingAdopt = null; queueSync(0); return; }
     const typing = [...document.querySelectorAll('textarea, input.field')].some(t => t.value.trim() && !t.readOnly);
-    const busy = ['play', 'live', 'board', 'parent', 'lesson'].some(id => !$(id).hidden) || typing;
+    const busy = ['play', 'live', 'board', 'parent', 'lesson', 'view'].some(id => !$(id).hidden) || typing;
     if (busy) { adoptTimer = setTimeout(tryAdopt, 10000); return; }
     try {
       localStorage.setItem(STORE_KEY, a.json);
@@ -4258,10 +4124,9 @@ const TreasureUp = (function () {
   // The main way through a day, Duolingo-style: one step at a time, with a
   // progress bar, Check, and right or wrong with the why. A lesson is one
   // part of the week's plan (a section, Friday's deep dive, Saturday's
-  // puzzle), after whatever is left of today's warm-up. It records answers
-  // exactly as the cards in the feed do, so the plan, the streak, XP and the
-  // family's copy all see them, and a question answered in one place shows
-  // as answered in the other and never pays twice. The practice steps (fill
+  // puzzle), after whatever is left of today's warm-up. It records each
+  // answer the first time only, and the plan, the streak, XP and the
+  // family's copy all see it. The practice steps (fill
   // in the word, put the words in order, match, who said it) are built from
   // the week's checked text and pay nothing. A missed step comes back at
   // the end until he gets it right; only the first try counts.
@@ -4369,22 +4234,22 @@ const TreasureUp = (function () {
     $('lesson').hidden = false;
     renderLesson();
   }
-  // Back to the cover, where the Today card and the map show what's done.
+  // Back to the page, where the Today card and the map show what's done.
   function closeLesson() {
     const L = lesson;
     lesson = null;
     $('lesson').hidden = true;
     if (location.hash === '#lesson') history.replaceState(null, '', location.pathname + location.search);
+    stopClips();
     if (!L) return;
-    renderFeed();
-    if (observer) document.querySelectorAll('.reel').forEach(r => observer.observe(r));
+    renderHome();
+    $('home').scrollTop = 0;
     renderHud();
-    goToCard('intro');
     if (L.level) levelUp(L.level);
   }
   function lessonReset() { Object.assign(lesson, { picked: null, built: [], matched: {}, sel: null, missR: null, misses: 0, checked: false, ok: null, earned: 0 }); }
 
-  // Checking a step records it where the feed would, the first time only.
+  // Checking a step records it, the first time only.
   function recordStep(step, picked, ok) {
     if (step.retry) return 0;
     const before = S.xp;
@@ -4416,6 +4281,7 @@ const TreasureUp = (function () {
       html += `<div class="ls-read">
         ${img ? `<img src="${esc(img.src)}" alt="${esc(img.alt)}"><div class="credit" style="margin:-6px 0 10px">Picture: <a href="${esc(img.link)}" target="_blank" rel="noopener noreferrer">${esc(img.credit)}</a></div>` : ''}
         <div class="ls-prompt">${esc(r.hook)}</div><p class="reel-body">${esc(r.body)}</p>
+        ${r.media && r.media.video && (r.media.video.previewed === true || window.TU_NO_EMBED) ? clipHtml(r.media.video) : ''}
         <div class="ls-verse">“${esc(r.verse.text)}”<span class="ref">${esc(r.verse.ref)}</span></div></div>`;
     } else if (step.kind === 'reel' || step.kind === 'recall') {
       html += `<div class="ls-prompt">${esc(step.q)}</div>${step.kind === 'recall' && !step.retry ? '<p class="ls-hint">From earlier this week. No peeking.</p>' : ''}${opts()}`;
@@ -4499,7 +4365,7 @@ const TreasureUp = (function () {
     if (act === 'close') return closeLesson();
     if (act === 'nextlesson') { closeLesson(); return openLesson(''); }
     if (act === 'puzzle') { closeLesson(); return startGame('puzzle'); }
-    if (act === 'next') { L.at++; lessonReset(); return renderLesson(); }
+    if (act === 'next') { stopClips(); L.at++; lessonReset(); return renderLesson(); }
     if (act === 'pick' && !L.checked) L.picked = el.dataset.v;
     else if (act === 'tile' && !L.checked) L.built.push(Number(el.dataset.i));
     else if (act === 'unt' && !L.checked) L.built.splice(Number(el.dataset.n), 1);
@@ -5043,30 +4909,20 @@ const TreasureUp = (function () {
 
   /* ---------------- wiring ---------------- */
 
-  let observer = null;
-
   function wire() {
-    const feed = $('feed');
+    // The page: today's lesson, a day on the map, a reel to look back at.
+    $('home').addEventListener('click', e => {
+      const ls = e.target.closest('[data-lesson]');
+      if (ls) { openLesson(ls.dataset.lesson); return; }
+      const v = e.target.closest('[data-view]');
+      if (v) { openView(v.dataset.view); return; }
+      if (e.target.closest('[data-games]')) { openGames(); return; }
+      if (e.target.closest('[data-parent]')) { openParent(); return; }
+    });
 
-    // Keep the position dots in step with the card on screen.
-    observer = new IntersectionObserver(entries => {
-      entries.forEach(en => {
-        if (!en.isIntersecting || en.intersectionRatio < 0.6) return;
-        const i = Number(en.target.dataset.index);
-        document.querySelectorAll('.rail-dot').forEach((d, n) => d.classList.toggle('on', n === i));
-        pauseOffscreen(en.target);
-      });
-    }, { root: feed, threshold: [0, 0.6, 0.95] });
-    document.querySelectorAll('.reel').forEach(r => observer.observe(r));
-
-    // Retire the swipe hint once he's moved.
-    feed.addEventListener('scroll', function once() {
-      if (feed.scrollTop > 40) { const h = $('hint'); if (h) h.remove(); feed.removeEventListener('scroll', once); }
-    }, { passive: true });
-
-    feed.addEventListener('click', e => {
-      const sw = e.target.closest('[data-sw-pick]');
-      if (sw) { if (!sw.disabled) answerSayWarm(sw.dataset.swPick); return; }
+    // One reel, looked back at: its bonus questions, a note, its clip.
+    $('viewBack').addEventListener('click', closeView);
+    $('view').addEventListener('click', e => {
       const ns = e.target.closest('[data-note-save]');
       if (ns) { saveNote(ns.dataset.noteSave); return; }
       const ne = e.target.closest('[data-note-edit]');
@@ -5075,15 +4931,6 @@ const TreasureUp = (function () {
       if (nc) { copyNote(nc.dataset.noteCopy); return; }     // the link still opens
       const clip = e.target.closest('button.clip');
       if (clip) { playClip(clip); return; }
-      if (e.target.closest('[data-jump]')) { goToCard(landingCard(), true); return; }
-      const ls = e.target.closest('[data-lesson]');
-      if (ls) { openLesson(ls.dataset.lesson); return; }
-      const back = e.target.closest('[data-goto]');
-      if (back) { goToCard(back.dataset.goto, true); return; }
-      if (e.target.closest('[data-board]')) { openBoard(); return; }
-      const g = e.target.closest('[data-game]');
-      if (g) { startGame(g.dataset.game); return; }
-      if (e.target.closest('[data-parent]')) { openParent(); return; }
       const btn = e.target.closest('.choice');
       if (!btn || btn.disabled) return;
       const quiz = btn.closest('.quiz');
@@ -5126,9 +4973,11 @@ const TreasureUp = (function () {
       if (e.key === 'Enter' && e.target.closest('#liveCode, #liveName')) joinLive();
     });
 
-    // Today as a short lesson (preview).
+    // A day's lesson.
     $('lessonExit').addEventListener('click', closeLesson);
     $('lesson').addEventListener('click', e => {
+      const clip = e.target.closest('button.clip');
+      if (clip) { playClip(clip); return; }
       const el = e.target.closest('[data-ls]');
       if (el && !el.disabled) lessonAction(el);
     });
@@ -5165,28 +5014,21 @@ const TreasureUp = (function () {
       if (b) parentAction(b.dataset.act);
     });
 
-    // Desktop: arrows page the feed, so this is testable without a phone.
-    // Escape closes the board or the parent screen.
+    // Escape closes whatever is open over the page.
     document.addEventListener('keydown', e => {
       if (playing === 'word' && !$('play').hidden && !e.metaKey && !e.ctrlKey) {
         if (e.key === 'Enter') { e.preventDefault(); wordKey('enter'); return; }
         if (e.key === 'Backspace') { e.preventDefault(); wordKey('back'); return; }
         if (/^[a-z]$/i.test(e.key)) { wordKey(e.key.toUpperCase()); return; }
       }
-      if (e.key === 'Escape') { closeParent(); closeBoard(); closeGames(); closeFam(); if (!$('lesson').hidden) closeLesson(); if (!$('play').hidden) closePlay(); if (!$('live').hidden) closeLive(); return; }
-      if (!$('board').hidden || !$('parent').hidden || !$('games').hidden || !$('play').hidden || !$('live').hidden || !$('fam').hidden || !$('lesson').hidden) return;
-      if (e.target.closest && e.target.closest('textarea, input')) return;
-      if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
-      e.preventDefault();
-      feed.scrollBy({ top: (e.key === 'ArrowDown' ? 1 : -1) * feed.clientHeight, behavior: 'smooth' });
+      if (e.key === 'Escape') { closeParent(); closeBoard(); closeGames(); closeFam(); closeView(); if (!$('lesson').hidden) closeLesson(); if (!$('play').hidden) closePlay(); if (!$('live').hidden) closeLive(); }
     });
 
     // Coming back after midnight brings the new day's warm-up without a reload.
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState !== 'visible') return;
       if (S.daily && S.daily.day !== dayKey()) {
-        rollDay(); save(); renderFeed(); renderHud(); goToCard(openingCard());
-        document.querySelectorAll('.reel').forEach(r => observer.observe(r));
+        rollDay(); save(); refreshHome(); renderHud();
       }
     });
   }
@@ -5231,10 +5073,9 @@ const TreasureUp = (function () {
     Object.keys(S.deep || {}).forEach(id => { if (!deepIds.has(id)) delete S.deep[id]; });
 
     rollDay();
-    renderFeed();
+    renderHome();
     renderHud();
     wire();
-    goToCard(openingCard());
     save();
 
     // …/TreasureUp/#family opens straight to Scripture Showdown: bookmark it on the TV laptop.
