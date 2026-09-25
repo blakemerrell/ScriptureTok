@@ -246,6 +246,38 @@ service cloud.firestore {
       }
     }
 
+    // ---------------- developer mode ----------------
+    // Reviewing and changing content (…/TreasureUp-test/#dev) is for Blake
+    // and the people he adds by name and email, each signed in with Google.
+    // The GitHub token developer mode saves content with is readable only by
+    // them, and only Blake can change the list or the token.
+    function google() {
+      return signedIn() && request.auth.token.firebase.sign_in_provider == 'google.com'
+        && request.auth.token.email_verified == true;
+    }
+    function isOwner() { return google() && request.auth.token.email == 'blakemerrell@gmail.com'; }
+    function isDev() {
+      return isOwner() || (google() && exists(/databases/$(database)/documents/devs/$(request.auth.token.email.lower())));
+    }
+    match /devs/{email} {
+      allow read: if isDev();
+      allow create, update: if isOwner()
+        && email == email.lower() && email.matches('[^@ ]+@[^@ ]+[.][^@ ]+')
+        && request.resource.data.keys().hasOnly(['name', 'added'])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 40
+        && request.resource.data.added == request.time;
+      allow delete: if isOwner();
+    }
+    match /devSecrets/{name} {
+      allow read: if isDev();
+      allow write: if isOwner() && name == 'github'
+        && request.resource.data.keys().hasOnly(['token', 'updated'])
+        && request.resource.data.token is string
+        && request.resource.data.token.size() > 20 && request.resource.data.token.size() < 400
+        && request.resource.data.updated == request.time;
+    }
+
     // Nothing else is readable or writable.
     match /{document=**} {
       allow read, write: if false;

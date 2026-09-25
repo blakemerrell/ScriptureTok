@@ -101,17 +101,59 @@ async function loadScripture() {
   return { verses, books: [...books].sort((a, b) => b.length - a.length) };
 }
 
+// The books the app can link (BOOK_PATHS in index.html), so every
+// reference he reads can be a link to Gospel Library.
+function appBooks() {
+  const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+  const i = html.indexOf('const BOOK_PATHS = {');
+  const j = html.indexOf('\n  };\n', i);
+  if (i < 0 || j < 0) throw new Error('Could not find BOOK_PATHS in index.html');
+  return Object.keys(new Function('return ' + html.slice(html.indexOf('{', i), j) + '}')());
+}
+// The app's other names for a book, as the scripture data names it.
+const BOOK_ALIAS = { 'Psalm': 'Psalms', 'Song of Solomon': "Solomon's Song", 'Solomon’s Song': "Solomon's Song", 'Doctrine and Covenants': 'D&C' };
+
 // ---------- the week ----------
 
 // Every week in index.html, by running its content script with a stand-in
 // for the app (which would otherwise pick today's week and start up).
+// ---------- approval (developer mode) ----------
+// Each piece of a week carries `approved`: a fingerprint of its content
+// when Blake approved it in developer mode. Any later change makes the
+// fingerprint stop matching. Must match the app's approvalHash exactly.
+const canonJson = v => Array.isArray(v) ? '[' + v.map(canonJson).join(',') + ']'
+  : v && typeof v === 'object' ? '{' + Object.keys(v).filter(k => v[k] !== undefined).sort().map(k => JSON.stringify(k) + ':' + canonJson(v[k])).join(',') + '}'
+  : JSON.stringify(v === undefined ? null : v);
+function approvalHash(v) {
+  const c = canonJson(v);
+  let h = 0x811c9dc5;
+  for (let i = 0; i < c.length; i++) { h ^= c.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+  return (h >>> 0).toString(16).padStart(8, '0');
+}
+const withoutApproval = o => { const c = Object.assign({}, o); delete c.approved; return c; };
+// The pieces a week is reviewed in, with the fingerprint each should carry.
+function reviewItems(week) {
+  const items = [{ key: 'week', approved: week.approved, hash: approvalHash({ dates: week.dates, title: week.title, reference: week.reference, lesson: week.lesson, sections: week.sections }) }];
+  for (const r of week.reels || []) items.push({ key: 'reel:' + r.id, approved: r.approved, hash: approvalHash(withoutApproval(r)) });
+  for (const d of week.deep || []) items.push({ key: 'deep:' + d.id, approved: d.approved, hash: approvalHash(withoutApproval(d)) });
+  if (week.puzzle) items.push({ key: 'puzzle', approved: week.puzzle.approved, hash: approvalHash(withoutApproval(week.puzzle)) });
+  for (const x of week.sayings || []) items.push({ key: 'say:' + x.id, approved: x.approved, hash: approvalHash(withoutApproval(x)) });
+  if (week.words) items.push({ key: 'words', approved: week.wordsApproved, hash: approvalHash(week.words) });
+  return items;
+}
+// Weeks from here on can't go live without every piece approved; the two
+// weeks before went live before developer mode existed.
+const REVIEW_FROM = '2026-10-05';
+
+// content/weeks.js: a comment, then `window.TU_WEEKS = <JSON>;`. The same
+// rule developer mode uses to read and write it.
+const WEEKS_MARK = 'window.TU_WEEKS = ';
 function loadWeeks() {
-  const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
-  const start = html.indexOf('const WEEKS = [];');
-  const end = html.indexOf('</script>', start);
-  if (start < 0 || end < 0) throw new Error('Could not find the WEEKS block in index.html');
-  const stub = { pickWeek: w => w[0], boot() {} };
-  return new Function('TreasureUp', html.slice(start, end) + '\n;return WEEKS;')(stub);
+  const text = fs.readFileSync(path.join(ROOT, 'content', 'weeks.js'), 'utf8');
+  const at = text.indexOf(WEEKS_MARK), end = text.lastIndexOf(';');
+  if (at < 0 || end < at) throw new Error('content/weeks.js must be a comment, then window.TU_WEEKS = <JSON>;');
+  try { return JSON.parse(text.slice(at + WEEKS_MARK.length, end)); }
+  catch (e) { throw new Error('content/weeks.js is not valid JSON after window.TU_WEEKS = (' + e.message + ')'); }
 }
 
 // "September 28–October 4, 2026" -> "2026-09-28" (same rule as the app).
@@ -195,6 +237,39 @@ async function main(scripture, week, pages, online) {
   };
 
   const bookPattern = books.map(b => b.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+
+  // Every reference in text he reads is a link in the app (linkRefs in
+  // index.html), read the same way: each must be a real verse or chapter,
+  // and "verse 12" or "chapter 40" means the chapter of the verse the text
+  // belongs to (`home`), so it needs one.
+  const linkable = APP_BOOKS.slice().sort((a, b) => b.length - a.length).map(b => b.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+  const refRe = new RegExp(`(${linkable}) (\\d+)(?::(\\d+)(?:[–-](\\d+))?)?(?:[–-]\\d+)?|\\b([Vv]erses?|[Cc]hapter) (\\d+)(?:[–-](\\d+))?`, 'g');
+  const listRe = /^(; ?)(\d+)(?::(\d+)(?:[–-]\d+)?)?(?:[–-]\d+)?(?! ?[A-Za-z])/;
+  const exists = (book, ch, v) => verses.has(`${BOOK_ALIAS[book] || book} ${ch}:${v || 1}`);
+  function checkRefs(where, field, text, home) {
+    if (!text) return;
+    const h = /^(.+?) (\d+)/.exec(home || '');
+    const hb = h && APP_BOOKS.includes(h[1]) ? h : null;
+    let m;
+    refRe.lastIndex = 0;
+    while ((m = refRe.exec(text))) {
+      if (m[1] && m.index > 0 && /[A-Za-z0-9]/.test(text[m.index - 1])) continue;
+      if (m[1]) {
+        if (!exists(m[1], m[2], m[3]) || (m[4] && !exists(m[1], m[2], m[4]))) fail(where, `${field}: "${m[0]}" is not a real reference`);
+        let at = m.index + m[0].length;
+        for (let x; (x = listRe.exec(text.slice(at)));) {
+          if (!exists(m[1], x[2], x[3])) fail(where, `${field}: "${m[1]} ${x[0].slice(x[1].length)}" is not a real reference`);
+          at += x[0].length;
+        }
+        refRe.lastIndex = at;
+      } else if (!hb) {
+        fail(where, `${field}: "${m[0]}" has no verse to be read against; write the full reference (like "Isaiah 22:22")`);
+      } else if (/^c/i.test(m[5]) ? !exists(hb[1], m[6]) : !exists(hb[1], hb[2], m[6]) || (m[7] && !exists(hb[1], hb[2], m[7]))) {
+        fail(where, `${field}: "${m[0]}" is not in ${/^c/i.test(m[5]) ? hb[1] : hb[1] + ' ' + hb[2]}`);
+      }
+    }
+  }
+  checkRefs('week', 'reference', week.reference, null);
   const anyRef = new RegExp(`(?:${bookPattern}) \\d+:\\d+(?:[–-]\\d+)?`, 'g');
 
   // Quotes, references and punctuation in one piece of text he reads.
@@ -308,6 +383,12 @@ async function main(scripture, week, pages, online) {
     checkText(where, 'why', q.why, home);
     checkText(where, 'right answer', q.right, home);
     checkText(where, 'wrong answers', (q.wrong || []).join(' | '), home);
+    for (const [f, t] of [['hook', r.hook], ['body', r.body], ['question', q.q], ['why', q.why], ['note prompt', r.note]]) checkRefs(where, f, t, home);
+    for (const b of bonusesOf(r)) {
+      const bh = b.source && textOf(b.source) != null ? b.source : home;
+      checkRefs(where, 'bonus question', b.q, bh);
+      checkRefs(where, 'bonus why', b.why, bh);
+    }
 
     // Bonuses: answerable only from the reading.
     for (const [bn, b] of bonusesOf(r).entries()) {
@@ -388,6 +469,10 @@ async function main(scripture, week, pages, online) {
     } else if (!webSource({ source: d.read }, week)) fail(where, 'read must be a passage, "lesson", or a Gospel Library page');
     checkText(where, 'intro', d.intro, passage);
     checkReading(where, 'question', d);
+    const dh = d.source && textOf(d.source) != null ? d.source : passage;
+    checkRefs(where, 'intro', d.intro, passage);
+    checkRefs(where, 'question', d.q, dh);
+    checkRefs(where, 'why', d.why, dh);
   }
 
   if (clipCount > MEDIA.maxClipsPerWeek) fail('week', `${clipCount} clips (max ${MEDIA.maxClipsPerWeek}); keep it a lesson, not a video feed`);
@@ -442,6 +527,7 @@ async function main(scripture, week, pages, online) {
       if (!x.why) fail(where, 'needs a why');
       else if (x.why.split(/\s+/).length > LIMITS.whyWords) fail(where, `why is over ${LIMITS.whyWords} words`);
       checkText(where, 'why', x.why, x.ref);
+      checkRefs(where, 'why', x.why, x.ref);
     }
   }
 
@@ -474,6 +560,11 @@ async function main(scripture, week, pages, online) {
 }
 
 const scripture = await loadScripture();
+const APP_BOOKS = appBooks();
+{
+  const missing = scripture.books.filter(b => !APP_BOOKS.includes(b));
+  if (missing.length) failures.push(`index.html: BOOK_PATHS has no Gospel Library link for ${missing.join(', ')}`);
+}
 const weeks = loadWeeks();
 const online = args.has('--online') || args.has('--lesson');
 const pages = new Map();
@@ -494,6 +585,13 @@ for (const week of weeks) {
   const num = (/\/(\d+)\?/.exec(week.lesson || '') || [])[1];
   weekLabel = weeks.length > 1 ? `Week ${num || '?'} · ` : '';
   await main(scripture, week, pages, online);
+  // The live app only takes weeks Blake approved in developer mode.
+  if (args.has('--require-approval') && weekStart(week.dates) >= REVIEW_FROM) {
+    for (const it of reviewItems(week)) {
+      if (!it.approved) failures.push(`${weekLabel}${it.key}: not approved yet (approve it in developer mode, then publish)`);
+      else if (it.approved !== it.hash) failures.push(`${weekLabel}${it.key}: changed since it was approved (approve it again in developer mode)`);
+    }
+  }
 }
 weekLabel = '';
 
@@ -501,6 +599,12 @@ for (const n of notes) console.log('  · ' + n);
 if (failures.length) {
   console.error(`✗ ${failures.length} problem${failures.length === 1 ? '' : 's'}:\n`);
   for (const f of failures) console.error('  - ' + f);
+  // In GitHub Actions each problem is also an annotation on the commit,
+  // which is how developer mode shows Blake what the checker found.
+  if (process.env.GITHUB_ACTIONS) {
+    const clean = t => t.replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A');
+    for (const f of failures.slice(0, 10)) console.log(`::error title=Content check::${clean(f)}`);
+  }
   process.exit(1);
 }
 for (const week of weeks) {

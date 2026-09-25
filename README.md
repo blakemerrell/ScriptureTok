@@ -2,8 +2,10 @@
 
 *"Treasure up in your minds continually the words of life"* (D&C 84:85). Formerly ScriptureTok.
 
-The weekly **Come, Follow Me** lesson as a full-screen, swipeable feed, built
-so the lesson is understood, not just scrolled past.
+The weekly **Come, Follow Me** lesson as a short Duolingo-style lesson each
+day, built so the lesson is understood, not just scrolled past. One page
+shows the week: today's lesson, the week's plan, how it's going, and every
+reel to look back at.
 
 Live at **https://blakemerrell.github.io/TreasureUp/**
 
@@ -20,22 +22,25 @@ verse itself, and **one question** answerable from what's on the screen.
 
 | | |
 |---|---|
-| **XP only for understanding** | Scrolling, tapping and opening the app earn nothing. A right answer on the first try earns 20 XP. |
+| **XP only for understanding** | Reading, tapping and opening the app earn nothing. A right answer on the first try earns 20 XP. |
 | **One try** | A wrong answer shows the right one and the words in the verse that settle it. |
-| **Daily warm-up** | On a new day, up to 3 earlier questions come back before the feed, missed ones first, with no verse to look at. Remembering one earns 15 XP. |
-| **Reading bonus** | After a reel's question, a bonus question whose answer is only in the chapter (or the lesson page), never in the app. One try, 25 XP. The link opens the chapter at the top, not at the answer. |
-| **The week's plan** | The cover shows **Today** (today's section, what's left from earlier days first, and how much is done) and the week map: the lesson's sections one a day (Mon–Thu for a four-section week), Friday's deep dive, Saturday's puzzle, Sunday for church and a family game. It's a suggested pace, not a lock: everything stays open and reading ahead is fine. After the warm-up the app opens on today's next card. |
-| **Go deeper** | After each section's reels, a longer reading the lesson points to ("Read Isaiah 14:12–17") with one question only that reading answers; it opens once the section's reels are answered. Friday adds two pieces: the children's part of the lesson and that month's Friend, For the Strength of Youth or Liahona. 25 XP each, first try, checked by `tools/verify.mjs` like the bonuses (the answer must be inside the passage it asks him to read). |
-| **Pictures and clips** | A picture on each reel it fits (Church Media Library art or public-domain photos, credited and linked), shown whole and undimmed at the top of the reel with the text below it. At most 2 clips a week, only where they show something the words can't. Clips load nothing until tapped, then play just the chosen stretch in YouTube's privacy-mode player. |
+| **Daily warm-up** | On a new day, up to 3 earlier questions come back at the start of the day's lesson, missed ones first, with no verse to look at. Remembering one earns 15 XP. |
+| **Reading bonus** | Once a reel is answered, its own screen (from Look back) has a bonus question whose answer is only in the chapter (or the lesson page), never in the app. One try, 25 XP. The link opens the chapter at the top, not at the answer. |
+| **The week's plan** | The app opens on its page, at the top: **Today** (today's section, what's left from earlier days first, and how much is done) and the week map: the lesson's sections one a day (Mon–Thu for a four-section week), Friday's deep dive, Saturday's puzzle, Sunday for church and a family game. It's a suggested pace, not a lock: everything stays open and reading ahead is fine. When today's part is done the card says **✓ Done for today** and what's tomorrow. Sunday's row opens the games. |
+| **Today's lesson** | **▶ Start today's lesson** on the Today card plays that part of the plan one screen at a time, Duolingo-style: what's left of the warm-up, then for each reel read it (picture, text, verse), answer its question and fill in a missing word of the verse; then put a phrase of a verse in order, match each idea to its verse, and Go deeper. Friday's lesson is the two deep-dive pieces; Saturday's opens the puzzle. Each row of the week map opens that part's lesson. Each answer is recorded once, the first time, and XP, the streak, the plan and the family's copy all see it. The practice steps (fill in the word, order, match, who said it) are built from the week's checked text and pay nothing. A missed step comes back at the end until he gets it right; only the first try counts. Leaving partway keeps what he answered and reopening picks up there; a finished part replays as practice. The last screen shows XP, % right first time, time, the streak, and any new level or reward. A reel's clip plays on its Read screen and stops when he moves on. Or `…/#lesson`. |
+| **Look back** | Below the plan, every reel and Go-deeper reading of the week by section, ✓ / ✕. One he has answered opens on its own screen as it was: picture, clip, verse and his answer, then its reading bonus and a note. One he hasn't opens its day's lesson. |
+| **Your week** | Big numbers on the page: reels done, right first time, bonus finds, went deeper, notes, the puzzle, and "A perfect week!" or "You finished the week!" at the end. |
+| **Go deeper** | The last step of each section's lesson, after its reels: a longer reading the lesson points to ("Read Isaiah 14:12–17") with one question only that reading answers. Friday adds two pieces: the children's part of the lesson and that month's Friend, For the Strength of Youth or Liahona. 25 XP each, first try, checked by `tools/verify.mjs` like the bonuses (the answer must be inside the passage it asks him to read). |
+| **Scripture links** | Every scripture reference he can read is a link to it in Gospel Library, opening in a new tab: in the text, questions, answers' why lines, verse boxes, the week's reading, notes and the games. "(verse 22)" or "chapter 40" means the chapter of the verse the text belongs to, the same way the content checker reads it. Where a step tests memory (the warm-up, fill in the missing word, put the words in order, Verse Word's hints, Scripture Climb and the TV games before the answer shows), the link appears once he has answered. The app knows every book of the standard works; the checker fails if one is missing or if content names a reference that isn't real. |
+| **Pictures and clips** | A picture on each reel it fits (Church Media Library art or public-domain photos, credited and linked), shown whole and undimmed at the top of the reel with the text below it, in the lesson and on the reel's own screen. At most 2 clips a week, only where they show something the words can't. Clips load nothing until tapped, then play just the chosen stretch in YouTube's privacy-mode player. |
 | **Streak** | Days in a row with at least one question answered. A **streak freeze** (earned by solving the weekly puzzle) covers one missed day and is used automatically; the count shows next to the streak. |
-| **Notes** | After a reel, he can write what it means to him in his own words: 10 XP once per reel (12+ words, not filler). "Put it in my scriptures" copies the note and opens that verse in Gospel Library to paste it as a note there. No outside app can read Gospel Library notes, so the XP comes from writing it here. Notes are kept across weeks as a journal on his phone; a parent can read them in the parent screen, and the note box tells him so. |
+| **Notes** | On an answered reel's own screen (from Look back), he can write what it means to him in his own words: 10 XP once per reel (12+ words, not filler). "Put it in my scriptures" copies the note and opens that verse in Gospel Library to paste it as a note there. No outside app can read Gospel Library notes, so the XP comes from writing it here. Notes are kept across weeks as a journal on his phone; a parent can read them in the parent screen, and the note box tells him so. |
 | **🎮 Games** | Next to the streak. **Weekly puzzle**: a Connections-style sort of 16 ideas into the lesson's 4 sections, unlocked once every reel is answered; 4 mistakes a day, repeat guesses are free, a lost try resets the next day; solving pays 40 XP and a streak freeze. **Who said it?**: match lines quoted exactly from scripture to their speaker, 5 XP each on the first try; one line also comes back in each day's warm-up. **Verse Word**: real Wordle rules (six tries, green/yellow/gray letters, and every guess must be a word from the Bible or Book of Mormon, per `scripture-words.js`, rebuilt by `node tools/build-words.mjs`), with hints that unlock: after 2 guesses the chapter, after 4 the verse with a blank. 15 XP solved in 1–2, 10 in 3–4, 5 in 5–6. **Scripture Climb**: a Millionaire-style ladder of ten questions (reel questions, then reading-only bonuses) from 100 to 32,000 (a miss ends the climb and keeps the highest rung reached), with 50:50, Read it, and Ask a parent lifelines; the first climb each day pays 2 XP per right answer. **Scripture Showdown**: below. |
 | **Live game** | Kahoot-style. A TV or laptop hosts (`…/#host`): it shows a 4-digit code, then each question, and keeps score. Phones and tablets join with the code (`…/#join`, or `…/#join-1234`) and answer on their own screens in real time; the same answers appear in the same colors everywhere. 500 points for a right answer plus up to 500 for speed, 20 seconds a question, a leaderboard after each, and a family total at the end. No accounts needed to play; it never changes XP. Runs through Firebase across devices (`FIREBASE_CONFIG` in `index.html`, rules in `firestore.rules`); until that's set, it runs between tabs of one browser, which is also how the tests play it. |
-| **👪 Family** | Optional, next to 🎮. Once a device is in a family, 💬 takes 👪's place on the main page and opens straight to the chat (People is the other tab). A parent signs in (Google, or a sign-in link by email) and starts a family. Grown-ups (grandparents, friends, roommates, the other parent) are added by email and sign in with that address; a child is added by first name and joins by opening a one-time link on their own phone or tablet, with no account. Links work once, for 7 days. **People** shows each person's level, XP, streak and this week's right answers, and a family total. Each person's progress is saved to the family, so a new device ("Link another device") or a parent's second phone picks up where the other left off. Progress on a device belongs to one person: if a device already has progress when someone joins or signs in there, it asks whose it is, and someone else's is set aside on the device (it comes back when they sign out) instead of being mixed in. Two devices for the same person stay in step: an idle one catches up by itself, and if both changed while apart (say one was offline) they're merged, keeping every answer and note from both. People shows when this device last saved to the family. Parents see every device joined as a child and can remove one; a child whose devices are all removed is listed under "Taken out", with **Add back** (the saved progress comes too) or **Delete saved progress**. Whoever started the family always stays a parent. Email sign-in links are limited to 5 a day on Firebase's free plan; Google sign-in has no limit. **Chat** is one family chat, text and emoji only: no private messages, links or photos, nobody can delete a message, and a parent can hide one (everyone sees it was hidden; parents can still read it and unhide it). A dot on 💬 means a new message. `firestore.rules` enforces all of it. |
-| **Year trail** | The first card shows the 52 weeks of Come, Follow Me 2026 with this week marked; each finished week turns green. |
-| **Scripture Showdown** | A quiz-show board game for the whole family, built from the week's checked questions. Columns are the lesson's sections; reel questions are the low values, reading-only bonus questions the high ones, one of them a Daily Double. A parent hosts on a laptop hooked to the TV and taps who got each one; scores add up to a family total and a family best. Open it from the first or last card, or bookmark `…/TreasureUp/#family`. It never changes his XP. |
-| **Family rewards** | A parent sets rewards at XP marks behind a 4-digit PIN ("Pick Friday's movie at 300 XP"). He sees his progress on the first and last cards and gets "Reward unlocked, show a parent" when he crosses one; only the parent can mark it given. The PIN keeps an 11-year-old from editing his own rewards; it isn't security. |
-| **Week report** | The last card lists every reel with ✓ / ✕, and points to the real reading for the week. |
+| **👪 Family** | Optional, next to 🎮. Once a device is in a family, 💬 takes 👪's place in the top bar and opens straight to the chat (People is the other tab). A parent signs in (Google, or a sign-in link by email) and starts a family. Grown-ups (grandparents, friends, roommates, the other parent) are added by email and sign in with that address; a child is added by first name and joins by opening a one-time link on their own phone or tablet, with no account. Links work once, for 7 days. **People** shows each person's level, XP, streak and this week's right answers, and a family total. Each person's progress is saved to the family, so a new device ("Link another device") or a parent's second phone picks up where the other left off. Progress on a device belongs to one person: if a device already has progress when someone joins or signs in there, it asks whose it is, and someone else's is set aside on the device (it comes back when they sign out) instead of being mixed in. Two devices for the same person stay in step: an idle one catches up by itself, and if both changed while apart (say one was offline) they're merged, keeping every answer and note from both. People shows when this device last saved to the family. Parents see every device joined as a child and can remove one; a child whose devices are all removed is listed under "Taken out", with **Add back** (the saved progress comes too) or **Delete saved progress**. Whoever started the family always stays a parent. Email sign-in links are limited to 5 a day on Firebase's free plan; Google sign-in has no limit. **Chat** is one family chat, text and emoji only: no private messages, links or photos, nobody can delete a message, and a parent can hide one (everyone sees it was hidden; parents can still read it and unhide it). A dot on 💬 means a new message. `firestore.rules` enforces all of it. |
+| **Year trail** | The page shows the 52 weeks of Come, Follow Me 2026 with this week marked; each finished week turns green. |
+| **Scripture Showdown** | A quiz-show board game for the whole family, built from the week's checked questions. Columns are the lesson's sections; reel questions are the low values, reading-only bonus questions the high ones, one of them a Daily Double. A parent hosts on a laptop hooked to the TV and taps who got each one; scores add up to a family total and a family best. Open it from 🎮 (or Sunday's row on the week map), or bookmark `…/TreasureUp/#family`. It never changes his XP. |
+| **Family rewards** | A parent sets rewards at XP marks behind a 4-digit PIN ("Pick Friday's movie at 300 XP"). He sees his progress on the page and gets "Reward unlocked, show a parent" when he crosses one (on a lesson's last screen, if it happened there); only the parent can mark it given. The PIN keeps an 11-year-old from editing his own rewards; it isn't security. |
 | **Sections match church** | Reels are grouped under the lesson's own section headings, so what he reads lines up with class on Sunday. |
 
 Progress lives in `localStorage` on that one device: no account, no
@@ -71,12 +76,13 @@ family also saves a copy to the family's Firebase project.
 
 ## Changing the weekly lesson
 
-Everything you edit is the **`CONTENT` block at the bottom of `index.html`**.
-Each week is one `WEEKS.push({ … })`. **Add next week any time before its
-Monday**: the app opens on the week whose dates include today, so it switches
-by itself (and last week turns green on the year trail). Keep weeks in date
-order and drop ones older than last week. The comment above the block
-describes every field. One reel, the short version:
+All content is **`content/weeks.js`** (see `content/README.md` for every
+field). Blake reviews, approves, changes and publishes it from **developer
+mode** on the test site (`…/TreasureUp-test/#dev`); new weeks arrive there as
+drafts. **Add next week any time before its Monday**: the app opens on the
+week whose dates include today, so it switches by itself (and last week turns
+green on the year trail). Keep weeks in date order and drop ones older than
+last week. One reel, the short version (as JSON in the file):
 
 ```js
 {
@@ -119,7 +125,7 @@ Rules the check script enforces:
   sets `previewed: true`; the private preview shows it, marked "not approved
   yet", so it can be reviewed.
 
-Two more blocks at the top of `WEEK_CONTENT` feed the games:
+Three more fields feed the games:
 
 - `puzzle.groups`: exactly 4 groups of 4 tiles, one group per lesson
   section. Each tile is `{ text, ref }`; the ref must be inside the week's
@@ -139,7 +145,8 @@ node tools/verify.mjs --online   # quotes, references, and every Gospel Library 
 ```
 
 and push to `main`. The deploy runs the same check and **refuses to publish**
-if anything fails. (If the Church website itself is down, that's a warning,
+if anything fails. The live app's deploy also refuses any week (from October
+5, 2026 on) that isn't fully approved in developer mode. (If the Church website itself is down, that's a warning,
 not a failure, so an outage can't block a deploy.)
 
 Answer order is shuffled in the app, so always put the right answer in
