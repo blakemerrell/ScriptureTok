@@ -157,7 +157,7 @@ function loadWeeks() {
 }
 
 // The map game's boards (content/boards.js): a map that holds together, and
-// prophecy cards that quote scripture exactly.
+// a hook and a story that quote scripture exactly.
 const BOARDS_MARK = 'window.TU_BOARDS = ';
 function loadBoards() {
   const file = path.join(ROOT, 'content', 'boards.js');
@@ -195,15 +195,11 @@ function checkBoards(boards, { verses }) {
     }
     if ((b.kingdoms || []).length < 2) failures.push(`${where}: needs at least 2 kingdoms`);
     if (b.walls && !ids.has(b.walls)) failures.push(`${where}: walls land ${b.walls} isn't on the map`);
-    for (const c of b.cards || []) {
-      const src = c.ref ? textOf(c.ref) : null;
-      if (!c.id || !c.title || !c.does) failures.push(`${where}: card ${c.id || '?'} needs an id, a title and what it does`);
-      if (src == null) failures.push(`${where}: card ${c.id}: reference "${c.ref}" does not exist`);
-      else if (!quoteMatches(c.quote || '', src)) failures.push(`${where}: card ${c.id}: "${c.quote}" is not in ${c.ref}`);
-    }
     for (const m of (b.intro || '').matchAll(/\(([^)]+ \d+:\d+(?:[–-]\d+)?)\)/g)) if (textOf(m[1]) == null) failures.push(`${where}: intro reference "${m[1]}" does not exist`);
-    // The narrator's story: each “quote” must be in the verse cited after it.
-    for (const line of b.story || []) {
+    // The narrator's hook (the game's opening line) and story: each “quote”
+    // must be in the verse cited after it.
+    if (!b.hook) failures.push(`${where}: needs a hook, the narrator's opening line`);
+    for (const line of [b.hook || ''].concat(b.story || [])) {
       for (const m of line.matchAll(/“([^”]+)”[^(“]*\(([^)]+)\)/g)) {
         const src = textOf(m[2]);
         if (src == null) failures.push(`${where}: story reference "${m[2]}" does not exist`);
@@ -703,7 +699,7 @@ for (const week of weeks) {
   console.log(`✓ ${week.title} (${week.dates}): ${week.reels.length} reels, ${quotes} quotes and ${bonuses} bonus answers checked` +
     (extras.length ? `, plus ${extras.join(' and ')}` : ''));
 }
-if (boards.length) console.log(`✓ ${boards.map(b => `${b.title}: ${b.lands.length} lands, ${b.links.length} borders, ${b.kingdoms.length} kingdoms, ${b.cards.length} prophecy cards`).join('; ')}`);
+if (boards.length) console.log(`✓ ${boards.map(b => `${b.title}: ${b.lands.length} lands, ${b.links.length} borders, ${b.kingdoms.length} kingdoms`).join('; ')}`);
 if (online) {
   const loaded = [...pages.values()].filter(t => t != null).length;
   console.log(`✓ ${loaded} of ${pages.size} Gospel Library pages checked live`);

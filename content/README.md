@@ -128,10 +128,13 @@ to a week: the questions come from the weeks in weeks.js.
 - `links`: the borders, each pair once. Every land must be reachable.
 - `kingdoms`: `{ id, name, home, color }`, 2 to 5, each with its own home land.
 - `walls`: the land whose defender rolls 3 dice (Babylonia).
-- `cards`: prophecy cards, `{ id, title, quote, ref, does }`. `quote` must be
-  the verse's exact words; `does` is what playing it does, and the game's
-  code has to know the card's `id`.
 - `intro`: the line on the first screen; its references must be real.
+- `hook`: the narrator's opening line when a game starts, read aloud with
+  `goal`. Each “quote” in it must be the exact words of the verse cited
+  after it, in brackets.
+- `story`: the whole story, a tap away (⋯ → The story), quoted the same way.
+- `goal`, `turn` and `dice`: how to win, each step of a turn, and how the
+  dice work (⋯ → How to play).
 
 The map outlines were drawn by a script from a hand-drawn coastline and
 seed points; to change a border, change the outline and `links` together.

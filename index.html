@@ -482,8 +482,22 @@
   .live-mode { font-size: 12px; color: rgba(255,255,255,.5); margin-top: 16px; }
 
   /* ---- Babylon Falls: the map on a computer, a controller on each phone ---- */
-  .rk-host { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 18px; align-items: start; }
-  @media (max-width: 900px) { .rk-host { grid-template-columns: 1fr; } }
+  /* Every game screen: the players, the map, and one narrator card. */
+  .rk-screen { display: grid; grid-template-columns: minmax(0, 1fr) 380px; grid-template-areas: "strip strip" "map card"; gap: 12px; align-items: start; }
+  .rk-screen > .rk-strip { grid-area: strip; }
+  .rk-screen > .rk-mapbox { grid-area: map; }
+  .rk-screen > .rk-card { grid-area: card; }
+  @media (max-width: 900px) { .rk-screen { grid-template-columns: minmax(0, 1fr); grid-template-areas: "strip" "map" "card"; } }
+  /* The map screen is read from across the room. */
+  @media (min-width: 901px) {
+    .rk-screen.tv { grid-template-columns: minmax(0, 1fr) 440px; }
+    .rk-screen.tv .rk-say { font-size: 19px; }
+    .rk-screen.tv .rk-who { font-size: 24px; } .rk-screen.tv .rk-who small { font-size: 17px; }
+    .rk-screen.tv .rk-q { font-size: 23px; }
+    .rk-screen.tv .rk-choice { font-size: 18px; padding: 10px 12px; }
+    .rk-screen.tv .rk-note, .rk-screen.tv .rk-result, .rk-screen.tv .quiz-why, .rk-screen.tv .rk-view, .rk-screen.tv .rk-log { font-size: 17px; }
+    .rk-screen.tv .rk-pl { font-size: 16px; } .rk-screen.tv .rk-pl small { font-size: 14px; }
+  }
   .rk-mapbox { border-radius: 16px; overflow: hidden; border: 1px solid rgba(255,255,255,.15); background: #16324f; }
   .rk-map { display: block; width: 100%; height: auto; }
   .rk-sea { fill: #16324f; }
@@ -494,12 +508,27 @@
   .rk-land.to { stroke: var(--gold); stroke-width: 7; }
   .rk-walls { fill: none; stroke: var(--gold); stroke-width: 4; stroke-dasharray: 10 6; pointer-events: none; }
   .rk-lab { pointer-events: none; }
+  .rk-lab.can { pointer-events: auto; cursor: pointer; }
   .rk-lab .nm { fill: #fff; font-size: 17px; font-weight: 800; text-anchor: middle; paint-order: stroke; stroke: rgba(0,0,0,.65); stroke-width: 4px; }
   .rk-lab .badge { fill: #fff; stroke: #0b1020; stroke-width: 2; }
-  .rk-lab .ar { fill: #0b1020; font-size: 21px; font-weight: 900; text-anchor: middle; }
-  .rk-side { display: grid; gap: 12px; }
-  .rk-turn { padding: 12px 14px; border-radius: 14px; background: rgba(0,0,0,.35); border: 2px solid rgba(255,255,255,.2); }
-  .rk-who { font-size: 22px; font-weight: 900; display: flex; align-items: center; gap: 8px; margin-top: 2px; }
+  .rk-lab.can .badge { stroke: var(--gold); stroke-width: 5; }
+  .rk-lab.from .badge { stroke: #fff; stroke-width: 6; }
+  .rk-lab.to .badge { fill: #fde68a; }
+  .rk-lab .ar { fill: #0b1020; font-size: 21px; font-weight: 900; text-anchor: middle; pointer-events: none; }
+  .rk-strip { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+  .rk-round { font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: rgba(255,255,255,.6); margin-right: 4px; }
+  .rk-pl { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px; background: rgba(255,255,255,.07); border: 2px solid transparent; font-size: 13px; font-weight: 700; }
+  .rk-pl small { font-size: 12px; font-weight: 700; color: rgba(255,255,255,.65); }
+  .rk-pl.now { border-color: var(--c); background: rgba(255,255,255,.14); }
+  .rk-pl.me { font-weight: 900; }
+  .rk-pl.out { opacity: .4; }
+  #riskMore { font-size: 20px; font-weight: 900; line-height: 1; padding-left: 16px; padding-right: 16px; }
+  #riskMore[hidden] { display: none; }
+  .rk-card { padding: 14px 16px; border-radius: 16px; background: rgba(0,0,0,.35); border: 1px solid rgba(255,255,255,.15); }
+  .rk-card > :first-child { margin-top: 0; }
+  .rk-say { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 14px; background: rgba(124,58,237,.22); border: 1px solid rgba(167,139,250,.5); font-size: 15px; font-weight: 700; line-height: 1.4; margin-bottom: 10px; }
+  .rk-say .mic { flex: 0 0 auto; }
+  .rk-who { font-size: 20px; font-weight: 900; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 2px; }
   .rk-who small { font-size: 14px; color: rgba(255,255,255,.7); font-weight: 700; }
   .rk-dot { display: inline-block; width: 12px; height: 12px; border-radius: 99px; flex: 0 0 auto; vertical-align: middle; }
   .rk-note { font-size: 14px; line-height: 1.4; color: rgba(255,255,255,.78); margin-top: 4px; }
@@ -512,12 +541,30 @@
   .rk-result { font-weight: 800; margin-top: 10px; line-height: 1.4; }
   .rk-result.ok { color: var(--right); }
   .rk-result.no { color: #fca5a5; }
-  .rk-dice { padding: 10px 12px; border-radius: 14px; background: rgba(0,0,0,.3); }
-  .rk-roll { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
-  .rk-roll > span { display: flex; gap: 6px; }
+  .rk-qhead { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; }
+  .rk-clock { font-weight: 900; font-size: 22px; font-variant-numeric: tabular-nums; padding: 2px 10px; border-radius: 10px; background: rgba(255,255,255,.1); }
+  .rk-clock.low { color: #fca5a5; background: rgba(239,68,68,.2); }
+  .rk-btns { display: grid; gap: 8px; margin-top: 10px; }
+  .rk-btns.two { grid-template-columns: 1fr 1fr; }
+  .rk-coach { margin-top: 12px; padding: 10px 12px; border-radius: 12px; background: rgba(252,211,77,.08); border: 1px solid rgba(252,211,77,.3); font-size: 14px; line-height: 1.45; }
+  .rk-coach .eyebrow { color: var(--gold); }
+  .rk-coach p { margin: 4px 0 6px; }
+  .rk-pass { padding: 16px; border-radius: 14px; background: rgba(0,0,0,.25); border: 3px solid rgba(255,255,255,.2); text-align: center; }
+  .rk-pass .rk-q { font-size: 26px; }
+  /* ⋯: the story, how to play, what's happened. */
+  .rk-menu { display: grid; gap: 6px; }
+  .rk-item { text-align: left; font: inherit; font-weight: 800; font-size: 15px; color: #fff; padding: 11px 14px; border-radius: 12px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.14); cursor: pointer; }
+  .rk-view { font-size: 15px; line-height: 1.5; }
+  .rk-view p { margin: 4px 0 10px; }
+  .rk-view .eyebrow { margin-top: 8px; color: var(--gold); }
+  .rk-view ol { margin: 4px 0 10px 20px; padding: 0; list-style: decimal; }
+  .rk-log { font-size: 14px; color: rgba(255,255,255,.75); display: grid; gap: 4px; max-height: 50vh; overflow: auto; }
+  /* The dice, tumbling across the map. */
   .rk-die { width: 38px; height: 38px; border-radius: 9px; display: grid; grid-template: repeat(3, 1fr) / repeat(3, 1fr); padding: 5px; }
   .rk-die i { width: 7px; height: 7px; border-radius: 50%; place-self: center; background: currentColor; visibility: hidden; }
   .rk-die i.on { visibility: visible; }
+  .rk-die.att { background: #dc2626; color: #fff; }
+  .rk-die.def { background: #f8fafc; color: #0b1020; }
   .rk-fx { position: fixed; z-index: 140; display: grid; place-content: center; justify-items: center; gap: 10px; pointer-events: none; transition: opacity .45s; }
   .rk-fx.gone { opacity: 0; }
   .rk-fx-row { display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-radius: 20px; background: rgba(5,5,15,.72); }
@@ -532,52 +579,17 @@
   @keyframes rkLand { 50% { transform: scale(1.15); } }
   .rk-fx-say { padding: 6px 14px; border-radius: 999px; background: rgba(5,5,15,.75); font-weight: 900; font-size: clamp(16px, 2.2vw, 24px); opacity: 0; transition: opacity .3s; }
   .rk-fx.landed .rk-fx-say { opacity: 1; }
-  .rk-say { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 14px; background: rgba(124,58,237,.22); border: 1px solid rgba(167,139,250,.5); font-size: 15px; font-weight: 700; line-height: 1.4; }
-  .rk-say .mic { flex: 0 0 auto; }
-  .rk-story { padding: 14px 16px; border-radius: 14px; background: rgba(0,0,0,.35); border: 2px solid rgba(252,211,77,.45); font-size: 15px; line-height: 1.5; }
-  .rk-story p { margin: 4px 0 10px; }
-  .rk-story .eyebrow { margin-top: 8px; color: var(--gold); }
-  .rk-story ol { margin: 4px 0 10px 20px; padding: 0; list-style: decimal; }
-  .rk-qhead { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; }
-  .rk-clock { font-weight: 900; font-size: 22px; font-variant-numeric: tabular-nums; padding: 2px 10px; border-radius: 10px; background: rgba(255,255,255,.1); }
-  .rk-clock.low { color: #fca5a5; background: rgba(239,68,68,.2); }
-  .rk-coach { margin: 0 0 10px; }
-  .rk-coach-btn { font: inherit; font-weight: 800; font-size: 14px; color: var(--gold); background: rgba(252,211,77,.12); border: 1px solid rgba(252,211,77,.45); border-radius: 999px; padding: 7px 14px; cursor: pointer; }
-  .rk-coach-body { margin-top: 8px; padding: 10px 12px; border-radius: 12px; background: rgba(252,211,77,.08); border: 1px solid rgba(252,211,77,.3); font-size: 14px; line-height: 1.45; }
-  .rk-coach-body p { margin: 0 0 6px; }
-  .rk-die.att { background: #dc2626; color: #fff; }
-  .rk-die.def { background: #f8fafc; color: #0b1020; }
-  .rk-seats { display: grid; gap: 6px; }
-  .rk-seat { display: grid; grid-template-columns: auto auto 1fr auto; gap: 8px; align-items: center; padding: 8px 10px; border-radius: 10px; background: rgba(255,255,255,.06); font-size: 14px; }
-  .rk-seat.now { outline: 2px solid var(--gold); }
-  .rk-seat.out { opacity: .45; }
-  .rk-seat .k { color: rgba(255,255,255,.6); }
-  .rk-seat .n { font-weight: 800; }
-  .rk-log { font-size: 13px; color: rgba(255,255,255,.65); display: grid; gap: 3px; max-height: 160px; overflow: auto; }
+  /* The lobby and the one-screen setup. */
   .rk-kingdoms { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; margin-top: 10px; }
   .rk-king { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 12px; background: rgba(255,255,255,.08); border: 2px solid transparent; font: inherit; font-weight: 800; color: #fff; text-align: left; }
   button.rk-king { cursor: pointer; }
   .rk-king small { width: 100%; font-size: 12px; font-weight: 600; color: rgba(255,255,255,.6); }
   .rk-king.mine { border-color: var(--gold); }
   .rk-king.taken, .rk-king.open { opacity: .5; }
-  .rk-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
   .rk-soloset { display: grid; gap: 8px; margin-top: 10px; }
   .rk-soloking { display: grid; grid-template-columns: auto 90px 1fr; gap: 10px; align-items: center; }
-  .rk-pass { padding: 16px; border-radius: 14px; background: rgba(0,0,0,.35); border: 3px solid rgba(255,255,255,.2); text-align: center; }
-  .rk-pass .rk-q { font-size: 26px; }
-  .rk-chips .lbl { width: 100%; font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: rgba(255,255,255,.55); }
-  .rk-chip { padding: 9px 12px; border-radius: 999px; font: inherit; font-size: 14px; font-weight: 800; color: #fff; background: rgba(255,255,255,.1); border: 2px solid rgba(255,255,255,.2); cursor: pointer; }
-  .rk-chip.on { border-color: #fff; background: rgba(255,255,255,.22); }
-  .rk-chip.to { border-color: var(--gold); background: rgba(252,211,77,.18); }
   .rk-len { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
   .rk-me { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 15px; }
-  .rk-me .n { margin-left: auto; font-weight: 800; }
-  .rk-panel { margin-top: 12px; max-width: 560px; }
-  .rk-btns { display: grid; gap: 8px; margin-top: 10px; }
-  .rk-step { display: flex; align-items: center; gap: 16px; justify-content: center; margin-top: 8px; font-size: 24px; }
-  .rk-cards { display: grid; gap: 8px; margin-top: 12px; }
-  .rk-card { padding: 10px 12px; border-radius: 12px; background: rgba(252,211,77,.1); border: 1px solid rgba(252,211,77,.5); display: grid; gap: 4px; font-size: 14px; }
-  .rk-card small { color: rgba(255,255,255,.72); }
 
   /* ---- Family: people, join links and the family chat ---- */
   .hud-dot { position: absolute; top: 1px; right: 1px; width: 9px; height: 9px; border-radius: 99px; background: var(--gold); box-shadow: 0 0 0 2px #0a0a14; }
@@ -908,7 +920,10 @@
       <div class="eyebrow">Family map game</div>
       <div id="riskTitle" class="board-title"></div>
     </div>
-    <button id="riskExit" class="btn ghost" style="margin-left:auto">Exit</button>
+    <div style="margin-left:auto;display:flex;gap:8px">
+      <button id="riskMore" class="btn ghost" data-rkv="menu" aria-label="Menu: the story, how to play, what's happened" hidden>⋯</button>
+      <button id="riskExit" class="btn ghost">Exit</button>
+    </div>
   </div>
   <div id="riskBody"></div>
 </section>
@@ -3258,10 +3273,13 @@ const TreasureUp = (function () {
   // a move that isn't allowed. Armies come from the week's checked
   // questions: an easy one (a reel's own question, this week's or an
   // earlier week's) for 3, a hard one (find it in the reading) for 5, a
-  // miss for 1, plus 1 for every 3 lands held. Battles are dice as in Risk,
-  // and Babylon's walls give its defender 3 dice. After the last round the
-  // most land wins, Babylonia counting 3. Nothing here changes anyone's XP.
-  const RISK = { easy: 3, hard: 5, miss: 1, perLands: 3, start: 4, neutral: 2, wallsNeutral: 3, maxCards: 2, rounds: [5, 8, 12], time: { easy: 30, hard: 180 } };
+  // miss for 1, plus 1 for every 3 lands held; a hard one found also earns
+  // a 💡 insight (the odds and best moves for one turn). Battles are dice
+  // as in Risk, and Babylon's walls give its defender 3 dice. Everything is
+  // done by tapping the map, and one narrator card says what happened and
+  // what's next. After the last round the most land wins, Babylonia
+  // counting 3. Nothing here changes anyone's XP.
+  const RISK = { easy: 3, hard: 5, miss: 1, perLands: 3, start: 4, neutral: 2, wallsNeutral: 3, insightMax: 3, rounds: [5, 8, 12], time: { easy: 30, hard: 180 } };
   const BOARD = () => (window.TU_BOARDS || [])[0] || null;
 
   function RiskLocal() {
@@ -3402,15 +3420,19 @@ const TreasureUp = (function () {
   const kingdomOf = k => BOARD().kingdoms.find(x => x.id === k);
   const landsOf = (g, uid) => Object.keys(g.lands || {}).filter(id => g.lands[id].o === uid);
   const landName = id => (BOARD().lands.find(l => l.id === id) || {}).name || id;
-  const seatName = s => s ? s.name + ' (' + kingdomOf(s.k).name + ')' : '';
   function adjacent(a, b) { return BOARD().links.some(([x, y]) => (x === a && y === b) || (x === b && y === a)); }
+  const nearOf = id => BOARD().links.filter(([x, y]) => x === id || y === id).map(([x, y]) => x === id ? y : x);
+  // Lands that can attack (2 or more armies with an enemy next door), and
+  // lands that can move armies (2 or more with a land of one's own next door).
+  const riskAttackers = (g, uid) => landsOf(g, uid).filter(id => g.lands[id].a >= 2 && nearOf(id).some(n => g.lands[n].o !== uid));
+  const riskMovers = (g, uid) => landsOf(g, uid).filter(id => g.lands[id].a >= 2 && nearOf(id).some(n => g.lands[n].o === uid));
   function riskDie() {
     // The tests set the dice (window.TU_DICE) when there's no Firebase.
     if (!FIREBASE_CONFIG && Array.isArray(window.TU_DICE) && window.TU_DICE.length) return window.TU_DICE.shift();
     return 1 + Math.floor(Math.random() * 6);
   }
   const rollDice = n => Array.from({ length: n }, riskDie).sort((a, b) => b - a);
-  function riskLog(g, text) { g.log = (g.log || []).concat(text).slice(-8); }
+  function riskLog(g, text) { g.log = (g.log || []).concat(text).slice(-30); }
   // The narrator's line: what just happened, told as a story (and read out
   // on the big screen when its voice is on).
   function riskSay(g, text) {
@@ -3421,7 +3443,7 @@ const TreasureUp = (function () {
   const kName = (g, uid) => { const s = uid && seatOf(g, uid); return s ? kingdomOf(s.k).name : 'the neutral army'; };
   const fmtClock = n => Math.floor(n / 60) + ':' + String(n % 60).padStart(2, '0');
 
-  // The coach's odds: every way one roll can go (ad attacking dice against
+  // An insight's odds: every way one roll can go (ad attacking dice against
   // dd defending), then the chance of taking a land by attacking until it
   // falls or only one army is left to attack from.
   const rollTable = {};
@@ -3457,7 +3479,9 @@ const TreasureUp = (function () {
     return go(Math.min(a, 60), Math.min(d, 60));
   }
 
-  const newTurn = i => ({ i, phase: 'choose', level: null, q: null, armies: 0, result: null, gates: false });
+  // A turn: choose a question, answer it, place the armies it raised,
+  // attack, then move armies once (from one land to a neighbour).
+  const newTurn = i => ({ i, phase: 'choose', level: null, q: null, armies: 0, result: null, insight: false, moved: null });
 
   function riskBegin(g) {
     const B = BOARD();
@@ -3466,15 +3490,15 @@ const TreasureUp = (function () {
     g.seats.forEach(s => { g.lands[kingdomOf(s.k).home] = { o: s.uid, a: RISK.start }; });
     g.state = 'play';
     g.round = 1;
-    g.cards = {};
+    g.insight = {};
     g.used = { easy: [], hard: [] };
     g.dice = null;
     g.log = [];
     g.turn = newTurn(0);
-    g.story = true;                            // the narrator tells the story first
+    g.story = true;                            // the narrator opens with the hook
     g.say = null;
   }
-  // After the story: round 1 begins.
+  // After the opening: round 1 begins.
   function riskStoryDone(g) {
     g.story = false;
     riskSay(g, 'Round 1 of ' + g.rounds + '. ' + kingdomOf(g.seats[0].k).name + ' moves first: ' + g.seats[0].name + ', raise your army!');
@@ -3502,20 +3526,18 @@ const TreasureUp = (function () {
     riskSay(g, (i === 0 || g.seats.slice(0, i).every(s => s.out) ? 'Round ' + g.round + ' of ' + g.rounds + '. ' : '') + kingdomOf(g.seats[i].k).name + "'s turn: " + g.seats[i].name + ', raise your army!');
   }
 
-  // A turn's answer (or its time running out): armies, maybe a prophecy card.
+  // A turn's answer (or its time running out): armies, and for a hunt found
+  // in the chapter, a 💡 insight to spend on a turn.
   function riskAnswered(g, right, picked, timeout) {
-    const B = BOARD(), t = g.turn, seat = g.seats[t.i], hand = g.cards[seat.uid] || [], K = kingdomOf(seat.k).name;
+    const t = g.turn, seat = g.seats[t.i], K = kingdomOf(seat.k).name;
     const got = right ? RISK[t.level] : RISK.miss, bonus = Math.floor(landsOf(g, seat.uid).length / RISK.perLands);
-    let card = null;
-    if (right && t.level === 'hard' && hand.length < RISK.maxCards && B.cards.length) {
-      card = B.cards[Math.floor(Math.random() * B.cards.length)].id;
-      g.cards[seat.uid] = hand.concat(card);
-    }
+    const had = (g.insight || {})[seat.uid] || 0, insight = right && t.level === 'hard' && had < RISK.insightMax;
+    if (insight) g.insight = Object.assign({}, g.insight, { [seat.uid]: had + 1 });
     t.armies = got + bonus;
-    t.result = { right, picked, got, bonus, card, timeout };
+    t.result = { right, picked, got, bonus, insight, timeout };
     t.phase = 'place';
-    riskSay(g, (timeout ? "Time's up! " : right ? seat.name + ' knew it! ' : 'Not this time. ') + K + ' raises ' + t.armies + (t.armies === 1 ? ' army' : ' armies') +
-      (card ? ' and wins a prophecy card' : '') + '.');
+    riskSay(g, (timeout ? "Time's up! " : right ? seat.name + (t.level === 'hard' ? ' found it! ' : ' knew it! ') : 'Not this time. ') +
+      K + ' raises ' + t.armies + (t.armies === 1 ? ' army' : ' armies') + (insight ? ' and earns an insight' : '') + '.');
   }
   // The answer's time is up: counts as a miss. Checked on the host's (or the
   // one screen's) own clock, so every phone gets the same time.
@@ -3579,7 +3601,7 @@ const TreasureUp = (function () {
     if (g.state !== 'play' || !g.turn || g.story) return;
     const t = g.turn, seat = g.seats[t.i];
     if (!seat || seat.uid !== m.uid) return;                             // not your turn
-    const uid = m.uid, hand = g.cards[uid] || [];
+    const uid = m.uid, K = kingdomOf(seat.k).name;
     if (m.kind === 'level' && t.phase === 'choose' && (m.a === 'easy' || m.a === 'hard')) {
       t.level = m.a;
       t.q = riskNextQuestion(g, m.a);
@@ -3594,20 +3616,14 @@ const TreasureUp = (function () {
       L.a += n;
       t.armies -= n;
       if (!t.armies) t.phase = 'attack';
-    } else if (m.kind === 'card' && (t.phase === 'place' || t.phase === 'attack') && hand.includes(m.a)) {
-      const c = B.cards.find(x => x.id === m.a);
-      if (m.a === 'gates') t.gates = true;
-      else if (m.a === 'weighed') {
-        const L = g.lands[B.walls];
-        if (L.o === uid) return;                                        // not on your own city
-        L.a = Math.max(1, L.a - Math.floor(L.a / 2));
-      }
-      g.cards[uid] = hand.filter((x, n) => n !== hand.indexOf(m.a));
-      riskSay(g, seat.name + ' plays “' + c.title + '”: “' + c.quote + '” (' + c.ref + ').');
+    } else if (m.kind === 'insight' && ['place', 'attack', 'move'].includes(t.phase) && !t.insight && (g.insight || {})[uid] > 0) {
+      g.insight[uid]--;                                                 // the odds and best moves, for the rest of this turn
+      t.insight = true;
+      riskLog(g, seat.name + ' uses an insight.');
     } else if (m.kind === 'attack' && t.phase === 'attack') {
       const A = g.lands[m.a], D = g.lands[m.b];
       if (!A || !D || A.o !== uid || D.o === uid || A.a < 2 || !adjacent(m.a, m.b)) return;
-      const walls = m.b === B.walls && !t.gates;
+      const walls = m.b === B.walls;
       const ad = Math.min(3, A.a - 1), dd = Math.min(walls ? 3 : 2, D.a);
       const ra = rollDice(ad), rd = rollDice(dd);
       let la = 0, ld = 0;
@@ -3616,9 +3632,9 @@ const TreasureUp = (function () {
       D.a -= ld;
       const was = D.o;
       g.dice = { a: ra, d: rd, from: m.a, to: m.b, la, ld, walls, won: false, by: uid, n: ((g.dice && g.dice.n) || 0) + 1 };
-      const K = kingdomOf(seat.k).name, defK = kName(g, was);
+      const defK = kName(g, was);
       riskSay(g, K + ' attacks ' + landName(m.b) + (walls ? ', behind Babylon’s walls' : '') + '! ' +
-        (ld && !la ? defK + ' loses ' + ld + '.' : la && !ld ? 'The defenders hold: ' + K + ' loses ' + la + '.' : K + ' loses ' + la + ', ' + defK + ' loses ' + ld + '.'));
+        (ld && !la ? defK.charAt(0).toUpperCase() + defK.slice(1) + ' loses ' + ld + '.' : la && !ld ? 'The defenders hold: ' + K + ' loses ' + la + '.' : K + ' loses ' + la + ', ' + defK + ' loses ' + ld + '.'));
       if (D.a <= 0) {
         // A capture never costs the attacker anything, so there are always
         // armies to move in: as many as the dice rolled.
@@ -3630,39 +3646,43 @@ const TreasureUp = (function () {
         const loser = was && seatOf(g, was);
         if (loser && !landsOf(g, was).length) {
           loser.out = true;
-          delete g.cards[was];
+          if (g.insight) delete g.insight[was];
           riskSay(g, landName(m.b) + ' falls, and with it the kingdom of ' + kingdomOf(loser.k).name + '!');
         }
         if (g.seats.filter(s => !s.out).length === 1) riskOver(g);
       }
-    } else if (m.kind === 'move' && t.phase === 'attack') {
+    } else if (m.kind === 'done' && t.phase === 'attack') {
+      t.phase = 'move';
+    } else if (m.kind === 'shift' && t.phase === 'move') {
+      // One army a tap, and one move a turn: from one land to one neighbour.
       const A = g.lands[m.a], D = g.lands[m.b];
-      const n = Math.floor(Number(m.n)) || 0;
-      if (!A || !D || A.o !== uid || D.o !== uid || !adjacent(m.a, m.b) || n < 1 || n > A.a - 1) return;
-      A.a -= n;
-      D.a += n;
-      riskLog(g, kingdomOf(seat.k).name + ' moves ' + n + (n === 1 ? ' army' : ' armies') + ' to ' + landName(m.b) + '.');
-      riskNextTurn(g);
-    } else if (m.kind === 'end' && t.phase === 'attack') {
+      if (!A || !D || A.o !== uid || D.o !== uid || A.a < 2 || !adjacent(m.a, m.b)) return;
+      if (t.moved && (t.moved.from !== m.a || t.moved.to !== m.b)) return;
+      A.a--;
+      D.a++;
+      t.moved = { from: m.a, to: m.b, n: ((t.moved && t.moved.n) || 0) + 1 };
+    } else if (m.kind === 'end' && (t.phase === 'attack' || t.phase === 'move')) {
+      if (t.moved) riskLog(g, K + ' moves ' + t.moved.n + (t.moved.n === 1 ? ' army' : ' armies') + ' to ' + landName(t.moved.to) + '.');
       riskNextTurn(g);
     }
   }
 
   // ----- the map -----
 
-  // The board as SVG. `ui` (phones and the host) marks lands: `can` ones
-  // are tappable, `from` and `to` are the chosen ones.
+  // The board as SVG. `ui` marks lands: `can` ones glow and can be tapped
+  // (the land or its army badge), `from` and `to` are the chosen ones.
   function riskMap(g, ui) {
     const B = BOARD(), u = ui || {};
     const can = new Set(u.can || []);
     const colorOf = id => { const L = g.lands && g.lands[id], s = L && L.o && seatOf(g, L.o); return s ? kingdomOf(s.k).color : '#566174'; };
     const home = new Set((g.seats || []).map(s => kingdomOf(s.k).home));
-    const lands = B.lands.map(l => `<polygon class="rk-land${can.has(l.id) ? ' can' : ''}${u.from === l.id ? ' from' : ''}${u.to === l.id ? ' to' : ''}" data-land="${l.id}"
+    const mark = id => (can.has(id) ? ' can' : '') + (u.from === id ? ' from' : '') + (u.to === id ? ' to' : '');
+    const lands = B.lands.map(l => `<polygon class="rk-land${mark(l.id)}" data-land="${l.id}"
       points="${l.ring.map(p => p.join(',')).join(' ')}" fill="${colorOf(l.id)}"><title>${esc(l.name)}</title></polygon>`).join('');
     const wall = B.lands.find(l => l.id === B.walls);
     const labels = B.lands.map(l => {
       const L = (g.lands || {})[l.id], [x, y] = l.label;
-      return `<g class="rk-lab" transform="translate(${x} ${y})${u.small ? ' scale(1.5)' : ''}">
+      return `<g class="rk-lab${mark(l.id)}" data-land="${l.id}" transform="translate(${x} ${y})${u.small ? ' scale(1.5)' : ''}">
         <text class="nm" y="-30">${esc(l.name)}${home.has(l.id) ? ' ★' : ''}</text>
         ${L ? `<circle r="21" class="badge"/><text class="ar" y="8">${L.a}</text>` : ''}</g>`;
     }).join('');
@@ -3680,7 +3700,8 @@ const TreasureUp = (function () {
   const pips = n => Array.from({ length: 9 }, (_, i) => `<i${PIPS[n].includes(i) ? ' class="on"' : ''}></i>`).join('');
   const dieHtml = (n, cls) => `<span class="rk-die ${cls}" data-n="${n}" aria-label="${n}">${pips(n)}</span>`;
   // A new roll tumbles across the map, then lands on its numbers. It's
-  // drawn over the screen (not inside it), so a redraw doesn't cut it short.
+  // drawn over the screen (not inside it), so a redraw doesn't cut it short;
+  // a quicker next roll replaces it.
   function riskMaybeRoll(g) {
     const d = g && g.dice;
     if (!rk || !g) return;
@@ -3689,6 +3710,7 @@ const TreasureUp = (function () {
     rk.rolled = d.n;
     const box = document.querySelector('#riskBody .rk-mapbox');
     if (!box || reduceMotion()) return;
+    document.querySelectorAll('.rk-fx').forEach(x => x.remove());
     const r = box.getBoundingClientRect(), fx = document.createElement('div');
     fx.className = 'rk-fx';
     fx.style.cssText = `left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px`;
@@ -3706,14 +3728,6 @@ const TreasureUp = (function () {
     setTimeout(() => fx.classList.add('gone'), 2400);
     setTimeout(() => fx.remove(), 2900);
   }
-  function diceHtml(g) {
-    const d = g.dice;
-    if (!d) return '';
-    const s = seatOf(g, d.by);
-    return `<div class="rk-dice"><div class="eyebrow">${esc(s ? s.name : '')}: ${esc(landName(d.from))} attacks ${esc(landName(d.to))}${d.walls ? ' · behind the walls' : ''}</div>
-      <div class="rk-roll"><span>${d.a.map(n => dieHtml(n, 'att')).join('')}</span><b>vs</b><span>${d.d.map(n => dieHtml(n, 'def')).join('')}</span></div>
-      <p class="rk-note">${d.won ? '🏳️ ' + esc(landName(d.to)) + ' is taken!' : 'Attacker loses ' + d.la + ', defender loses ' + d.ld + '.'}</p></div>`;
-  }
 
   // ----- screens -----
 
@@ -3721,7 +3735,7 @@ const TreasureUp = (function () {
     $('riskTitle').textContent = BOARD() ? BOARD().title : 'Babylon Falls';
     $('risk').hidden = false;
   }
-  const riskBody = html => { $('riskBody').innerHTML = html; };
+  const riskBody = html => { $('riskBody').innerHTML = html; $('riskMore').hidden = true; };
   function stopRisk() {
     if (rk) { (rk.unsub || []).forEach(f => { try { f(); } catch (e) {} }); clearInterval(rk.tick); }
     document.querySelectorAll('.rk-fx').forEach(x => x.remove());
@@ -3729,7 +3743,7 @@ const TreasureUp = (function () {
     rk = null;
   }
 
-  // ----- the narrator's voice, the story, and the coach -----
+  // ----- the narrator, the ⋯ menu, and insight -----
 
   // The big screen (the map, or the one shared screen) reads the narrator's
   // lines aloud with the browser's own voice, unless it's turned off.
@@ -3745,65 +3759,86 @@ const TreasureUp = (function () {
   }
   function riskNarrate(g) {
     if (!rk || !g) return;
-    if (g.state === 'play' && g.story && rk.told !== rk.code) {       // the story, once
+    if (g.state === 'play' && g.story && rk.told !== rk.code) {       // the opening, once
       rk.told = rk.code;
       const B = BOARD();
-      riskSpeak(B.story.concat('How to win: ' + B.goal).join(' '));
+      riskSpeak(B.hook + ' How to win: ' + B.goal);
     }
     if (rk.spoken === undefined) { rk.spoken = g.say ? g.say.n : 0; return; }   // this screen's first look: don't reread an old line
     const fresh = (g.says || []).filter(x => x.n > rk.spoken);
     if (g.say && fresh.length) { rk.spoken = g.say.n; riskSpeak(fresh.map(x => x.text).join(' ')); }
   }
   const riskSayHtml = g => g.say ? `<div class="rk-say"><span class="mic" aria-hidden="true">🎙️</span><span>${linkRefs(g.say.text)}</span></div>` : '';
-  function riskStoryHtml(button) {
-    const B = BOARD();
-    return `<div class="rk-story"><div class="eyebrow">The story</div>${B.story.map(x => `<p>${linkRefs(x)}</p>`).join('')}
-      <div class="eyebrow">How to win</div><p>${esc(B.goal)}</p>
-      <div class="eyebrow">Each turn</div><ol>${B.turn.map(x => `<li>${esc(x)}</li>`).join('')}</ol>
-      <div class="eyebrow">The dice</div><p>${esc(B.dice)}</p>${button || ''}</div>`;
+
+  // ⋯ opens, on this screen only, the story, how to play, and what's
+  // happened so far; on the map screen or the one shared screen, also the
+  // narrator's voice, skipping a turn and ending the game.
+  function riskViewHtml(g) {
+    const B = BOARD(), role = rk.role;
+    const back = '<div class="rk-btns"><button class="btn" data-rkv="game">Back to the game</button></div>';
+    if (rk.view === 'story') return `<div class="rk-view"><div class="eyebrow">The story</div>${B.story.map(x => `<p>${linkRefs(x)}</p>`).join('')}${back}</div>`;
+    if (rk.view === 'rules') {
+      return `<div class="rk-view"><div class="eyebrow">How to win</div><p>${esc(B.goal)}</p>
+        <div class="eyebrow">Each turn</div><ol>${B.turn.map(x => `<li>${esc(x)}</li>`).join('')}</ol>
+        <div class="eyebrow">The dice</div><p>${esc(B.dice)}</p>${back}</div>`;
+    }
+    if (rk.view === 'log') {
+      return `<div class="rk-view"><div class="eyebrow">What's happened</div>
+        <div class="rk-log">${(g.log || []).slice().reverse().map(x => `<div>${esc(x)}</div>`).join('') || '<div>Nothing yet.</div>'}</div>${back}</div>`;
+    }
+    const play = g.state === 'play' && !g.story;
+    const item = (attr, label) => `<button class="rk-item" ${attr}>${label}</button>`;
+    return `<div class="rk-menu">
+      ${item('data-rkv="story"', '📜 The story')}
+      ${item('data-rkv="rules"', '❓ How to play')}
+      ${item('data-rkv="log"', "🕘 What's happened")}
+      ${role !== 'player' ? item('data-rkv="voice"', riskVoiceOn() ? '🔊 Narrator’s voice: on' : '🔈 Narrator’s voice: off') : ''}
+      ${play && role === 'host' ? item('data-rkh="skip"', '⏭️ Skip this turn') + item('data-rkh="finish"', '🏁 End the game now') : ''}
+      ${play && role === 'solo' ? item('data-rk="soloskip"', '⏭️ Skip this turn') + item('data-rk="solofinish"', '🏁 End the game now') : ''}
+    </div>${back}`;
+  }
+  function riskView(v) {
+    if (!rk || !rk.g) return;
+    if (v === 'voice') { try { localStorage.setItem(NS + 'risk.voice', riskVoiceOn() ? '0' : '1'); if (!riskVoiceOn()) speechSynthesis.cancel(); } catch (e) {} }
+    else rk.view = v === 'game' ? null : v;
+    riskRender();
   }
 
-  // The coach: what each choice means right now, with the real odds.
-  const riskCoachOn = () => { try { return localStorage.getItem(NS + 'risk.coach') === '1'; } catch (e) { return false; } };
+  // 💡 Insight, bought with a hunt found in the chapter: for the rest of a
+  // turn, what the choices mean right now, with the real odds.
   function riskCoach(g, me) {
     const B = BOARD(), t = g.turn, sel = rk.sel || {}, mine = landsOf(g, me);
     const pct = x => Math.round(x * 100) + '%', armies = n => n + (n === 1 ? ' army' : ' armies');
-    const near = f => B.links.filter(([x, y]) => x === f || y === f).map(([x, y]) => x === f ? y : x);
-    const odds = (f, to) => takeOdds(g.lands[f].a, g.lands[to].a, to === B.walls && !t.gates);
+    const odds = (f, to) => takeOdds(g.lands[f].a, g.lands[to].a, to === B.walls);
+    const front = id => nearOf(id).some(n => g.lands[n].o !== me);
     const points = s => { const ls = landsOf(g, s.uid); return ls.length + (ls.includes(B.walls) ? 2 : 0); };
     const score = `<p class="rk-note">Points now: ${g.seats.filter(s => !s.out).map(s => ({ s, p: points(s) })).sort((a, b) => b.p - a.p)
       .map(x => esc(x.s.uid === me ? 'you' : x.s.name) + ' ' + x.p).join(' · ')}. Babylonia counts 3.</p>`;
-    if (t.phase === 'choose') {
-      const bonus = Math.floor(mine.length / RISK.perLands), timed = g.timer !== false;
-      return `<p><b>Easy:</b> ${RISK.easy} armies if you know it${timed ? ` (${RISK.time.easy} seconds)` : ''}. <b>Hunt:</b> ${RISK.hard} if you find the answer in the chapter${timed ? ` (${RISK.time.hard / 60} minutes)` : ''}, but only ${RISK.miss} if you don't.</p>
-        <p>You'll also get ${bonus} for holding ${mine.length} ${mine.length === 1 ? 'land' : 'lands'} (1 for every ${RISK.perLands}).</p>${score}`;
-    }
-    if (t.phase === 'answer') {
-      return t.level === 'hard' ? '<p>Open the chapter and look for the words in the question. Read the verses around them to be sure.</p>'
-        : "<p>It's from a reel: think back to what it said, and pick the answer it gave.</p>";
-    }
     if (t.phase === 'place') {
-      const front = [];
-      mine.forEach(f => near(f).forEach(to => { if (g.lands[to].o !== me) front.push({ f, to, d: g.lands[to].a }); }));
-      front.sort((a, b) => a.d - b.d);
-      return (front.length ? `<p>Put them where you'll attack from. An idea: ${esc(landName(front[0].f))}, next to ${esc(landName(front[0].to))} (${armies(front[0].d)}).</p>` : '') +
+      const spots = [];
+      mine.forEach(f => nearOf(f).forEach(to => { if (g.lands[to].o !== me) spots.push({ f, to, d: g.lands[to].a }); }));
+      spots.sort((a, b) => a.d - b.d);
+      return (spots.length ? `<p>Put them where you'll attack from. An idea: ${esc(landName(spots[0].f))}, next to ${esc(landName(spots[0].to))} (${armies(spots[0].d)}).</p>` : '') +
         `<p>Babylonia is worth 3 lands at the end, but behind its walls its defender rolls 3 dice.</p>${score}`;
     }
-    if (t.phase !== 'attack') return '';
-    if (sel.mode === 'move') return "<p>Move armies off lands with no enemy next door, toward the lands you'll attack from next turn. It ends your turn.</p>";
-    const rule = `<p class="rk-note">${esc(B.dice)}</p>`;
-    if (sel.from && sel.to) {
-      const o = odds(sel.from, sel.to), cost = o.lost < 0.5 ? 'almost nothing' : 'about ' + armies(Math.round(o.lost));
-      const gates = sel.to === B.walls && !t.gates && (g.cards[me] || []).includes('gates');
-      return `<p><b>Your odds:</b> attacking ${esc(landName(sel.to))} (${g.lands[sel.to].a}) from ${esc(landName(sel.from))} (${g.lands[sel.from].a}), you'd take it about ${pct(o.win)} of the time if you keep attacking, losing ${cost} on the way.</p>` +
-        (o.win < 0.5 ? `<p>That's a long shot.${gates ? ' Play The two leaved gates first, or' : ''} Place more armies here next turn and try then.</p>` : '') + rule;
+    if (t.phase === 'attack') {
+      if (sel.from && sel.to) {
+        const o = odds(sel.from, sel.to), cost = o.lost < 0.5 ? 'almost nothing' : 'about ' + armies(Math.round(o.lost));
+        return `<p><b>Your odds:</b> attacking ${esc(landName(sel.to))} (${g.lands[sel.to].a}) from ${esc(landName(sel.from))} (${g.lands[sel.from].a}), you'd take it about ${pct(o.win)} of the time if you keep attacking, losing ${cost} on the way.</p>` +
+          (o.win < 0.5 ? "<p>That's a long shot. Place more armies here next turn and try then.</p>" : '');
+      }
+      const best = [];
+      riskAttackers(g, me).filter(f => !sel.from || f === sel.from)
+        .forEach(f => nearOf(f).forEach(to => { if (g.lands[to].o !== me) best.push({ f, to, o: odds(f, to) }); }));
+      best.sort((a, b) => b.o.win - a.o.win);
+      return (best.length ? `<p><b>${sel.from ? 'From ' + esc(landName(sel.from)) + ', your odds' : 'Best odds right now'}:</b> ${best.slice(0, 3).map(x => `${sel.from ? '' : esc(landName(x.f)) + ' → '}${esc(landName(x.to))}, ${pct(x.o.win)}`).join('; ')}.</p>`
+        : '<p>None of your lands can attack this turn.</p>') +
+        `<p>Every roll can cost you armies, and a land left with 1 army is easy to take. Stop when the odds turn against you.</p>${score}`;
     }
-    const best = [];
-    mine.forEach(f => { if (g.lands[f].a >= 2) near(f).forEach(to => { if (g.lands[to].o !== me) best.push({ f, to, o: odds(f, to) }); }); });
-    best.sort((a, b) => b.o.win - a.o.win);
-    return (best.length ? `<p><b>Best odds right now:</b> ${best.slice(0, 2).map(x => `${esc(landName(x.f))} → ${esc(landName(x.to))}, ${pct(x.o.win)}`).join('; ')}.</p>`
-      : '<p>None of your lands has 2 or more armies to attack with. End your turn, or move armies.</p>') +
-      `<p>Every roll can cost you armies, and a land left with 1 army is easy to take. Stop when the odds turn against you.</p>${rule}${score}`;
+    const pairs = [];
+    riskMovers(g, me).filter(f => !front(f)).forEach(f => nearOf(f).forEach(to => { if (g.lands[to].o === me && front(to)) pairs.push({ f, to }); }));
+    return pairs.length ? `<p>${esc(landName(pairs[0].f))} has no enemy next to it. Move its armies to ${esc(landName(pairs[0].to))}, where they can attack next turn.</p>`
+      : '<p>Keep your armies where an enemy is next door: a land left with 1 army is easy to take.</p>';
   }
   // Exit on the map screen ends the game for everyone, so mid-game it asks
   // for a second tap.
@@ -3848,6 +3883,75 @@ const TreasureUp = (function () {
       </div>`);
   }
 
+  // ----- every game screen: players, the map, the narrator's card -----
+
+  // Who's playing, how many lands each holds, and whose turn it is.
+  function riskStripHtml(g, me) {
+    return `<div class="rk-strip">${g.state === 'play' && !g.story ? `<span class="rk-round">Round ${g.round} of ${g.rounds}</span>` : ''}${g.seats.map((s, i) => {
+      const n = landsOf(g, s.uid).length, k = kingdomOf(s.k), ins = (g.insight || {})[s.uid] || 0;
+      const now = g.state === 'play' && !g.story && g.turn && g.turn.i === i;
+      return `<span class="rk-pl${now ? ' now' : ''}${s.out ? ' out' : ''}${s.uid === me ? ' me' : ''}" style="--c:${k.color}" title="${esc(k.name)}">
+        <span class="rk-dot" style="background:${k.color}"></span>${esc(s.name)}${s.uid === me ? ' (you)' : ''}<small>${s.out ? 'fallen' : n + (n === 1 ? ' land' : ' lands')}${ins ? ' · 💡' + ins : ''}</small></span>`;
+    }).join('')}</div>`;
+  }
+  function riskScreen(g, card, ui) {
+    const small = rk.role !== 'host' && window.matchMedia && window.matchMedia('(max-width: 900px)').matches;
+    const u = Object.assign({ small }, ui, rk.view ? { can: [] } : {});
+    riskBody(`<div class="rk-screen${rk.role === 'host' ? ' tv' : ''}">${riskStripHtml(g, u.me)}
+      <div class="rk-mapbox">${riskMap(g, u)}</div>
+      <div class="rk-card">${rk.view ? riskViewHtml(g) : card}</div></div>`);
+    $('riskMore').hidden = false;
+  }
+
+  // The opening: one line of the story and how to win. The whole story is
+  // a tap away.
+  function riskStartCard() {
+    const B = BOARD(), role = rk.role;
+    return `<div class="rk-say"><span class="mic" aria-hidden="true">🎙️</span><span>${linkRefs(B.hook)}</span></div>
+      <div class="eyebrow" style="color:var(--gold)">How to win</div><p class="rk-note">${esc(B.goal)}</p>
+      ${role === 'player' ? '<p class="rk-q">The game starts when the map screen taps Let’s begin.</p>'
+        : `<div class="rk-btns"><button class="btn" ${role === 'host' ? 'data-rkh="begin"' : 'data-rk="solobegin"'}>Let’s begin</button></div>`}
+      <button class="today-alt" data-rkv="story">📜 Read the whole story</button>`;
+  }
+
+  const phaseText = t => ({ choose: 'is choosing a question', answer: 'is answering', place: 'is placing armies', attack: 'is attacking', move: 'is moving armies' })[t.phase] || '';
+  // Where a question is from, and its clock while it's being answered.
+  function riskQHead(g) {
+    const t = g.turn, Q = gameQuestion(t.q), read = t.level === 'hard' && riskReading(Q);
+    const from = Q.week && Q.week !== WEEK ? `A review from ${esc(Q.week.title)}` : read ? `Hunt: find it in ${esc(read.label)}` : 'Easy';
+    return `<div class="rk-qhead"><div class="eyebrow" style="color:var(--gold)">${from}</div>${t.phase === 'answer' && t.limit ? `<div class="rk-clock" id="rkClock">${fmtClock(riskLeft(t))}</div>` : ''}</div>`;
+  }
+  function riskResultHtml(g) {
+    const t = g.turn, r = t.result, Q = gameQuestion(t.q), n = landsOf(g, g.seats[t.i].uid).length;
+    return `<p class="rk-result ${r.right ? 'ok' : 'no'}">${r.right ? 'Right!' : (r.timeout ? 'Time’s up! The answer: ' : 'Not this time. The answer: ') + esc(Q.q.right) + '.'} +${r.got} ${r.got === 1 ? 'army' : 'armies'}${r.bonus ? ` · +${r.bonus} for ${n} lands` : ''}${r.insight ? ' · 💡 an insight' : ''}</p>
+      <p class="quiz-why">${linkRefs(Q.q.why, Q.home)}</p>`;
+  }
+  // What everyone watching sees of a turn (the map screen and the other
+  // phones): whose it is and what they're doing; the question while it's
+  // answered, so the family reads along; then the answer and why.
+  function riskWatchHtml(g) {
+    const t = g.turn, s = g.seats[t.i], k = kingdomOf(s.k);
+    let html = `<div class="rk-who"><span class="rk-dot" style="background:${k.color}"></span>${esc(s.name)} <small>${esc(phaseText(t))}</small></div>`;
+    if (t.q && (t.phase === 'answer' || t.phase === 'place')) {
+      const Q = gameQuestion(t.q), answered = !!t.result;
+      html += `${riskQHead(g)}<p class="rk-q">${answered ? linkRefs(Q.text, Q.home) : esc(Q.text)}</p>
+        <div class="rk-choices">${riskChoices(t.q).map((c, n) => `<div class="rk-choice${answered ? (c === Q.q.right ? ' right' : c === t.result.picked ? ' wrong' : ' dim') : ''}"><b>${'ABC'[n]}</b> ${esc(c)}</div>`).join('')}</div>
+        ${answered ? riskResultHtml(g) : ''}`;
+    }
+    return html;
+  }
+  // The end: who won, and everyone's points.
+  function riskOverCard(g, me) {
+    const f = g.final || riskScores(g), w = f[0], place = me ? f.findIndex(x => x.uid === me) + 1 : 0, role = rk.role;
+    return `${riskSayHtml(g)}
+      ${me ? `<p class="rk-q">${place === 1 ? '🏆 You won!' : place ? 'You finished ' + ['1st', '2nd', '3rd', '4th', '5th'][place - 1] + '.' : 'Game over.'}</p>`
+        : `<div class="rk-who">🏆 ${esc(w.name)} <small>${esc(kingdomOf(w.k).name)}</small></div>`}
+      <p class="rk-note">${esc(w.name)}: ${w.lands} ${w.lands === 1 ? 'land' : 'lands'}${w.babylon ? ', Babylon among them' : ''}, ${w.pts} points. Babylonia counts 3.</p>
+      <div class="grid gap-2" style="margin-top:10px">${f.map((x, i) => `<div class="score-row"><span>${['🥇', '🥈', '🥉'][i] || (i + 1) + '.'} ${esc(x.name)} · ${esc(kingdomOf(x.k).name)}</span><b>${x.pts}</b></div>`).join('')}</div>
+      ${role === 'host' ? '<div class="rk-btns"><button class="btn" data-rkh="again">Play again</button></div>'
+        : role === 'solo' ? '<div class="rk-btns two"><button class="btn" data-rk="soloagain">Play again</button><button class="btn ghost" data-rk="solodone">Done</button></div>' : ''}`;
+  }
+
   // ----- host: the computer with the map -----
 
   async function riskHost() {
@@ -3890,7 +3994,7 @@ const TreasureUp = (function () {
     const g = rk && rk.g;
     if (!g) return;
     const fields = {};
-    ['state', 'rounds', 'timer', 'round', 'seats', 'lands', 'cards', 'used', 'turn', 'dice', 'log', 'final', 'say', 'says', 'story'].forEach(k => { if (g[k] !== undefined) fields[k] = g[k]; });
+    ['state', 'rounds', 'timer', 'round', 'seats', 'lands', 'insight', 'used', 'turn', 'dice', 'log', 'final', 'say', 'says', 'story'].forEach(k => { if (g[k] !== undefined) fields[k] = g[k]; });
     try { await riskConn().save(rk.code, JSON.parse(JSON.stringify(fields))); }
     catch (e) { toast("Couldn't reach the game", 'Check the internet'); }
   }
@@ -3911,53 +4015,18 @@ const TreasureUp = (function () {
   function riskHostAction(act, el) {
     const g = rk && rk.g;
     if (!g) return;
-    // This screen only: the rules again, and the narrator's voice.
-    if (act === 'rules') { rk.rules = !rk.rules; return renderRiskHost(); }
-    if (act === 'voice') { try { localStorage.setItem(NS + 'risk.voice', riskVoiceOn() ? '0' : '1'); if (!riskVoiceOn()) speechSynthesis.cancel(); } catch (e) {} return renderRiskHost(); }
     if (act === 'rounds' && g.state === 'lobby') g.rounds = Number(el.dataset.n) || RISK.rounds[1];
     else if (act === 'timer' && g.state === 'lobby') g.timer = el.dataset.v !== 'off';
     else if (act === 'begin' && g.state === 'play' && g.story) riskStoryDone(g);
     else if (act === 'start' && g.state === 'lobby' && g.seats.length >= 2) riskBegin(g);
-    else if (act === 'skip' && g.state === 'play') { riskLog(g, g.seats[g.turn.i].name + "'s turn was skipped."); riskNextTurn(g); }
+    else if (act === 'skip' && g.state === 'play' && !g.story) { riskLog(g, g.seats[g.turn.i].name + "'s turn was skipped."); riskNextTurn(g); }
     else if (act === 'finish' && g.state === 'play') riskOver(g);
     else if (act === 'again' && g.state === 'over') {
       Object.assign(g, { state: 'lobby', seats: g.seats.map(s => ({ uid: s.uid, name: s.name, k: s.k })), turn: null, dice: null, final: null, log: [] });
     } else return;
+    rk.view = null;
     riskSave();
     renderRiskHost();
-  }
-
-  const phaseText = t => ({ choose: 'is choosing a question', answer: 'is answering', place: 'is placing armies', attack: 'is attacking' })[t.phase] || '';
-
-  function riskSeatsHtml(g, meUid) {
-    return `<div class="rk-seats">${g.seats.map((s, i) => {
-      const ls = landsOf(g, s.uid), armies = ls.reduce((n, id) => n + g.lands[id].a, 0), k = kingdomOf(s.k);
-      const now = g.turn && g.turn.i === i && g.state === 'play';
-      return `<div class="rk-seat${now ? ' now' : ''}${s.out ? ' out' : ''}${s.uid === meUid ? ' me' : ''}">
-        <span class="rk-dot" style="background:${k.color}"></span><b>${esc(s.name)}</b><span class="k">${esc(k.name)}</span>
-        <span class="n">${s.out ? 'fallen' : ls.length + ' land' + (ls.length === 1 ? '' : 's') + ' · ' + armies}${(g.cards && g.cards[s.uid] || []).length ? ' · 🂠' + g.cards[s.uid].length : ''}</span></div>`;
-    }).join('')}</div>`;
-  }
-
-  // What the TV shows about the turn: the question while he answers (so the
-  // family reads along), then the right answer and why.
-  function riskTurnHtml(g) {
-    const t = g.turn, s = g.seats[t.i], k = kingdomOf(s.k);
-    let html = `<div class="rk-turn" style="border-color:${k.color}"><div class="eyebrow">Round ${g.round} of ${g.rounds}</div>
-      <div class="rk-who"><span class="rk-dot" style="background:${k.color}"></span>${esc(s.name)} <small>${esc(k.name)}</small></div><p class="rk-note">${esc(phaseText(t))}</p>`;
-    if (t.q) {
-      const Q = gameQuestion(t.q), answered = !!t.result, read = t.level === 'hard' && riskReading(Q);
-      const from = Q.week && Q.week !== WEEK ? `A review from ${esc(Q.week.title)}` : read ? `Hunt: find it in ${esc(read.label)}` : 'Easy';
-      html += `<div class="rk-qhead"><div class="eyebrow" style="color:var(--gold)">${from}</div>${!answered && t.limit ? `<div class="rk-clock" id="rkClock">${fmtClock(riskLeft(t))}</div>` : ''}</div>
-        <p class="rk-q">${answered ? linkRefs(Q.text, Q.home) : esc(Q.text)}</p>
-        <div class="rk-choices">${riskChoices(t.q).map((c, n) => `<div class="rk-choice${answered ? (c === Q.q.right ? ' right' : c === t.result.picked ? ' wrong' : ' dim') : ''}"><b>${'ABC'[n]}</b> ${esc(c)}</div>`).join('')}</div>`;
-      if (answered) {
-        const r = t.result;
-        html += `<p class="rk-result ${r.right ? 'ok' : 'no'}">${r.right ? 'Right!' : r.timeout ? 'Time’s up.' : 'Not this time.'} +${r.got} ${r.got === 1 ? 'army' : 'armies'}${r.bonus ? ` · +${r.bonus} for ${landsOf(g, s.uid).length} lands` : ''}${r.card ? ' · a prophecy card' : ''}</p>
-          <p class="quiz-why">${linkRefs(Q.q.why, Q.home)}</p>`;
-      }
-    }
-    return html + '</div>';
   }
 
   function renderRiskHost() {
@@ -3969,9 +4038,9 @@ const TreasureUp = (function () {
       g.seats.forEach(s => { taken[s.k] = s; });
       const waiting = rk.players.filter(p => !seatOf(g, p.uid));
       riskBody(`
-        <div class="rk-host">
+        <div class="rk-screen">
           <div class="rk-mapbox">${riskMap({ lands: null, seats: g.seats })}</div>
-          <div class="rk-side">
+          <div class="rk-card">
             <div class="eyebrow">Join code</div>
             <div class="live-code" style="font-size:clamp(48px,7vw,96px)">${esc(rk.code)}</div>
             <p class="board-help">On each phone or tablet: open Treasure Up, tap 🎮, choose <b>Babylon Falls</b>, then <b>Join with a code</b>. Then pick a kingdom.</p>
@@ -3988,34 +4057,10 @@ const TreasureUp = (function () {
         </div>`);
       return;
     }
-    const side = g.state === 'over' ? riskFinalHtml(g)
-      : g.story ? riskStoryHtml('<div class="board-actions"><button class="btn" data-rkh="begin">Let’s begin</button></div>')
-      : rk.rules ? riskStoryHtml('<div class="board-actions"><button class="btn" data-rkh="rules">Back to the game</button></div>')
-      : riskTurnHtml(g) + diceHtml(g);
-    riskBody(`
-      <div class="rk-host">
-        <div class="rk-mapbox">${riskMap(g, g.dice ? { from: g.dice.from, to: g.dice.to } : null)}</div>
-        <div class="rk-side">
-          ${g.story ? '' : riskSayHtml(g)}
-          ${side}
-          ${riskSeatsHtml(g)}
-          <div class="rk-log">${(g.log || []).slice().reverse().map(x => `<div>${esc(x)}</div>`).join('')}</div>
-          <div class="board-actions">${g.state === 'play'
-            ? `<button class="btn ghost" data-rkh="skip">Skip this turn</button><button class="btn ghost" data-rkh="finish">End the game now</button>`
-            : `<button class="btn" data-rkh="again">Play again</button>`}
-            <button class="btn ghost" data-rkh="rules">How to play</button><button class="btn ghost" data-rkh="voice">${riskVoiceOn() ? '🔊 Voice on' : '🔈 Voice off'}</button></div>
-        </div>
-      </div>`);
+    const card = g.state === 'over' ? riskOverCard(g, null) : g.story ? riskStartCard() : riskSayHtml(g) + riskWatchHtml(g);
+    riskScreen(g, card, g.dice ? { from: g.dice.from, to: g.dice.to } : {});
     riskNarrate(g);
     riskMaybeRoll(g);
-  }
-
-  function riskFinalHtml(g) {
-    const f = g.final || riskScores(g), w = f[0], k = kingdomOf(w.k);
-    return `<div class="rk-turn" style="border-color:${k.color}"><div class="eyebrow">Game over</div>
-      <div class="rk-who">🏆 ${esc(w.name)} <small>${esc(k.name)}</small></div>
-      <p class="rk-note">${w.lands} lands${w.babylon ? ', Babylon among them' : ''}: ${w.pts} points. Babylonia counts 3.</p>
-      <div class="grid gap-2" style="margin-top:10px">${f.map((x, i) => `<div class="score-row"><span>${['🥇', '🥈', '🥉'][i] || (i + 1) + '.'} ${esc(x.name)} · ${esc(kingdomOf(x.k).name)}</span><b>${x.pts}</b></div>`).join('')}</div></div>`;
   }
 
   // ----- player: a phone or tablet -----
@@ -4051,13 +4096,16 @@ const TreasureUp = (function () {
     if (err) return riskJoinForm(code, err);
     rk = { role: 'player', code, name, g: null, sel: {}, unsub: [] };
     rk.tick = setInterval(riskTick, 500);
+    const myTurn = x => !!(x && x.state === 'play' && !x.story && x.turn && x.seats[x.turn.i] && x.seats[x.turn.i].uid === C.uid());
+    const at = x => x && x.turn ? x.turn.i + '|' + x.turn.phase : '';
     rk.unsub.push(C.watchGame(code, g => {
       if (!rk) return;
       const before = rk.g;
       rk.g = g;
-      // A new turn or phase clears what was picked on the map.
-      if (!before || !g || JSON.stringify(before.turn && [before.turn.i, before.turn.phase]) !== JSON.stringify(g.turn && [g.turn.i, g.turn.phase])) rk.sel = {};
-      if (g && g.dice && before && before.dice && g.dice.n !== before.dice.n && g.dice.won) rk.sel = {};
+      // A new turn or phase clears what was picked on the map; his own turn
+      // (or the game starting or ending) closes the ⋯ menu so he sees it.
+      if (at(before) !== at(g)) rk.sel = {};
+      if ((myTurn(g) && !myTurn(before)) || (before && g && (before.state !== g.state || before.story !== g.story))) rk.view = null;
       renderRiskPlayer();
     }));
   }
@@ -4068,59 +4116,75 @@ const TreasureUp = (function () {
   // checked and applied right here by the same rules.
   function riskSend(m) {
     if (rk.role !== 'solo') return riskConn().move(rk.code, m).catch(() => toast("Couldn't reach the game", 'Check the internet'));
-    const g = rk.g, was = g.turn ? g.turn.i : -1, phase = g.turn && g.turn.phase, rolls = g.dice && g.dice.n;
+    const g = rk.g, at = () => g.turn ? g.turn.i + '|' + g.turn.phase : '', before = at(), was = g.turn ? g.turn.i : -1;
     riskApply(g, Object.assign({}, m, { uid: riskMe() }));
-    if (!g.turn || g.turn.i !== was || g.turn.phase !== phase || (g.dice && g.dice.won && g.dice.n !== rolls)) rk.sel = {};
-    if (g.turn && g.turn.i !== was) rk.pass = true;                    // hand the screen on
+    if (at() !== before) rk.sel = {};
+    if (g.turn && g.turn.i !== was) { rk.pass = true; rk.view = null; }  // hand the screen on
+    if (g.state !== 'play') rk.view = null;
     riskSoloSave();
   }
 
-  // What a phone can tap on the map right now.
+  // What can be tapped on the map right now, on the turn's own screen.
   function riskCan(g, me) {
-    const t = g.turn;
-    if (!t || !g.seats[t.i] || g.seats[t.i].uid !== me) return [];
-    const mine = landsOf(g, me), sel = rk.sel;
-    if (t.phase === 'place') return mine;
-    if (t.phase !== 'attack') return [];
-    const from = sel.from && g.lands[sel.from] && g.lands[sel.from].o === me ? sel.from : null;
-    const strong = mine.filter(id => g.lands[id].a >= 2);
-    if (!from) return strong;
-    const near = BOARD().links.filter(([x, y]) => x === from || y === from).map(([x, y]) => x === from ? y : x);
-    return strong.concat(near.filter(id => sel.mode === 'move' ? g.lands[id].o === me : g.lands[id].o !== me));
+    const t = g.turn, sel = rk.sel;
+    if (!t || g.story || !g.seats[t.i] || g.seats[t.i].uid !== me) return [];
+    if (t.phase === 'place') return landsOf(g, me);
+    if (t.phase === 'attack') {
+      const from = riskAttackers(g, me);
+      return sel.from ? from.concat(nearOf(sel.from).filter(id => g.lands[id].o !== me)) : from;
+    }
+    if (t.phase === 'move') {
+      if (t.moved) return g.lands[t.moved.from].a >= 2 ? [t.moved.to] : [];
+      const from = riskMovers(g, me);
+      return sel.from ? from.concat(nearOf(sel.from).filter(id => g.lands[id].o === me && !from.includes(id))) : from;
+    }
+    return [];
   }
+  // Forget a pick the map no longer allows: a land that fell, or that is
+  // down to 1 army.
+  function riskSelFix(g, me) {
+    const t = g.turn, sel = rk.sel;
+    if (t.phase === 'attack') {
+      if (sel.from && !riskAttackers(g, me).includes(sel.from)) sel.from = sel.to = null;
+      if (sel.to && (!sel.from || g.lands[sel.to].o === me)) sel.to = null;
+    }
+    if (t.phase === 'move' && sel.from && !riskMovers(g, me).includes(sel.from)) sel.from = null;
+  }
+  const riskMapUi = (g, me) => {
+    const t = g.turn, sel = rk.sel, moved = t.phase === 'move' && t.moved;
+    return { can: riskCan(g, me), from: moved ? moved.from : sel.from || sel.place, to: moved ? moved.to : sel.to };
+  };
 
+  // A tap on the map: place an army; pick a land to attack from, then tap
+  // a neighbour to roll (each tap a roll); pick a land to move from, then
+  // tap a neighbour of yours (each tap an army).
   function riskTap(id) {
     const g = rk && rk.g, me = riskMe();
-    if (!g || rk.role === 'host' || !riskCan(g, me).includes(id)) return;
+    if (!g || rk.role === 'host' || rk.view || !riskCan(g, me).includes(id)) return;
     const t = g.turn, sel = rk.sel, own = g.lands[id].o === me;
-    if (t.phase === 'place') {                                          // one army a tap
+    if (t.phase === 'place') {
       sel.place = id;
       riskSend({ kind: 'place', a: id, n: 1 });
-    } else if (sel.mode === 'move') {                                   // from one of yours to a neighbour of yours
-      if (own && sel.from && sel.from !== id && adjacent(sel.from, id)) { sel.to = id; sel.n = 1; }
+    } else if (t.phase === 'attack') {
+      if (!own) { sel.to = id; riskSend({ kind: 'attack', a: sel.from, b: id }); }
+      else if (sel.from === id) sel.from = sel.to = null;
       else { sel.from = id; sel.to = null; }
-    } else if (own) { sel.from = id; sel.to = null; }                   // attack from here…
-    else sel.to = id;                                                   // …to there
+    } else if (t.phase === 'move') {
+      if (t.moved) riskSend({ kind: 'shift', a: t.moved.from, b: t.moved.to });
+      else if (sel.from && sel.from !== id && adjacent(sel.from, id)) riskSend({ kind: 'shift', a: sel.from, b: id });
+      else sel.from = sel.from === id ? null : id;
+    }
     riskRender();
   }
 
   function riskPlayerAction(act, el) {
     const g = rk && rk.g, sel = rk.sel;
     if (!g) return;
-    if (act === 'land') return riskTap(el.dataset.v);
-    if (act === 'coach') { try { localStorage.setItem(NS + 'risk.coach', riskCoachOn() ? '0' : '1'); } catch (e) {} return riskRender(); }
     if (act === 'pick') riskSend({ kind: 'pick', a: el.dataset.k });
     else if (act === 'level') riskSend({ kind: 'level', a: el.dataset.v });
     else if (act === 'ans') { sel.answered = true; riskSend({ kind: 'answer', a: el.dataset.v }); }
     else if (act === 'allhere' && sel.place) riskSend({ kind: 'place', a: sel.place, n: g.turn.armies });
-    else if (act === 'attack' && sel.from && sel.to) riskSend({ kind: 'attack', a: sel.from, b: sel.to });
-    else if (act === 'card') riskSend({ kind: 'card', a: el.dataset.v });
-    else if (act === 'movemode') { rk.sel = { mode: 'move' }; }
-    else if (act === 'cancel') { rk.sel = {}; }
-    else if (act === 'less') sel.n = Math.max(1, (sel.n || 1) - 1);
-    else if (act === 'more') sel.n = Math.min(g.lands[sel.from].a - 1, (sel.n || 1) + 1);
-    else if (act === 'domove' && sel.from && sel.to) riskSend({ kind: 'move', a: sel.from, b: sel.to, n: sel.n || 1 });
-    else if (act === 'end') riskSend({ kind: 'end' });
+    else if (act === 'insight' || act === 'done' || act === 'end') riskSend({ kind: act });
     riskRender();
   }
 
@@ -4128,13 +4192,12 @@ const TreasureUp = (function () {
     if (!rk || rk.role !== 'player') return;
     const g = rk.g, me = riskConn().uid(), B = BOARD();
     if (!g) { riskBody('<div class="live-big">The game has ended.</div><p class="live-sub">Thanks for playing!</p>'); return; }
-    const seat = seatOf(g, me), k = seat && kingdomOf(seat.k);
-    const head = seat ? `<div class="rk-me"><span class="rk-dot" style="background:${k.color}"></span><b>${esc(seat.name)}</b> · ${esc(k.name)}
-      <span class="n">${seat.out ? 'fallen' : landsOf(g, me).length + (landsOf(g, me).length === 1 ? ' land' : ' lands')}</span></div>` : '';
+    const seat = seatOf(g, me);
     if (g.state === 'lobby') {
-      const taken = {};
+      const taken = {}, k = seat && kingdomOf(seat.k);
       g.seats.forEach(s => { taken[s.k] = s; });
-      riskBody(`${head}<div class="clue"><p class="clue-q">${seat ? "You're in! Watch the map." : 'Pick your kingdom'}</p>
+      riskBody(`${seat ? `<div class="rk-me"><span class="rk-dot" style="background:${k.color}"></span><b>${esc(seat.name)}</b> · ${esc(k.name)}</div>` : ''}
+        <div class="clue"><p class="clue-q">${seat ? "You're in! Watch the map." : 'Pick your kingdom'}</p>
         <div class="rk-kingdoms">${B.kingdoms.map(x => {
           const who = taken[x.id], mine = who && who.uid === me;
           return `<button class="rk-king${mine ? ' mine' : ''}${who && !mine ? ' taken' : ''}" data-rk="pick" data-k="${x.id}"${who && !mine ? ' disabled' : ''}>
@@ -4143,14 +4206,16 @@ const TreasureUp = (function () {
         <p class="board-help">${seat ? 'You can still switch until the game starts.' : ''}</p></div>`);
       return;
     }
-    if (g.state === 'over') {
-      const f = g.final || [], place = f.findIndex(x => x.uid === me) + 1;
-      riskBody(`${head}<div class="live-big">${place === 1 ? '🏆 You won!' : place ? 'You finished ' + ['1st', '2nd', '3rd', '4th', '5th'][place - 1] : 'Game over'}</div>
-        <p class="live-sub">${f[0] ? esc(f[0].name) + ' wins with ' + f[0].pts + ' points.' : ''}</p>`);
-      return;
+    const mine = g.state === 'play' && !g.story && seat && !seat.out && g.seats[g.turn.i].uid === me;
+    let card, ui = {};
+    if (g.state === 'over') card = riskOverCard(g, me);
+    else if (g.story) card = riskStartCard();
+    else if (mine) { riskSelFix(g, me); card = riskMyCard(g, me); ui = riskMapUi(g, me); }
+    else {
+      card = (!seat ? '<p class="rk-note">You joined after the game started. Watch the map!</p>'
+        : seat.out ? '<p class="rk-note">Your kingdom has fallen. Watch how it ends!</p>' : '') + riskSayHtml(g) + riskWatchHtml(g);
     }
-    const c = riskControls(g, me, true);
-    riskBody(`${head}${c.map}<div class="rk-panel">${c.panel}</div>`);
+    riskScreen(g, card, Object.assign({ me }, ui));
     riskMaybeRoll(g);
   }
 
@@ -4208,9 +4273,7 @@ const TreasureUp = (function () {
     const g = rk.g;
     if (act === 'soloready') rk.pass = false;
     else if (act === 'solobegin' && g.story) riskStoryDone(g);
-    else if (act === 'solorules') { rk.rules = !rk.rules; return renderRiskSolo(); }
-    else if (act === 'solovoice') { try { localStorage.setItem(NS + 'risk.voice', riskVoiceOn() ? '0' : '1'); if (!riskVoiceOn()) speechSynthesis.cancel(); } catch (e) {} return renderRiskSolo(); }
-    else if (act === 'soloskip' && g.state === 'play') { riskLog(g, g.seats[g.turn.i].name + "'s turn was skipped."); riskNextTurn(g); rk.sel = {}; rk.pass = g.state === 'play'; }
+    else if (act === 'soloskip' && g.state === 'play' && !g.story) { riskLog(g, g.seats[g.turn.i].name + "'s turn was skipped."); riskNextTurn(g); rk.sel = {}; rk.pass = g.state === 'play'; }
     else if (act === 'solofinish' && g.state === 'play') riskOver(g);
     else if (act === 'soloagain') {
       rk.g = { board: g.board, state: 'lobby', rounds: g.rounds, timer: g.timer, seats: g.seats.map(x => ({ uid: x.uid, name: x.name, k: x.k })) };
@@ -4222,114 +4285,77 @@ const TreasureUp = (function () {
       try { localStorage.removeItem(SOLO_KEY); } catch (e) {}
       return closeRisk();
     }
+    rk.view = null;
     riskSoloSave();
     renderRiskSolo();
   }
 
   function renderRiskSolo() {
     if (!rk || rk.role !== 'solo') return;
-    const g = rk.g, small = window.matchMedia && window.matchMedia('(max-width: 900px)').matches;
-    const log = `<div class="rk-log">${(g.log || []).slice().reverse().map(x => `<div>${esc(x)}</div>`).join('')}</div>`;
-    if (g.state === 'over') {
-      riskNarrate(g);
-      riskBody(`<div class="rk-host"><div class="rk-mapbox">${riskMap(g)}</div><div class="rk-side">${riskSayHtml(g)}${riskFinalHtml(g)}${riskSeatsHtml(g)}
-        <div class="board-actions"><button class="btn" data-rk="soloagain">Play again</button><button class="btn ghost" data-rk="solodone">Done</button></div></div></div>`);
-      return;
+    const g = rk.g;
+    let card, ui = g.dice ? { from: g.dice.from, to: g.dice.to } : {};
+    if (g.state === 'over') card = riskOverCard(g, null);
+    else if (g.story) card = riskStartCard();
+    else if (rk.pass) {
+      const s = g.seats[g.turn.i], k = kingdomOf(s.k);
+      card = `${riskSayHtml(g)}<div class="rk-pass" style="border-color:${k.color}"><p class="rk-q">Pass to ${esc(s.name)}</p><p class="rk-note">${esc(k.name)}'s turn.</p>
+        <div class="rk-btns"><button class="btn" data-rk="soloready">I'm ${esc(s.name)}: go</button></div></div>`;
+    } else {
+      const me = g.seats[g.turn.i].uid;
+      riskSelFix(g, me);
+      card = riskMyCard(g, me);
+      ui = riskMapUi(g, me);
     }
-    const s = g.seats[g.turn.i], k = kingdomOf(s.k);
-    const foot = `<button class="btn ghost" data-rk="solorules">How to play</button><button class="btn ghost" data-rk="solovoice">${riskVoiceOn() ? '🔊 Voice on' : '🔈 Voice off'}</button>`;
-    if (g.story || rk.rules) {
-      riskBody(`<div class="rk-host"><div class="rk-mapbox">${riskMap(g)}</div><div class="rk-side">
-        ${riskStoryHtml(`<div class="board-actions">${g.story ? '<button class="btn" data-rk="solobegin">Let’s begin</button>' : '<button class="btn" data-rk="solorules">Back to the game</button>'}${g.story ? foot : ''}</div>`)}
-        ${riskSeatsHtml(g, s.uid)}</div></div>`);
-      return riskNarrate(g);
-    }
-    const who = `${riskSayHtml(g)}<div class="rk-turn" style="border-color:${k.color}"><div class="eyebrow">Round ${g.round} of ${g.rounds}</div>
-      <div class="rk-who"><span class="rk-dot" style="background:${k.color}"></span>${esc(s.name)} <small>${esc(k.name)}</small></div></div>`;
-    if (rk.pass) {
-      riskBody(`<div class="rk-host"><div class="rk-mapbox">${riskMap(g, g.dice ? { from: g.dice.from, to: g.dice.to } : null)}</div><div class="rk-side">
-        <div class="rk-pass" style="border-color:${k.color}"><div class="eyebrow">Round ${g.round} of ${g.rounds}</div>
-          <p class="rk-q">Pass to ${esc(s.name)}</p><p class="rk-note">${esc(k.name)}'s turn.</p>
-          <div class="rk-btns"><button class="btn" data-rk="soloready">I'm ${esc(s.name)}: go</button></div></div>
-        ${riskSayHtml(g)}${diceHtml(g)}${riskSeatsHtml(g, s.uid)}${log}</div></div>`);
-      riskNarrate(g);
-      return riskMaybeRoll(g);
-    }
-    const c = riskControls(g, s.uid, small);
-    riskBody(`<div class="rk-host">${c.map}<div class="rk-side">${who}<div class="rk-panel" style="margin-top:0">${c.panel}</div>
-      ${riskSeatsHtml(g, s.uid)}${log}
-      <div class="board-actions"><button class="btn ghost" data-rk="soloskip">Skip this turn</button><button class="btn ghost" data-rk="solofinish">End the game now</button>${foot}</div></div></div>`);
+    riskScreen(g, card, ui);
     riskNarrate(g);
     riskMaybeRoll(g);
   }
 
-  // A player's map and controls during the game: on their own phone, or on
-  // the one screen everyone shares.
-  function riskControls(g, me, small) {
-    const B = BOARD(), seat = seatOf(g, me);
-    const t = g.turn, mine = t && g.seats[t.i] && g.seats[t.i].uid === me, sel = rk.sel;
-    const can = riskCan(g, me);
-    const chip = id => `<button class="rk-chip${sel.from === id || sel.place === id ? ' on' : ''}${sel.to === id ? ' to' : ''}" data-rk="land" data-v="${id}">${esc(landName(id))} · ${g.lands[id].a}</button>`;
-    const chips = (label, ids) => ids.length ? `<div class="rk-chips"><span class="lbl">${label}</span>${ids.map(chip).join('')}</div>` : '';
-    const own = can.filter(id => g.lands[id].o === me), other = can.filter(id => g.lands[id].o !== me);
-    const map = `<div class="rk-mapbox${small ? ' small' : ''}">${riskMap(g, { small, can, from: sel.from || sel.place, to: sel.to })}</div>`;
-    let panel = '';
-    if (g.story) panel = `<p class="rk-q">Listen to the story on the big screen.</p><p class="rk-note"><b>How to win:</b> ${esc(B.goal)}</p>`;
-    else if (!seat) panel = '<p class="rk-note">You joined after the game started. Watch the map!</p>';
-    else if (seat.out) panel = '<p class="rk-note">Your kingdom has fallen. Watch how it ends!</p>';
-    else if (!mine) {
-      const s = g.seats[t.i];
-      panel = `<p class="rk-note"><span class="rk-dot" style="background:${kingdomOf(s.k).color}"></span> ${esc(s.name)} ${esc(phaseText(t))}.</p>${diceHtml(g)}`;
-    } else if (t.phase === 'choose') {
-      panel = `<p class="rk-q">Your turn! Pick a question for armies.</p>
-        <div class="rk-btns"><button class="btn" data-rk="level" data-v="easy">Easy · +${RISK.easy} armies</button>
-        <button class="btn" data-rk="level" data-v="hard">Hunt through a chapter · +${RISK.hard}</button></div>
-        <p class="rk-note">A miss still gets ${RISK.miss}. You also get 1 for every ${RISK.perLands} lands you hold.${RISK.maxCards ? ' A right hunt can win a prophecy card.' : ''}</p>`;
-    } else if (t.phase === 'answer') {
+  // The narrator's card on a player's own turn: what just happened, then
+  // what they can do next, which is mostly tapping the map. A button or two
+  // at most.
+  function riskMyCard(g, me) {
+    const B = BOARD(), t = g.turn, sel = rk.sel, s = seatOf(g, me);
+    const have = (g.insight || {})[me] || 0;
+    const insightBtn = !t.insight && have ? `<button class="btn ghost" data-rk="insight">💡 Show the odds (${have} left)</button>` : '';
+    const coach = t.insight ? `<div class="rk-coach"><div class="eyebrow">💡 Insight</div>${riskCoach(g, me)}</div>` : '';
+    const btns = (...b) => b.some(Boolean) ? `<div class="rk-btns${b.filter(Boolean).length > 1 ? ' two' : ''}">${b.filter(Boolean).join('')}</div>` : '';
+    if (t.phase === 'choose') {
+      return `${riskSayHtml(g)}<p class="rk-q">Your turn, ${esc(s.name)}. Raise your army!</p>
+        <div class="rk-btns two"><button class="btn" data-rk="level" data-v="easy">Easy · ${RISK.easy} armies</button><button class="btn" data-rk="level" data-v="hard">Hunt · ${RISK.hard} armies</button></div>
+        <p class="rk-note">A hunt means finding the answer in the chapter; get it right and you also earn a 💡 insight. A miss still gets ${RISK.miss}.</p>`;
+    }
+    if (t.phase === 'answer') {
       const Q = gameQuestion(t.q), read = t.level === 'hard' && riskReading(Q);
-      const from = Q.week && Q.week !== WEEK ? `A review from ${esc(Q.week.title)}` : read ? `Hunt: find it in ${esc(read.label)}` : 'Easy';
-      panel = `<div class="rk-qhead"><div class="eyebrow" style="color:var(--gold)">${from}</div>${t.limit ? `<div class="rk-clock" id="rkClock">${fmtClock(riskLeft(t))}</div>` : ''}</div>
-        <p class="rk-q">${esc(Q.text)}</p>
+      return `${riskQHead(g)}<p class="rk-q">${esc(Q.text)}</p>
         ${read ? `<a class="deep-open" href="${esc(read.url)}" target="_blank" rel="noopener noreferrer">Open ${esc(read.label)} ↗</a>` : ''}
         <div class="rk-btns">${riskChoices(t.q).map(c => `<button class="ls-opt" data-rk="ans" data-v="${esc(c)}"${sel.answered ? ' disabled' : ''}>${esc(c)}</button>`).join('')}</div>
-        <button class="today-alt" data-rk="ans" data-v="">I don't know</button>`;
-    } else {
-      const r = t.result, Q = gameQuestion(t.q);
-      const res = r && t.phase === 'place' ? `<p class="rk-result ${r.right ? 'ok' : 'no'}">${r.right ? 'Right!' : (r.timeout ? 'Time’s up! The answer: ' : 'Not this time: ') + esc(Q.q.right) + '.'} ${linkRefs(Q.q.why, Q.home)}</p>` : '';
-      const hand = (g.cards[me] || []).map(id => B.cards.find(c => c.id === id)).filter(Boolean);
-      const cards = hand.length ? `<div class="rk-cards">${hand.map(c => `<div class="rk-card"><b>${esc(c.title)}</b><span>“${esc(c.quote)}” ${linkRefs(c.ref)}</span><small>${esc(c.does)}</small>
-        <button class="btn" data-rk="card" data-v="${c.id}"${c.id === 'weighed' && g.lands[B.walls].o === me ? ' disabled style="opacity:.4"' : ''}>Play it</button></div>`).join('')}</div>` : '';
-      if (t.phase === 'place') {
-        panel = `${res}<p class="rk-q">Place ${t.armies} ${t.armies === 1 ? 'army' : 'armies'}</p>
-          <p class="rk-note">Tap your lands, on the map or here: one army a tap.</p>
-          ${chips('Your lands', own)}
-          ${sel.place ? `<div class="rk-btns"><button class="btn" data-rk="allhere">All ${t.armies} on ${esc(landName(sel.place))}</button></div>` : ''}${cards}`;
-      } else if (sel.mode === 'move') {
-        const A = sel.from && g.lands[sel.from];
-        panel = `<p class="rk-q">Move armies, then your turn ends</p>
-          <p class="rk-note">${!sel.from ? 'Tap one of your lands to move from.' : !sel.to ? 'Now tap a land of yours next to ' + esc(landName(sel.from)) + '.' : 'From ' + esc(landName(sel.from)) + ' to ' + esc(landName(sel.to)) + ':'}</p>
-          ${sel.to ? `<div class="rk-step"><button class="btn ghost" data-rk="less">−</button><b>${sel.n || 1}</b><button class="btn ghost" data-rk="more"${(sel.n || 1) >= A.a - 1 ? ' disabled' : ''}>+</button></div>
-            <div class="rk-btns"><button class="btn" data-rk="domove">Move ${sel.n || 1} and end turn</button></div>` : ''}
-          ${chips('From', own.filter(id => g.lands[id].a >= 2 && !(sel.from && adjacent(sel.from, id))))}${sel.from ? chips('To', own.filter(id => id !== sel.from && adjacent(sel.from, id))) : ''}
-          <div class="rk-btns"><button class="btn ghost" data-rk="end">End turn without moving</button><button class="btn ghost" data-rk="cancel">Back to attacking</button></div>`;
-      } else {
-        const A = sel.from && g.lands[sel.from], D = sel.to && g.lands[sel.to];
-        const walls = sel.to === B.walls && !t.gates;
-        panel = `${diceHtml(g)}<p class="rk-q">Attack!</p>
-          <p class="rk-note">${!sel.from ? 'Tap one of your lands with 2 or more armies.' : !sel.to ? 'Now tap a land next to ' + esc(landName(sel.from)) + ' to attack.'
-            : esc(landName(sel.from)) + ' (' + A.a + ') attacks ' + esc(landName(sel.to)) + ' (' + D.a + ')' + (walls ? '. Babylon’s walls: its defender rolls 3 dice.' : '.')}</p>
-          ${chips('Attack from', own)}${sel.from ? chips('Attack', other) : ''}
-          ${sel.from && sel.to && A.a >= 2 ? `<div class="rk-btns"><button class="btn" data-rk="attack">Roll the dice</button></div>` : ''}
-          ${t.gates ? '<p class="rk-note">The gates are open this turn: Babylon’s walls don’t count.</p>' : ''}
-          ${cards}
-          <div class="rk-btns"><button class="btn ghost" data-rk="movemode">Move armies, then end turn</button><button class="btn ghost" data-rk="end">End turn</button></div>`;
-      }
+        <button class="today-alt" data-rk="ans" data-v=""${sel.answered ? ' disabled' : ''}>I don't know</button>`;
     }
-    // The narrator's line on top; the coach, when he wants it, on his turn.
-    const coach = mine && !g.story && seat && !seat.out
-      ? `<div class="rk-coach"><button class="rk-coach-btn" data-rk="coach" aria-expanded="${riskCoachOn()}">💡 Coach ${riskCoachOn() ? '▾' : '▸'}</button>${riskCoachOn() ? `<div class="rk-coach-body">${riskCoach(g, me)}</div>` : ''}</div>` : '';
-    panel = (g.story || rk.role === 'solo' ? '' : riskSayHtml(g)) + coach + panel;
-    return { map, panel };
+    if (t.phase === 'place') {
+      const Q = gameQuestion(t.q);
+      return `<p class="rk-note">${linkRefs(Q.text, Q.home)}</p>${riskResultHtml(g)}
+        <p class="rk-q">Tap your lands to place ${t.armies} ${t.armies === 1 ? 'army' : 'armies'}, one a tap.</p>
+        ${btns(sel.place && t.armies > 1 ? `<button class="btn ghost" data-rk="allhere">All ${t.armies} on ${esc(landName(sel.place))}</button>` : '', insightBtn)}${coach}`;
+    }
+    if (t.phase === 'attack') {
+      const can = riskAttackers(g, me);
+      const next = !can.length ? 'None of your lands can attack: that takes 2 or more armies next to an enemy.'
+        : !sel.from ? 'Attack? Tap one of your lands to attack from.'
+        : !sel.to ? `Tap a land next to ${landName(sel.from)} to attack it. Each tap rolls the dice.`
+        : `Tap ${landName(sel.to)} again to roll again.`;
+      const walls = sel.from && g.lands[B.walls].o !== me && adjacent(sel.from, B.walls)
+        ? `<p class="rk-note">${esc(landName(B.walls))} has walls: its defender rolls 3 dice.</p>` : '';
+      return `${riskSayHtml(g)}<p class="rk-q">${esc(next)}</p>${walls}${btns('<button class="btn" data-rk="done">Done attacking</button>', insightBtn)}${coach}`;
+    }
+    const m = t.moved;
+    const next = m ? `${m.n} moved to ${landName(m.to)}.` + (g.lands[m.from].a >= 2 ? ` Tap ${landName(m.to)} again to move another.` : '')
+      : !riskMovers(g, me).length ? 'No armies can move this turn.'
+      : !sel.from ? 'Move armies? Tap a land to move from.'
+      : `Now tap a land of yours next to ${landName(sel.from)}, one army a tap.`;
+    return `${riskSayHtml(g)}<p class="rk-q">${esc(next)}</p>
+      <p class="rk-note">One move a turn, from one land to a neighbour. Each land keeps at least 1.</p>
+      ${btns('<button class="btn" data-rk="end">End turn</button>', insightBtn)}${coach}`;
   }
 
 
@@ -6265,6 +6291,8 @@ const TreasureUp = (function () {
     // Babylon Falls: the map screen's buttons, a phone's buttons, and its map.
     $('riskExit').addEventListener('click', riskExit);
     $('risk').addEventListener('click', e => {
+      const v = e.target.closest('[data-rkv]');
+      if (v) { riskView(v.dataset.rkv); return; }
       const land = e.target.closest('[data-land]');
       if (land && rk && rk.role !== 'host') { riskTap(land.dataset.land); return; }
       const h = e.target.closest('[data-rkh]');

@@ -1,7 +1,7 @@
 // Draws Babylon Falls' map into content/boards.js: several seed points per
 // land along its real extent, their Voronoi cells merged and clipped to a
 // hand-drawn coastline, then the borders worked out from the shapes and
-// compared with the ones wanted (WANT). Kingdoms, cards and the rest of the
+// compared with the ones wanted (WANT). Kingdoms, the story and the rest of the
 // board are kept as they are.
 //   npm install --no-save d3-delaunay@6 polygon-clipping@0.15 polylabel@1
 //   node tools/build-babylon-map.js
