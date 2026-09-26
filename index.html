@@ -293,7 +293,7 @@
     padding: calc(var(--sat) + 16px) 16px calc(var(--sab) + 16px);
     background: rgba(3,3,10,.82); backdrop-filter: blur(4px);
   }
-  .overlay[hidden], #board[hidden], #play[hidden], #live[hidden], #fam[hidden], #dev[hidden] { display: none; }
+  .overlay[hidden], #board[hidden], #play[hidden], #live[hidden], #fam[hidden], #dev[hidden], #risk[hidden] { display: none; }
   .overlay-card {
     width: 100%; max-width: 520px; max-height: 88dvh; overflow-y: auto;
     padding: 18px; border-radius: 22px; background: #12121f; border: 1px solid rgba(255,255,255,.12);
@@ -315,7 +315,7 @@
   .btn.ghost { background: rgba(255,255,255,.1); color: #fff; border: 1px solid rgba(255,255,255,.22); }
   .btn:focus-visible, .tile:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 
-  #board, #play, #live, #fam, #dev {
+  #board, #play, #live, #fam, #dev, #risk {
     position: fixed; inset: 0; z-index: 110; overflow-y: auto;
     display: flex; flex-direction: column;
     padding: calc(var(--sat) + 14px) 16px calc(var(--sab) + 16px);
@@ -480,6 +480,71 @@
   .live-big { font-weight: 900; font-size: clamp(30px, 8vw, 64px); line-height: 1.1; text-align: center; margin-top: 18vh; }
   .live-sub { text-align: center; font-size: clamp(16px, 4vw, 24px); color: rgba(255,255,255,.75); margin-top: 12px; }
   .live-mode { font-size: 12px; color: rgba(255,255,255,.5); margin-top: 16px; }
+
+  /* ---- Babylon Falls: the map on a computer, a controller on each phone ---- */
+  .rk-host { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 18px; align-items: start; }
+  @media (max-width: 900px) { .rk-host { grid-template-columns: 1fr; } }
+  .rk-mapbox { border-radius: 16px; overflow: hidden; border: 1px solid rgba(255,255,255,.15); background: #16324f; }
+  .rk-map { display: block; width: 100%; height: auto; }
+  .rk-sea { fill: #16324f; }
+  .rk-map .sea { fill: #8dbbe8; font-size: 15px; font-style: italic; text-anchor: middle; opacity: .75; pointer-events: none; }
+  .rk-land { stroke: #0b1020; stroke-width: 2.5; stroke-linejoin: round; transition: fill .3s; }
+  .rk-land.can { cursor: pointer; stroke: #fff; stroke-width: 3; filter: brightness(1.18); }
+  .rk-land.from { stroke: #fff; stroke-width: 7; }
+  .rk-land.to { stroke: var(--gold); stroke-width: 7; }
+  .rk-walls { fill: none; stroke: var(--gold); stroke-width: 4; stroke-dasharray: 10 6; pointer-events: none; }
+  .rk-lab { pointer-events: none; }
+  .rk-lab .nm { fill: #fff; font-size: 17px; font-weight: 800; text-anchor: middle; paint-order: stroke; stroke: rgba(0,0,0,.65); stroke-width: 4px; }
+  .rk-lab .badge { fill: #fff; stroke: #0b1020; stroke-width: 2; }
+  .rk-lab .ar { fill: #0b1020; font-size: 21px; font-weight: 900; text-anchor: middle; }
+  .rk-side { display: grid; gap: 12px; }
+  .rk-turn { padding: 12px 14px; border-radius: 14px; background: rgba(0,0,0,.35); border: 2px solid rgba(255,255,255,.2); }
+  .rk-who { font-size: 22px; font-weight: 900; display: flex; align-items: center; gap: 8px; margin-top: 2px; }
+  .rk-who small { font-size: 14px; color: rgba(255,255,255,.7); font-weight: 700; }
+  .rk-dot { display: inline-block; width: 12px; height: 12px; border-radius: 99px; flex: 0 0 auto; vertical-align: middle; }
+  .rk-note { font-size: 14px; line-height: 1.4; color: rgba(255,255,255,.78); margin-top: 4px; }
+  .rk-q { font-size: 18px; font-weight: 800; line-height: 1.3; margin: 6px 0 10px; }
+  .rk-choices { display: grid; gap: 6px; }
+  .rk-choice { padding: 8px 10px; border-radius: 10px; background: rgba(255,255,255,.08); font-size: 15px; }
+  .rk-choice.right { background: rgba(52,211,153,.25); outline: 2px solid var(--right); }
+  .rk-choice.wrong { background: rgba(251,113,133,.22); }
+  .rk-choice.dim { opacity: .45; }
+  .rk-result { font-weight: 800; margin-top: 10px; line-height: 1.4; }
+  .rk-result.ok { color: var(--right); }
+  .rk-result.no { color: #fca5a5; }
+  .rk-dice { padding: 10px 12px; border-radius: 14px; background: rgba(0,0,0,.3); }
+  .rk-roll { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
+  .rk-roll > span { display: flex; gap: 6px; }
+  .rk-die { width: 38px; height: 38px; border-radius: 9px; display: grid; place-items: center; font-weight: 900; font-size: 20px; }
+  .rk-die.att { background: #dc2626; color: #fff; }
+  .rk-die.def { background: #f8fafc; color: #0b1020; }
+  .rk-seats { display: grid; gap: 6px; }
+  .rk-seat { display: grid; grid-template-columns: auto auto 1fr auto; gap: 8px; align-items: center; padding: 8px 10px; border-radius: 10px; background: rgba(255,255,255,.06); font-size: 14px; }
+  .rk-seat.now { outline: 2px solid var(--gold); }
+  .rk-seat.out { opacity: .45; }
+  .rk-seat .k { color: rgba(255,255,255,.6); }
+  .rk-seat .n { font-weight: 800; }
+  .rk-log { font-size: 13px; color: rgba(255,255,255,.65); display: grid; gap: 3px; max-height: 160px; overflow: auto; }
+  .rk-kingdoms { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; margin-top: 10px; }
+  .rk-king { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 12px; background: rgba(255,255,255,.08); border: 2px solid transparent; font: inherit; font-weight: 800; color: #fff; text-align: left; }
+  button.rk-king { cursor: pointer; }
+  .rk-king small { width: 100%; font-size: 12px; font-weight: 600; color: rgba(255,255,255,.6); }
+  .rk-king.mine { border-color: var(--gold); }
+  .rk-king.taken, .rk-king.open { opacity: .5; }
+  .rk-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .rk-chips .lbl { width: 100%; font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: rgba(255,255,255,.55); }
+  .rk-chip { padding: 9px 12px; border-radius: 999px; font: inherit; font-size: 14px; font-weight: 800; color: #fff; background: rgba(255,255,255,.1); border: 2px solid rgba(255,255,255,.2); cursor: pointer; }
+  .rk-chip.on { border-color: #fff; background: rgba(255,255,255,.22); }
+  .rk-chip.to { border-color: var(--gold); background: rgba(252,211,77,.18); }
+  .rk-len { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+  .rk-me { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 15px; }
+  .rk-me .n { margin-left: auto; font-weight: 800; }
+  .rk-panel { margin-top: 12px; max-width: 560px; }
+  .rk-btns { display: grid; gap: 8px; margin-top: 10px; }
+  .rk-step { display: flex; align-items: center; gap: 16px; justify-content: center; margin-top: 8px; font-size: 24px; }
+  .rk-cards { display: grid; gap: 8px; margin-top: 12px; }
+  .rk-card { padding: 10px 12px; border-radius: 12px; background: rgba(252,211,77,.1); border: 1px solid rgba(252,211,77,.5); display: grid; gap: 4px; font-size: 14px; }
+  .rk-card small { color: rgba(255,255,255,.72); }
 
   /* ---- Family: people, join links and the family chat ---- */
   .hud-dot { position: absolute; top: 1px; right: 1px; width: 9px; height: 9px; border-radius: 99px; background: var(--gold); box-shadow: 0 0 0 2px #0a0a14; }
@@ -801,6 +866,18 @@
     <button id="liveExit" class="btn ghost" style="margin-left:auto">Exit</button>
   </div>
   <div id="liveBody"></div>
+</section>
+
+<!-- Babylon Falls: the family map game. -->
+<section id="risk" hidden aria-label="Babylon Falls">
+  <div class="board-top">
+    <div>
+      <div class="eyebrow">Family map game</div>
+      <div id="riskTitle" class="board-title"></div>
+    </div>
+    <button id="riskExit" class="btn ghost" style="margin-left:auto">Exit</button>
+  </div>
+  <div id="riskBody"></div>
 </section>
 
 <!-- Family: sign-in, everyone's progress, join links, and the family chat. -->
@@ -2177,6 +2254,7 @@ const TreasureUp = (function () {
     rows.push(gameRow('climb', '🪜', 'Scripture Climb', 'Ten questions, each worth more. Three lifelines.', climbStatus(), false));
     rows.push(gameRow('live', '📡', 'Live game', 'The TV shows the questions; everyone answers on their own phone or tablet.', 'Host or join with a code', false));
     rows.push(gameRow('board', '📺', 'Scripture Showdown', 'A quiz-show game for the whole family, best on the TV.', 'Play together', false));
+    if (BOARD()) rows.push(gameRow('babylon', '🏰', BOARD().title, 'A Risk-style map game for 2 to 5: the map on a computer or TV, everyone on their own phone or tablet.', 'Put up the map, or join with a code', false));
     $('gamesBody').innerHTML = rows.join('');
   }
 
@@ -2191,6 +2269,7 @@ const TreasureUp = (function () {
     else if (id === 'word') openWord();
     else if (id === 'climb') openClimb();
     else if (id === 'live') liveStart();
+    else if (id === 'babylon') riskChooser();
   }
 
   let playing = null;   // 'puzzle' | 'sayings'
@@ -3134,6 +3213,732 @@ const TreasureUp = (function () {
     }
   }
 
+  /* ---------------- Babylon Falls: the family map game ---------------- */
+
+  // Risk-style, for 2 to 5 players. The map (content/boards.js) is on a
+  // computer or TV; everyone plays on their own phone or tablet. The
+  // computer runs the game: it holds the whole state, and each phone sends
+  // moves, which the computer checks before applying, so a phone can't make
+  // a move that isn't allowed. Armies come from the week's checked
+  // questions: an easy one (a reel's own question, this week's or an
+  // earlier week's) for 3, a hard one (find it in the reading) for 5, a
+  // miss for 1, plus 1 for every 3 lands held. Battles are dice as in Risk,
+  // and Babylon's walls give its defender 3 dice. After the last round the
+  // most land wins, Babylonia counting 3. Nothing here changes anyone's XP.
+  const RISK = { easy: 3, hard: 5, miss: 1, perLands: 3, start: 4, neutral: 2, wallsNeutral: 3, maxCards: 2, rounds: [5, 8, 12] };
+  const BOARD = () => (window.TU_BOARDS || [])[0] || null;
+
+  function RiskLocal() {
+    // Between tabs of one browser, like the live game's test mode: each
+    // record is its own localStorage key (risk.<code>.game, .p.<uid>,
+    // .m.<time>-<n>-<uid>), and a BroadcastChannel says when one changed.
+    const PRE = NS + 'risk.';
+    const subs = new Set();
+    const bc = 'BroadcastChannel' in window ? new BroadcastChannel('treasureup-risk') : null;
+    let uid = null, seq = 0;
+    try { uid = sessionStorage.getItem(PRE + 'uid'); } catch (e) {}
+    if (!uid) { uid = 'u' + Math.random().toString(36).slice(2, 10); try { sessionStorage.setItem(PRE + 'uid', uid); } catch (e) {} }
+    const get = k => { try { return JSON.parse(localStorage.getItem(PRE + k)); } catch (e) { return null; } };
+    const keys = pre => { const out = []; try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.startsWith(PRE + pre)) out.push(k.slice(PRE.length)); } } catch (e) {} return out; };
+    const notify = c => { subs.forEach(f => f(c)); if (bc) bc.postMessage(c); };
+    const put = (c, k, v) => { try { v == null ? localStorage.removeItem(PRE + k) : localStorage.setItem(PRE + k, JSON.stringify(v)); } catch (e) {} notify(c); };
+    if (bc) bc.onmessage = e => subs.forEach(f => f(e.data));
+    // The message can arrive before another tab's write has reached this
+    // one; the storage event comes once it has, so read again then.
+    window.addEventListener('storage', e => { if (e.key && e.key.startsWith(PRE)) { const c = e.key.slice(PRE.length).split('.')[0]; subs.forEach(f => f(c)); } });
+    const watch = (c, read, cb) => { const f = x => { if (x === c) cb(read()); }; subs.add(f); cb(read()); return () => subs.delete(f); };
+    return {
+      kind: 'local',
+      uid: () => uid,
+      init: async () => uid,
+      async create(c, game) {
+        if (get(c + '.game')) return false;
+        put(c, c + '.game', Object.assign({}, game, { host: uid }));
+        return true;
+      },
+      watchGame: (c, cb) => watch(c, () => get(c + '.game'), cb),
+      async save(c, fields) { const g = get(c + '.game'); if (g) put(c, c + '.game', Object.assign(g, fields)); },
+      watchPlayers: (c, cb) => watch(c, () => keys(c + '.p.').map(k => Object.assign({ uid: k.split('.p.')[1] }, get(k))), cb),
+      async join(c, name) {
+        if (!get(c + '.game')) return 'No game with that code.';
+        put(c, c + '.p.' + uid, { name });
+        return null;
+      },
+      async move(c, m) { put(c, c + '.m.' + Date.now() + '-' + String(seq++).padStart(4, '0') + '-' + uid, Object.assign({}, m, { uid })); },
+      watchMoves: (c, cb) => watch(c, () => keys(c + '.m.').sort().map(k => Object.assign({ id: k }, get(k))).filter(m => m.kind), cb),
+      async dropMove(c, id) { put(c, id, null); },
+      async end(c) { keys(c + '.').forEach(k => { try { localStorage.removeItem(PRE + k); } catch (e) {} }); notify(c); }
+    };
+  }
+
+  function RiskFirebase() {
+    // /risk/{code}: the game, written only by the computer that hosts it;
+    // /players/{uid}: each phone's name; /moves: each phone's moves, which
+    // only the host reads, applies and deletes (firestore.rules).
+    let db, FV;
+    const me = () => firebase.auth().currentUser;
+    const ref = c => db.collection('risk').doc(c);
+    return {
+      kind: 'firebase',
+      uid: () => (window.firebase && firebase.apps.length && me() ? me().uid : null),
+      async init() {
+        const u = await fbUser();
+        db = firebase.firestore();
+        FV = firebase.firestore.FieldValue;
+        return u.uid;
+      },
+      async create(c, game) {
+        try {
+          await db.runTransaction(async t => {
+            if ((await t.get(ref(c))).exists) throw new Error('taken');
+            t.set(ref(c), Object.assign({}, game, { host: me().uid, created: FV.serverTimestamp() }));
+          });
+          return true;
+        } catch (e) { if (e.message === 'taken') return false; throw e; }
+      },
+      watchGame: (c, cb) => ref(c).onSnapshot(s => cb(s.exists ? s.data() : null), () => cb(null)),
+      async save(c, fields) { await ref(c).update(fields); },
+      watchPlayers: (c, cb) => ref(c).collection('players').onSnapshot(q => cb(q.docs.map(d => Object.assign({ uid: d.id }, d.data()))), () => cb([])),
+      async join(c, name) {
+        if (!(await ref(c).get()).exists) return 'No game with that code.';
+        await ref(c).collection('players').doc(me().uid).set({ name });
+        return null;
+      },
+      async move(c, m) { await ref(c).collection('moves').add(Object.assign({}, m, { uid: me().uid, at: FV.serverTimestamp() })); },
+      watchMoves: (c, cb) => ref(c).collection('moves').orderBy('at').onSnapshot(q =>
+        cb(q.docs.map(d => Object.assign({ id: d.id }, d.data({ serverTimestamps: 'estimate' })))), () => cb([])),
+      async dropMove(c, id) { await ref(c).collection('moves').doc(id).delete(); },
+      async end(c) {
+        const b = db.batch();
+        for (const sub of ['moves', 'players']) (await ref(c).collection(sub).get()).docs.forEach(d => b.delete(d.ref));
+        b.delete(ref(c));
+        await b.commit();
+      }
+    };
+  }
+
+  let RISKC = null;
+  const riskConn = () => RISKC || (RISKC = FIREBASE_CONFIG ? RiskFirebase() : RiskLocal());
+  let rk = null;   // this screen's part in a game: { role: 'host' | 'player', code, g, players, ... }
+
+  // Questions, named by id so every screen looks up the same checked one:
+  // "isa13-babylon:q" (a reel's own), "isa25-refuge:b1" (a bonus), and
+  // "deep:deep39-pride" (a Go-deeper reading). Reels can be from an earlier week.
+  const anyReel = id => (window.TU_WEEKS || []).reduce((f, w) => f || w.reels.find(r => r.id === id), null);
+  function gameQuestion(id) {
+    if (/^deep:/.test(id)) {
+      const d = deepItems().find(x => 'deep:' + x.id === id);
+      return d ? { q: d, home: deepHome(d), deep: d, week: WEEK } : null;
+    }
+    const [rid, part] = String(id).split(':'), r = anyReel(rid);
+    const q = !r ? null : part === 'q' ? r.question : bonusesOf(r)[Number(String(part).slice(1))];
+    if (!q) return null;
+    return { q, home: part === 'q' ? r.verse.ref : homeOf(r, q), bonus: part === 'q' ? null : q, week: (window.TU_WEEKS || []).find(w => w.reels.includes(r)) };
+  }
+  // Easy: reel questions, this week's and earlier weeks' (a review). Hard:
+  // this week's reading questions, the reel bonuses and Go deeper.
+  function riskPools() {
+    const start = weekStart(WEEK.dates);
+    const earlier = (window.TU_WEEKS || []).filter(w => w !== WEEK && weekStart(w.dates) < start);
+    return {
+      easy: WEEK.reels.concat(...earlier.map(w => w.reels)).map(r => r.id + ':q'),
+      hard: WEEK.reels.flatMap(r => bonusesOf(r).map((_, n) => r.id + ':b' + n)).concat(deepItems().map(d => 'deep:' + d.id))
+    };
+  }
+  const riskChoices = id => { const Q = gameQuestion(id); return shuffled([Q.q.right].concat(Q.q.wrong), 'risk|' + id); };
+  // Where to find a hard question's answer.
+  function riskReading(Q) {
+    if (Q.deep) {
+      const d = Q.deep, web = /^https:|^lesson$/.test(d.read);
+      const url = d.read === 'lesson' ? WEEK.lesson : web ? d.read : readLink(d.read);
+      return url ? { url, label: web ? sourceLabel(d.read) : d.read } : null;
+    }
+    return Q.bonus ? { url: sourceLink(Q.bonus.source), label: sourceLabel(Q.bonus.source) } : null;
+  }
+
+  // ----- the rules (run by the host) -----
+
+  const seatOf = (g, uid) => (g.seats || []).find(s => s.uid === uid);
+  const kingdomOf = k => BOARD().kingdoms.find(x => x.id === k);
+  const landsOf = (g, uid) => Object.keys(g.lands || {}).filter(id => g.lands[id].o === uid);
+  const landName = id => (BOARD().lands.find(l => l.id === id) || {}).name || id;
+  const seatName = s => s ? s.name + ' (' + kingdomOf(s.k).name + ')' : '';
+  function adjacent(a, b) { return BOARD().links.some(([x, y]) => (x === a && y === b) || (x === b && y === a)); }
+  function riskDie() {
+    // The tests set the dice (window.TU_DICE) when there's no Firebase.
+    if (!FIREBASE_CONFIG && Array.isArray(window.TU_DICE) && window.TU_DICE.length) return window.TU_DICE.shift();
+    return 1 + Math.floor(Math.random() * 6);
+  }
+  const rollDice = n => Array.from({ length: n }, riskDie).sort((a, b) => b - a);
+  function riskLog(g, text) { g.log = (g.log || []).concat(text).slice(-8); }
+  const newTurn = i => ({ i, phase: 'choose', level: null, q: null, armies: 0, result: null, gates: false });
+
+  function riskBegin(g) {
+    const B = BOARD();
+    g.lands = {};
+    B.lands.forEach(l => { g.lands[l.id] = { o: null, a: l.id === B.walls ? RISK.wallsNeutral : RISK.neutral }; });
+    g.seats.forEach(s => { g.lands[kingdomOf(s.k).home] = { o: s.uid, a: RISK.start }; });
+    g.state = 'play';
+    g.round = 1;
+    g.cards = {};
+    g.used = { easy: [], hard: [] };
+    g.dice = null;
+    g.log = [];
+    g.turn = newTurn(0);
+    riskLog(g, 'Round 1 of ' + g.rounds + '. ' + seatName(g.seats[0]) + ' goes first.');
+  }
+
+  function riskNextQuestion(g, level) {
+    const pool = riskPools()[level];
+    const order = shuffled(pool, rk.code + '|' + level + '|' + Math.floor(g.used[level].length / pool.length));
+    let id = order.find(x => !g.used[level].includes(x));
+    if (!id) { g.used[level] = []; id = order[0]; }
+    g.used[level].push(id);
+    return id;
+  }
+
+  function riskNextTurn(g) {
+    const n = g.seats.length;
+    let i = g.turn.i;
+    for (let k = 0; k < n; k++) {
+      i = (i + 1) % n;
+      if (i === 0) g.round++;
+      if (!g.seats[i].out) break;
+    }
+    if (g.round > g.rounds) return riskOver(g);
+    g.turn = newTurn(i);
+    riskLog(g, (i === 0 || g.seats.slice(0, i).every(s => s.out) ? 'Round ' + g.round + '. ' : '') + seatName(g.seats[i]) + "'s turn.");
+  }
+
+  function riskScores(g) {
+    const B = BOARD();
+    return g.seats.map(s => {
+      const ls = landsOf(g, s.uid);
+      return { uid: s.uid, name: s.name, k: s.k, lands: ls.length, babylon: ls.includes(B.walls),
+               pts: ls.length + (ls.includes(B.walls) ? 2 : 0), armies: ls.reduce((n, id) => n + g.lands[id].a, 0), out: !!s.out };
+    }).sort((a, b) => b.pts - a.pts || b.armies - a.armies);
+  }
+  function riskOver(g) {
+    g.state = 'over';
+    g.turn = null;
+    g.final = riskScores(g);
+    riskLog(g, 'The game is over. ' + seatName(seatOf(g, g.final[0].uid)) + ' wins.');
+  }
+
+  // Apply one move from a phone, if it's allowed; one that isn't is
+  // dropped. 'wait' means try it again once this screen has caught up
+  // (a kingdom picked before the phone's join has arrived here).
+  function riskApply(g, m) {
+    const B = BOARD();
+    if (g.state === 'lobby') {
+      if (m.kind !== 'pick' || !kingdomOf(m.a)) return;
+      const p = (rk.players || []).find(x => x.uid === m.uid);
+      if (!p) return 'wait';
+      const mine = seatOf(g, m.uid), holder = g.seats.find(s => s.k === m.a);
+      if (holder && holder.uid !== m.uid) return;                       // taken
+      if (mine) mine.k = m.a;
+      else g.seats = g.seats.concat({ uid: m.uid, name: p.name, k: m.a });
+      return;
+    }
+    if (g.state !== 'play' || !g.turn) return;
+    const t = g.turn, seat = g.seats[t.i];
+    if (!seat || seat.uid !== m.uid) return;                             // not your turn
+    const uid = m.uid, hand = g.cards[uid] || [];
+    if (m.kind === 'level' && t.phase === 'choose' && (m.a === 'easy' || m.a === 'hard')) {
+      t.level = m.a;
+      t.q = riskNextQuestion(g, m.a);
+      t.phase = 'answer';
+    } else if (m.kind === 'answer' && t.phase === 'answer') {
+      const Q = gameQuestion(t.q), right = m.a === Q.q.right;
+      const got = right ? RISK[t.level] : RISK.miss, bonus = Math.floor(landsOf(g, uid).length / RISK.perLands);
+      let card = null;
+      if (right && t.level === 'hard' && hand.length < RISK.maxCards && B.cards.length) {
+        card = B.cards[Math.floor(Math.random() * B.cards.length)].id;
+        g.cards[uid] = hand.concat(card);
+      }
+      t.armies = got + bonus;
+      t.result = { right, picked: m.a || '', got, bonus, card };
+      t.phase = 'place';
+      riskLog(g, seat.name + (right ? ' got it right' : ' missed it') + ': +' + t.armies + ' armies' + (card ? ' and a prophecy card' : '') + '.');
+    } else if (m.kind === 'place' && t.phase === 'place') {
+      const L = g.lands[m.a], n = Math.max(1, Math.min(t.armies, Math.floor(Number(m.n)) || 1));
+      if (!L || L.o !== uid) return;
+      L.a += n;
+      t.armies -= n;
+      if (!t.armies) t.phase = 'attack';
+    } else if (m.kind === 'card' && (t.phase === 'place' || t.phase === 'attack') && hand.includes(m.a)) {
+      const c = B.cards.find(x => x.id === m.a);
+      if (m.a === 'gates') t.gates = true;
+      else if (m.a === 'weighed') {
+        const L = g.lands[B.walls];
+        if (L.o === uid) return;                                        // not on your own city
+        L.a = Math.max(1, L.a - Math.floor(L.a / 2));
+      }
+      g.cards[uid] = hand.filter((x, n) => n !== hand.indexOf(m.a));
+      riskLog(g, seat.name + ' played “' + c.title + '” (' + c.ref + ').');
+    } else if (m.kind === 'attack' && t.phase === 'attack') {
+      const A = g.lands[m.a], D = g.lands[m.b];
+      if (!A || !D || A.o !== uid || D.o === uid || A.a < 2 || !adjacent(m.a, m.b)) return;
+      const walls = m.b === B.walls && !t.gates;
+      const ad = Math.min(3, A.a - 1), dd = Math.min(walls ? 3 : 2, D.a);
+      const ra = rollDice(ad), rd = rollDice(dd);
+      let la = 0, ld = 0;
+      for (let k = 0; k < Math.min(ad, dd); k++) { if (ra[k] > rd[k]) ld++; else la++; }
+      A.a -= la;
+      D.a -= ld;
+      const was = D.o;
+      g.dice = { a: ra, d: rd, from: m.a, to: m.b, la, ld, walls, won: false, by: uid, n: ((g.dice && g.dice.n) || 0) + 1 };
+      if (D.a <= 0) {
+        // A capture never costs the attacker anything, so there are always
+        // armies to move in: as many as the dice rolled.
+        D.o = uid;
+        D.a = ad;
+        A.a -= ad;
+        g.dice.won = true;
+        riskLog(g, seat.name + ' took ' + landName(m.b) + '.');
+        const loser = was && seatOf(g, was);
+        if (loser && !landsOf(g, was).length) {
+          loser.out = true;
+          delete g.cards[was];
+          riskLog(g, kingdomOf(loser.k).name + ' has fallen.');
+        }
+        if (g.seats.filter(s => !s.out).length === 1) riskOver(g);
+      }
+    } else if (m.kind === 'move' && t.phase === 'attack') {
+      const A = g.lands[m.a], D = g.lands[m.b];
+      const n = Math.floor(Number(m.n)) || 0;
+      if (!A || !D || A.o !== uid || D.o !== uid || !adjacent(m.a, m.b) || n < 1 || n > A.a - 1) return;
+      A.a -= n;
+      D.a += n;
+      riskLog(g, seat.name + ' moved ' + n + ' to ' + landName(m.b) + '.');
+      riskNextTurn(g);
+    } else if (m.kind === 'end' && t.phase === 'attack') {
+      riskNextTurn(g);
+    }
+  }
+
+  // ----- the map -----
+
+  // The board as SVG. `ui` (phones and the host) marks lands: `can` ones
+  // are tappable, `from` and `to` are the chosen ones.
+  function riskMap(g, ui) {
+    const B = BOARD(), u = ui || {};
+    const can = new Set(u.can || []);
+    const colorOf = id => { const L = g.lands && g.lands[id], s = L && L.o && seatOf(g, L.o); return s ? kingdomOf(s.k).color : '#566174'; };
+    const home = new Set((g.seats || []).map(s => kingdomOf(s.k).home));
+    const lands = B.lands.map(l => `<polygon class="rk-land${can.has(l.id) ? ' can' : ''}${u.from === l.id ? ' from' : ''}${u.to === l.id ? ' to' : ''}" data-land="${l.id}"
+      points="${l.ring.map(p => p.join(',')).join(' ')}" fill="${colorOf(l.id)}"><title>${esc(l.name)}</title></polygon>`).join('');
+    const wall = B.lands.find(l => l.id === B.walls);
+    const labels = B.lands.map(l => {
+      const L = (g.lands || {})[l.id], [x, y] = l.label;
+      return `<g class="rk-lab" transform="translate(${x} ${y})${u.small ? ' scale(1.5)' : ''}">
+        <text class="nm" y="-30">${esc(l.name)}${home.has(l.id) ? ' ★' : ''}</text>
+        ${L ? `<circle r="21" class="badge"/><text class="ar" y="8">${L.a}</text>` : ''}</g>`;
+    }).join('');
+    const seas = B.seas.map(s => {
+      const cx = s.ring.reduce((n, p) => n + p[0], 0) / s.ring.length, cy = s.ring.reduce((n, p) => n + p[1], 0) / s.ring.length;
+      return `<text class="sea" x="${Math.round(cx)}" y="${Math.round(cy)}">${esc(s.name)}</text>`;
+    }).join('');
+    return `<svg class="rk-map" viewBox="0 0 ${B.size[0]} ${B.size[1]}" role="img" aria-label="Map of the ancient Near East">
+      <rect width="${B.size[0]}" height="${B.size[1]}" class="rk-sea"/>${seas}${lands}
+      ${wall ? `<polygon class="rk-walls" points="${wall.ring.map(p => p.join(',')).join(' ')}"/>` : ''}${labels}</svg>`;
+  }
+
+  const dieHtml = (n, cls) => `<span class="rk-die ${cls}">${n}</span>`;
+  function diceHtml(g) {
+    const d = g.dice;
+    if (!d) return '';
+    const s = seatOf(g, d.by);
+    return `<div class="rk-dice"><div class="eyebrow">${esc(s ? s.name : '')}: ${esc(landName(d.from))} attacks ${esc(landName(d.to))}${d.walls ? ' · behind the walls' : ''}</div>
+      <div class="rk-roll"><span>${d.a.map(n => dieHtml(n, 'att')).join('')}</span><b>vs</b><span>${d.d.map(n => dieHtml(n, 'def')).join('')}</span></div>
+      <p class="rk-note">${d.won ? '🏳️ ' + esc(landName(d.to)) + ' is taken!' : 'Attacker loses ' + d.la + ', defender loses ' + d.ld + '.'}</p></div>`;
+  }
+
+  // ----- screens -----
+
+  function openRisk() {
+    $('riskTitle').textContent = BOARD() ? BOARD().title : 'Babylon Falls';
+    $('risk').hidden = false;
+  }
+  const riskBody = html => { $('riskBody').innerHTML = html; };
+  function stopRisk() {
+    if (rk) (rk.unsub || []).forEach(f => { try { f(); } catch (e) {} });
+    rk = null;
+  }
+  // Exit on the map screen ends the game for everyone, so mid-game it asks
+  // for a second tap.
+  function riskExit() {
+    if (rk && rk.role === 'host' && rk.g && rk.g.state === 'play' && !rk.sure) {
+      rk.sure = true;
+      $('riskExit').textContent = 'End the game? Tap again';
+      setTimeout(() => { if (rk) rk.sure = false; $('riskExit').textContent = 'Exit'; }, 4000);
+      return;
+    }
+    $('riskExit').textContent = 'Exit';
+    closeRisk();
+  }
+  async function closeRisk() {
+    const was = rk;
+    stopRisk();
+    $('risk').hidden = true;
+    if (location.hash.startsWith('#babylon')) history.replaceState(null, '', location.pathname + location.search);
+    if (was && was.role === 'host' && was.code) {
+      try { sessionStorage.removeItem(NS + 'risk.host'); } catch (e) {}
+      try { await riskConn().end(was.code); } catch (e) {}
+    }
+  }
+  const riskModeNote = () => riskConn().kind === 'local'
+    ? '<p class="live-mode">Test mode: players join from other tabs of this browser.</p>' : '';
+
+  function riskChooser() {
+    stopRisk();
+    openRisk();
+    const B = BOARD();
+    riskBody(`
+      <div class="clue" style="max-width:640px">
+        <p class="clue-q">${esc(B.title)}</p>
+        <p class="board-help">${linkRefs(B.intro)}</p>
+        <p class="board-help">A map game for 2 to 5, like Risk. The map goes on a computer or TV; everyone plays on their own phone or tablet. Answer this week's questions to raise armies, then take land. Babylon has walls.</p>
+        <div class="board-actions">
+          <button class="btn" data-rk="host">Put the map on this screen</button>
+          <button class="btn ghost" data-rk="join">Join with a code</button>
+        </div>
+        ${riskModeNote()}
+      </div>`);
+  }
+
+  // ----- host: the computer with the map -----
+
+  async function riskHost() {
+    stopRisk();
+    openRisk();
+    riskBody('<p class="board-help">Setting up the map…</p>');
+    const C = riskConn();
+    try { await C.init(); } catch (e) { riskBody(`<div class="clue"><p class="clue-q">Can't start the game</p><p class="board-help">${esc(e.message)}</p></div>`); return; }
+    // A reload picks the same game back up.
+    let code = null, resumed = null;
+    try { code = sessionStorage.getItem(NS + 'risk.host'); } catch (e) {}
+    if (code) {
+      resumed = await new Promise(ok => { const off = C.watchGame(code, g => { ok(g); setTimeout(() => off && off(), 0); }); });
+      if (!resumed || resumed.host !== C.uid()) { code = null; resumed = null; }
+    }
+    try {
+      for (let i = 0; i < 20 && !code; i++) {
+        const c = String(1000 + Math.floor(Math.random() * 9000));
+        if (await C.create(c, { board: BOARD().id, week: WEEK.title, state: 'lobby', rounds: RISK.rounds[1], seats: [] })) code = c;
+      }
+    } catch (e) {
+      riskBody(`<div class="clue"><p class="clue-q">Can't start the game</p><p class="board-help">${esc(e.message)}</p></div>`);
+      return;
+    }
+    if (!code) { riskBody('<div class="clue"><p class="clue-q">Couldn&rsquo;t get a game code. Try again.</p></div>'); return; }
+    try { sessionStorage.setItem(NS + 'risk.host', code); } catch (e) {}
+    rk = { role: 'host', code, g: null, players: [], done: new Set(), unsub: [] };
+    rk.unsub.push(C.watchGame(code, g => {
+      if (!rk) return;
+      if (!g) { rk.g = null; return renderRiskHost(); }
+      if (!rk.g) rk.g = g;                     // after that, this screen's copy is the one that counts
+      renderRiskHost();
+    }));
+    rk.unsub.push(C.watchPlayers(code, ps => { if (!rk) return; rk.players = ps; riskMoves(rk.moves || []); renderRiskHost(); }));
+    rk.unsub.push(C.watchMoves(code, ms => { if (!rk) return; rk.moves = ms; riskMoves(ms); }));
+  }
+
+  async function riskSave() {
+    const g = rk && rk.g;
+    if (!g) return;
+    const fields = {};
+    ['state', 'rounds', 'round', 'seats', 'lands', 'cards', 'used', 'turn', 'dice', 'log', 'final'].forEach(k => { if (g[k] !== undefined) fields[k] = g[k]; });
+    try { await riskConn().save(rk.code, JSON.parse(JSON.stringify(fields))); }
+    catch (e) { toast("Couldn't reach the game", 'Check the internet'); }
+  }
+
+  function riskMoves(ms) {
+    if (!rk || rk.role !== 'host' || !rk.g) return;
+    let changed = false;
+    for (const m of ms) {
+      if (rk.done.has(m.id)) continue;
+      if (riskApply(rk.g, m) === 'wait') continue;
+      rk.done.add(m.id);
+      changed = true;
+      riskConn().dropMove(rk.code, m.id).catch(() => {});
+    }
+    if (changed) { riskSave(); renderRiskHost(); }
+  }
+
+  function riskHostAction(act, el) {
+    const g = rk && rk.g;
+    if (!g) return;
+    if (act === 'rounds' && g.state === 'lobby') g.rounds = Number(el.dataset.n) || RISK.rounds[1];
+    else if (act === 'start' && g.state === 'lobby' && g.seats.length >= 2) riskBegin(g);
+    else if (act === 'skip' && g.state === 'play') { riskLog(g, g.seats[g.turn.i].name + "'s turn was skipped."); riskNextTurn(g); }
+    else if (act === 'finish' && g.state === 'play') riskOver(g);
+    else if (act === 'again' && g.state === 'over') {
+      Object.assign(g, { state: 'lobby', seats: g.seats.map(s => ({ uid: s.uid, name: s.name, k: s.k })), turn: null, dice: null, final: null, log: [] });
+    } else return;
+    riskSave();
+    renderRiskHost();
+  }
+
+  const phaseText = t => ({ choose: 'is choosing a question', answer: 'is answering', place: 'is placing armies', attack: 'is attacking' })[t.phase] || '';
+
+  function riskSeatsHtml(g, meUid) {
+    return `<div class="rk-seats">${g.seats.map((s, i) => {
+      const ls = landsOf(g, s.uid), armies = ls.reduce((n, id) => n + g.lands[id].a, 0), k = kingdomOf(s.k);
+      const now = g.turn && g.turn.i === i && g.state === 'play';
+      return `<div class="rk-seat${now ? ' now' : ''}${s.out ? ' out' : ''}${s.uid === meUid ? ' me' : ''}">
+        <span class="rk-dot" style="background:${k.color}"></span><b>${esc(s.name)}</b><span class="k">${esc(k.name)}</span>
+        <span class="n">${s.out ? 'fallen' : ls.length + ' land' + (ls.length === 1 ? '' : 's') + ' · ' + armies}${(g.cards && g.cards[s.uid] || []).length ? ' · 🂠' + g.cards[s.uid].length : ''}</span></div>`;
+    }).join('')}</div>`;
+  }
+
+  // What the TV shows about the turn: the question while he answers (so the
+  // family reads along), then the right answer and why.
+  function riskTurnHtml(g) {
+    const t = g.turn, s = g.seats[t.i], k = kingdomOf(s.k);
+    let html = `<div class="rk-turn" style="border-color:${k.color}"><div class="eyebrow">Round ${g.round} of ${g.rounds}</div>
+      <div class="rk-who"><span class="rk-dot" style="background:${k.color}"></span>${esc(s.name)} <small>${esc(k.name)}</small></div><p class="rk-note">${esc(phaseText(t))}</p>`;
+    if (t.q) {
+      const Q = gameQuestion(t.q), answered = !!t.result;
+      const from = Q.week && Q.week !== WEEK ? `From an earlier week: ${esc(Q.week.title)}` : t.level === 'hard' ? 'Hard: the answer is in the reading' : 'Easy';
+      html += `<div class="eyebrow" style="margin-top:10px;color:var(--gold)">${from}</div>
+        <p class="rk-q">${answered ? linkRefs(Q.q.q, Q.home) : esc(Q.q.q)}</p>
+        <div class="rk-choices">${riskChoices(t.q).map((c, n) => `<div class="rk-choice${answered ? (c === Q.q.right ? ' right' : c === t.result.picked ? ' wrong' : ' dim') : ''}"><b>${'ABC'[n]}</b> ${esc(c)}</div>`).join('')}</div>`;
+      if (answered) {
+        const r = t.result;
+        html += `<p class="rk-result ${r.right ? 'ok' : 'no'}">${r.right ? 'Right!' : 'Not this time.'} +${r.got} armies${r.bonus ? ` · +${r.bonus} for ${landsOf(g, s.uid).length} lands` : ''}${r.card ? ' · a prophecy card' : ''}</p>
+          <p class="quiz-why">${linkRefs(Q.q.why, Q.home)}</p>`;
+      }
+    }
+    return html + '</div>';
+  }
+
+  function renderRiskHost() {
+    if (!rk || rk.role !== 'host') return;
+    const g = rk.g;
+    if (!g) { riskBody('<div class="live-big">The game has ended.</div>'); return; }
+    if (g.state === 'lobby') {
+      const B = BOARD(), taken = {};
+      g.seats.forEach(s => { taken[s.k] = s; });
+      const waiting = rk.players.filter(p => !seatOf(g, p.uid));
+      riskBody(`
+        <div class="rk-host">
+          <div class="rk-mapbox">${riskMap({ lands: null, seats: g.seats })}</div>
+          <div class="rk-side">
+            <div class="eyebrow">Join code</div>
+            <div class="live-code" style="font-size:clamp(48px,7vw,96px)">${esc(rk.code)}</div>
+            <p class="board-help">On each phone or tablet: open Treasure Up, tap 🎮, choose <b>Babylon Falls</b>, then <b>Join with a code</b>. Then pick a kingdom.</p>
+            <div class="rk-kingdoms">${B.kingdoms.map(k => `<div class="rk-king${taken[k.id] ? ' chosen' : ' open'}"${taken[k.id] ? ` style="border-color:${k.color}"` : ''}><span class="rk-dot" style="background:${k.color}"></span>${esc(k.name)}<small>${taken[k.id] ? esc(taken[k.id].name) : 'open'}</small></div>`).join('')}</div>
+            ${waiting.length ? `<p class="board-help">Joined, still choosing: ${waiting.map(p => esc(p.name)).join(', ')}</p>` : ''}
+            <div class="eyebrow" style="margin-top:14px">How long</div>
+            <div class="rk-len">${RISK.rounds.map((n, i) => `<button class="btn ${g.rounds === n ? '' : 'ghost'}" data-rkh="rounds" data-n="${n}">${['Short', 'Standard', 'Long'][i]} · ${n} rounds</button>`).join('')}</div>
+            <div class="board-actions"><button class="btn" data-rkh="start"${g.seats.length >= 2 ? '' : ' disabled style="opacity:.4"'}>Start · ${g.seats.length} ${g.seats.length === 1 ? 'kingdom' : 'kingdoms'}</button></div>
+            <p class="board-help" style="font-size:13px">${linkRefs(B.intro)}</p>
+            ${riskModeNote()}
+          </div>
+        </div>`);
+      return;
+    }
+    const side = g.state === 'over' ? riskFinalHtml(g) : riskTurnHtml(g) + diceHtml(g);
+    riskBody(`
+      <div class="rk-host">
+        <div class="rk-mapbox">${riskMap(g, g.dice ? { from: g.dice.from, to: g.dice.to } : null)}</div>
+        <div class="rk-side">
+          ${side}
+          ${riskSeatsHtml(g)}
+          <div class="rk-log">${(g.log || []).slice().reverse().map(x => `<div>${esc(x)}</div>`).join('')}</div>
+          <div class="board-actions">${g.state === 'play'
+            ? `<button class="btn ghost" data-rkh="skip">Skip this turn</button><button class="btn ghost" data-rkh="finish">End the game now</button>`
+            : `<button class="btn" data-rkh="again">Play again</button>`}</div>
+        </div>
+      </div>`);
+  }
+
+  function riskFinalHtml(g) {
+    const f = g.final || riskScores(g), w = f[0], k = kingdomOf(w.k);
+    return `<div class="rk-turn" style="border-color:${k.color}"><div class="eyebrow">Game over</div>
+      <div class="rk-who">🏆 ${esc(w.name)} <small>${esc(k.name)}</small></div>
+      <p class="rk-note">${w.lands} lands${w.babylon ? ', Babylon among them' : ''}: ${w.pts} points. Babylonia counts 3.</p>
+      <div class="grid gap-2" style="margin-top:10px">${f.map((x, i) => `<div class="score-row"><span>${['🥇', '🥈', '🥉'][i] || (i + 1) + '.'} ${esc(x.name)} · ${esc(kingdomOf(x.k).name)}</span><b>${x.pts}</b></div>`).join('')}</div></div>`;
+  }
+
+  // ----- player: a phone or tablet -----
+
+  function riskJoinForm(code, err) {
+    stopRisk();
+    openRisk();
+    let name = '';
+    try { name = localStorage.getItem(NS + 'live.name') || ''; } catch (e) {}
+    if (!name && F) name = F.name.slice(0, 16);
+    riskBody(`
+      <div class="clue" style="max-width:420px">
+        <p class="clue-q">Join Babylon Falls</p>
+        <label class="block text-[12px] text-white/60" for="riskCode">Code on the map screen</label>
+        <input id="riskCode" class="field" inputmode="numeric" maxlength="4" autocomplete="off" value="${esc(code || '')}" style="font-size:28px;letter-spacing:.2em;text-align:center">
+        <label class="block mt-3 text-[12px] text-white/60" for="riskName">Your name</label>
+        <input id="riskName" class="field" maxlength="16" autocomplete="off" value="${esc(name)}">
+        ${err ? `<p class="parent-msg">${esc(err)}</p>` : ''}
+        <div class="board-actions"><button class="btn" data-rk="joinnow">Join</button></div>
+        ${riskModeNote()}
+      </div>`);
+  }
+
+  async function riskJoin() {
+    const code = $('riskCode').value.trim(), name = $('riskName').value.trim();
+    if (!/^\d{4}$/.test(code)) return riskJoinForm(code, 'The code is 4 numbers.');
+    if (!name) return riskJoinForm(code, 'Type your name.');
+    try { localStorage.setItem(NS + 'live.name', name); } catch (e) {}
+    const C = riskConn();
+    try { await C.init(); } catch (e) { return riskJoinForm(code, e.message); }
+    let err = null;
+    try { err = await C.join(code, name); } catch (e) { err = e.message; }
+    if (err) return riskJoinForm(code, err);
+    rk = { role: 'player', code, name, g: null, sel: {}, unsub: [] };
+    rk.unsub.push(C.watchGame(code, g => {
+      if (!rk) return;
+      const before = rk.g;
+      rk.g = g;
+      // A new turn or phase clears what was picked on the map.
+      if (!before || !g || JSON.stringify(before.turn && [before.turn.i, before.turn.phase]) !== JSON.stringify(g.turn && [g.turn.i, g.turn.phase])) rk.sel = {};
+      if (g && g.dice && before && before.dice && g.dice.n !== before.dice.n && g.dice.won) rk.sel = {};
+      renderRiskPlayer();
+    }));
+  }
+
+  const riskSend = m => riskConn().move(rk.code, m).catch(() => toast("Couldn't reach the game", 'Check the internet'));
+
+  // What a phone can tap on the map right now.
+  function riskCan(g, me) {
+    const t = g.turn;
+    if (!t || !g.seats[t.i] || g.seats[t.i].uid !== me) return [];
+    const mine = landsOf(g, me), sel = rk.sel;
+    if (t.phase === 'place') return mine;
+    if (t.phase !== 'attack') return [];
+    const from = sel.from && g.lands[sel.from] && g.lands[sel.from].o === me ? sel.from : null;
+    const strong = mine.filter(id => g.lands[id].a >= 2);
+    if (!from) return strong;
+    const near = BOARD().links.filter(([x, y]) => x === from || y === from).map(([x, y]) => x === from ? y : x);
+    return strong.concat(near.filter(id => sel.mode === 'move' ? g.lands[id].o === me : g.lands[id].o !== me));
+  }
+
+  function riskTap(id) {
+    const g = rk && rk.g, me = riskConn().uid();
+    if (!g || rk.role !== 'player' || !riskCan(g, me).includes(id)) return;
+    const t = g.turn, sel = rk.sel, own = g.lands[id].o === me;
+    if (t.phase === 'place') {                                          // one army a tap
+      sel.place = id;
+      riskSend({ kind: 'place', a: id, n: 1 });
+    } else if (sel.mode === 'move') {                                   // from one of yours to a neighbour of yours
+      if (own && sel.from && sel.from !== id && adjacent(sel.from, id)) { sel.to = id; sel.n = 1; }
+      else { sel.from = id; sel.to = null; }
+    } else if (own) { sel.from = id; sel.to = null; }                   // attack from here…
+    else sel.to = id;                                                   // …to there
+    renderRiskPlayer();
+  }
+
+  function riskPlayerAction(act, el) {
+    const g = rk && rk.g, sel = rk.sel;
+    if (!g) return;
+    if (act === 'land') return riskTap(el.dataset.v);
+    if (act === 'pick') riskSend({ kind: 'pick', a: el.dataset.k });
+    else if (act === 'level') riskSend({ kind: 'level', a: el.dataset.v });
+    else if (act === 'ans') { sel.answered = true; riskSend({ kind: 'answer', a: el.dataset.v }); }
+    else if (act === 'allhere' && sel.place) riskSend({ kind: 'place', a: sel.place, n: g.turn.armies });
+    else if (act === 'attack' && sel.from && sel.to) riskSend({ kind: 'attack', a: sel.from, b: sel.to });
+    else if (act === 'card') riskSend({ kind: 'card', a: el.dataset.v });
+    else if (act === 'movemode') { rk.sel = { mode: 'move' }; }
+    else if (act === 'cancel') { rk.sel = {}; }
+    else if (act === 'less') sel.n = Math.max(1, (sel.n || 1) - 1);
+    else if (act === 'more') sel.n = Math.min(g.lands[sel.from].a - 1, (sel.n || 1) + 1);
+    else if (act === 'domove' && sel.from && sel.to) riskSend({ kind: 'move', a: sel.from, b: sel.to, n: sel.n || 1 });
+    else if (act === 'end') riskSend({ kind: 'end' });
+    renderRiskPlayer();
+  }
+
+  function renderRiskPlayer() {
+    if (!rk || rk.role !== 'player') return;
+    const g = rk.g, me = riskConn().uid(), B = BOARD();
+    if (!g) { riskBody('<div class="live-big">The game has ended.</div><p class="live-sub">Thanks for playing!</p>'); return; }
+    const seat = seatOf(g, me), k = seat && kingdomOf(seat.k);
+    const head = seat ? `<div class="rk-me"><span class="rk-dot" style="background:${k.color}"></span><b>${esc(seat.name)}</b> · ${esc(k.name)}
+      <span class="n">${seat.out ? 'fallen' : landsOf(g, me).length + (landsOf(g, me).length === 1 ? ' land' : ' lands')}</span></div>` : '';
+    if (g.state === 'lobby') {
+      const taken = {};
+      g.seats.forEach(s => { taken[s.k] = s; });
+      riskBody(`${head}<div class="clue"><p class="clue-q">${seat ? "You're in! Watch the map." : 'Pick your kingdom'}</p>
+        <div class="rk-kingdoms">${B.kingdoms.map(x => {
+          const who = taken[x.id], mine = who && who.uid === me;
+          return `<button class="rk-king${mine ? ' mine' : ''}${who && !mine ? ' taken' : ''}" data-rk="pick" data-k="${x.id}"${who && !mine ? ' disabled' : ''}>
+            <span class="rk-dot" style="background:${x.color}"></span>${esc(x.name)}<small>${mine ? 'yours' : who ? esc(who.name) : 'home: ' + esc(landName(x.home))}</small></button>`;
+        }).join('')}</div>
+        <p class="board-help">${seat ? 'You can still switch until the game starts.' : ''}</p></div>`);
+      return;
+    }
+    if (g.state === 'over') {
+      const f = g.final || [], place = f.findIndex(x => x.uid === me) + 1;
+      riskBody(`${head}<div class="live-big">${place === 1 ? '🏆 You won!' : place ? 'You finished ' + ['1st', '2nd', '3rd', '4th', '5th'][place - 1] : 'Game over'}</div>
+        <p class="live-sub">${f[0] ? esc(f[0].name) + ' wins with ' + f[0].pts + ' points.' : ''}</p>`);
+      return;
+    }
+    const t = g.turn, mine = t && g.seats[t.i] && g.seats[t.i].uid === me, sel = rk.sel;
+    const can = riskCan(g, me);
+    const chip = id => `<button class="rk-chip${sel.from === id || sel.place === id ? ' on' : ''}${sel.to === id ? ' to' : ''}" data-rk="land" data-v="${id}">${esc(landName(id))} · ${g.lands[id].a}</button>`;
+    const chips = (label, ids) => ids.length ? `<div class="rk-chips"><span class="lbl">${label}</span>${ids.map(chip).join('')}</div>` : '';
+    const own = can.filter(id => g.lands[id].o === me), other = can.filter(id => g.lands[id].o !== me);
+    const map = `<div class="rk-mapbox small">${riskMap(g, { small: true, can: riskCan(g, me), from: sel.from || sel.place, to: sel.to })}</div>`;
+    let panel = '';
+    if (!seat) panel = '<p class="rk-note">You joined after the game started. Watch the map!</p>';
+    else if (seat.out) panel = '<p class="rk-note">Your kingdom has fallen. Watch how it ends!</p>';
+    else if (!mine) {
+      const s = g.seats[t.i];
+      panel = `<p class="rk-note"><span class="rk-dot" style="background:${kingdomOf(s.k).color}"></span> ${esc(s.name)} ${esc(phaseText(t))}.</p>${diceHtml(g)}`;
+    } else if (t.phase === 'choose') {
+      panel = `<p class="rk-q">Your turn! Pick a question for armies.</p>
+        <div class="rk-btns"><button class="btn" data-rk="level" data-v="easy">Easy · +${RISK.easy} armies</button>
+        <button class="btn" data-rk="level" data-v="hard">Hard: find it in the reading · +${RISK.hard}</button></div>
+        <p class="rk-note">A miss still gets ${RISK.miss}. You also get 1 for every ${RISK.perLands} lands you hold.${RISK.maxCards ? ' A right hard answer can win a prophecy card.' : ''}</p>`;
+    } else if (t.phase === 'answer') {
+      const Q = gameQuestion(t.q), read = t.level === 'hard' && riskReading(Q);
+      panel = `${Q.week && Q.week !== WEEK ? `<div class="eyebrow">From an earlier week: ${esc(Q.week.title)}</div>` : ''}
+        <p class="rk-q">${esc(Q.q.q)}</p>
+        ${read ? `<a class="deep-open" href="${esc(read.url)}" target="_blank" rel="noopener noreferrer">Open ${esc(read.label)} ↗</a>` : ''}
+        <div class="rk-btns">${riskChoices(t.q).map(c => `<button class="ls-opt" data-rk="ans" data-v="${esc(c)}"${sel.answered ? ' disabled' : ''}>${esc(c)}</button>`).join('')}</div>
+        <button class="today-alt" data-rk="ans" data-v="">I don't know</button>`;
+    } else {
+      const r = t.result, Q = gameQuestion(t.q);
+      const res = r && t.phase === 'place' ? `<p class="rk-result ${r.right ? 'ok' : 'no'}">${r.right ? 'Right!' : 'Not this time: ' + esc(Q.q.right) + '.'} ${linkRefs(Q.q.why, Q.home)}</p>` : '';
+      const hand = (g.cards[me] || []).map(id => B.cards.find(c => c.id === id)).filter(Boolean);
+      const cards = hand.length ? `<div class="rk-cards">${hand.map(c => `<div class="rk-card"><b>${esc(c.title)}</b><span>“${esc(c.quote)}” ${linkRefs(c.ref)}</span><small>${esc(c.does)}</small>
+        <button class="btn" data-rk="card" data-v="${c.id}"${c.id === 'weighed' && g.lands[B.walls].o === me ? ' disabled style="opacity:.4"' : ''}>Play it</button></div>`).join('')}</div>` : '';
+      if (t.phase === 'place') {
+        panel = `${res}<p class="rk-q">Place ${t.armies} ${t.armies === 1 ? 'army' : 'armies'}</p>
+          <p class="rk-note">Tap your lands, on the map or here: one army a tap.</p>
+          ${chips('Your lands', own)}
+          ${sel.place ? `<div class="rk-btns"><button class="btn" data-rk="allhere">All ${t.armies} on ${esc(landName(sel.place))}</button></div>` : ''}${cards}`;
+      } else if (sel.mode === 'move') {
+        const A = sel.from && g.lands[sel.from];
+        panel = `<p class="rk-q">Move armies, then your turn ends</p>
+          <p class="rk-note">${!sel.from ? 'Tap one of your lands to move from.' : !sel.to ? 'Now tap a land of yours next to ' + esc(landName(sel.from)) + '.' : 'From ' + esc(landName(sel.from)) + ' to ' + esc(landName(sel.to)) + ':'}</p>
+          ${sel.to ? `<div class="rk-step"><button class="btn ghost" data-rk="less">−</button><b>${sel.n || 1}</b><button class="btn ghost" data-rk="more"${(sel.n || 1) >= A.a - 1 ? ' disabled' : ''}>+</button></div>
+            <div class="rk-btns"><button class="btn" data-rk="domove">Move ${sel.n || 1} and end turn</button></div>` : ''}
+          ${chips('From', own.filter(id => g.lands[id].a >= 2 && !(sel.from && adjacent(sel.from, id))))}${sel.from ? chips('To', own.filter(id => id !== sel.from && adjacent(sel.from, id))) : ''}
+          <div class="rk-btns"><button class="btn ghost" data-rk="end">End turn without moving</button><button class="btn ghost" data-rk="cancel">Back to attacking</button></div>`;
+      } else {
+        const A = sel.from && g.lands[sel.from], D = sel.to && g.lands[sel.to];
+        const walls = sel.to === B.walls && !t.gates;
+        panel = `${diceHtml(g)}<p class="rk-q">Attack!</p>
+          <p class="rk-note">${!sel.from ? 'Tap one of your lands with 2 or more armies.' : !sel.to ? 'Now tap a land next to ' + esc(landName(sel.from)) + ' to attack.'
+            : esc(landName(sel.from)) + ' (' + A.a + ') attacks ' + esc(landName(sel.to)) + ' (' + D.a + ')' + (walls ? '. Babylon’s walls: its defender rolls 3 dice.' : '.')}</p>
+          ${chips('Attack from', own)}${sel.from ? chips('Attack', other) : ''}
+          ${sel.from && sel.to && A.a >= 2 ? `<div class="rk-btns"><button class="btn" data-rk="attack">Roll the dice</button></div>` : ''}
+          ${t.gates ? '<p class="rk-note">The gates are open this turn: Babylon’s walls don’t count.</p>' : ''}
+          ${cards}
+          <div class="rk-btns"><button class="btn ghost" data-rk="movemode">Move armies, then end turn</button><button class="btn ghost" data-rk="end">End turn</button></div>`;
+      }
+    }
+    riskBody(`${head}${map}<div class="rk-panel">${panel}</div>`);
+  }
+
   /* ---------------- family: accounts, progress, chat ---------------- */
 
   // A family is optional. Without one, everything stays on this device
@@ -3435,7 +4240,7 @@ const TreasureUp = (function () {
     if (!a || !F) return;
     if (canon(S) !== a.from) { pendingAdopt = null; queueSync(0); return; }
     const typing = [...document.querySelectorAll('textarea, input.field')].some(t => t.value.trim() && !t.readOnly);
-    const busy = ['play', 'live', 'board', 'parent', 'lesson', 'view'].some(id => !$(id).hidden) || typing;
+    const busy = ['play', 'live', 'board', 'parent', 'lesson', 'view', 'risk'].some(id => !$(id).hidden) || typing;
     if (busy) { adoptTimer = setTimeout(tryAdopt, 10000); return; }
     try {
       localStorage.setItem(STORE_KEY, a.json);
@@ -5062,6 +5867,23 @@ const TreasureUp = (function () {
       if (el && !el.disabled) lessonAction(el);
     });
 
+    // Babylon Falls: the map screen's buttons, a phone's buttons, and its map.
+    $('riskExit').addEventListener('click', riskExit);
+    $('risk').addEventListener('click', e => {
+      const land = e.target.closest('[data-land]');
+      if (land && rk && rk.role === 'player') { riskTap(land.dataset.land); return; }
+      const h = e.target.closest('[data-rkh]');
+      if (h && !h.disabled) { riskHostAction(h.dataset.rkh, h); return; }
+      const el = e.target.closest('[data-rk]');
+      if (!el || el.disabled) return;
+      const act = el.dataset.rk;
+      if (act === 'host') riskHost();
+      else if (act === 'join') riskJoinForm('');
+      else if (act === 'joinnow') riskJoin();
+      else if (rk && rk.role === 'player') riskPlayerAction(act, el);
+    });
+    $('risk').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.closest('#riskCode, #riskName')) riskJoin(); });
+
     // Developer mode.
     $('devExit').addEventListener('click', closeDev);
     $('dev').addEventListener('click', e => {
@@ -5167,6 +5989,9 @@ const TreasureUp = (function () {
     else if (location.hash === '#dev') openDev();
     // …/#lesson opens today's lesson.
     else if (location.hash === '#lesson') openLesson('');
+    // …/#babylon puts up the map game's map; …/#babylon-join-1234 joins it.
+    else if (location.hash === '#babylon' && BOARD()) riskHost();
+    else if (/^#babylon-join(-\d{4})?$/.test(location.hash) && BOARD()) riskJoinForm(location.hash.slice(14));
 
     familyBoot();
   }
@@ -5200,6 +6025,7 @@ const TreasureUp = (function () {
      app opens on the week whose dates include today.
      ================================================================== -->
 <script src="content/weeks.js"></script>
+<script src="content/boards.js"></script>
 <script>
 const WEEKS = window.TU_WEEKS || [];
 const WEEK_CONTENT = TreasureUp.pickWeek(WEEKS);

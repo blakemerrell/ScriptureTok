@@ -111,3 +111,22 @@ Each reel:
   word must be in `scripture-words.js` so it can be typed as a guess.
 - `approved` (and `wordsApproved` for the Verse Words): written by developer
   mode. Don't write these by hand.
+
+## The map game's board (content/boards.js)
+
+Babylon Falls plays on the first board in `window.TU_BOARDS`. It isn't tied
+to a week: the questions come from the weeks in weeks.js.
+
+- `lands`: `{ id, name, ring, label }`: the outline as `[x, y]` points on a
+  `size` map, and where the name and armies sit.
+- `links`: the borders, each pair once. Every land must be reachable.
+- `kingdoms`: `{ id, name, home, color }`, 2 to 5, each with its own home land.
+- `walls`: the land whose defender rolls 3 dice (Babylonia).
+- `cards`: prophecy cards, `{ id, title, quote, ref, does }`. `quote` must be
+  the verse's exact words; `does` is what playing it does, and the game's
+  code has to know the card's `id`.
+- `intro`: the line on the first screen; its references must be real.
+
+The map outlines were drawn by a script from a hand-drawn coastline and
+seed points; to change a border, change the outline and `links` together.
+tools/verify.mjs checks all of this.

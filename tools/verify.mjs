@@ -156,6 +156,56 @@ function loadWeeks() {
   catch (e) { throw new Error('content/weeks.js is not valid JSON after window.TU_WEEKS = (' + e.message + ')'); }
 }
 
+// The map game's boards (content/boards.js): a map that holds together, and
+// prophecy cards that quote scripture exactly.
+const BOARDS_MARK = 'window.TU_BOARDS = ';
+function loadBoards() {
+  const file = path.join(ROOT, 'content', 'boards.js');
+  if (!fs.existsSync(file)) return [];
+  const text = fs.readFileSync(file, 'utf8');
+  const at = text.indexOf(BOARDS_MARK), end = text.lastIndexOf(';');
+  if (at < 0 || end < at) throw new Error('content/boards.js must be a comment, then window.TU_BOARDS = <JSON>;');
+  try { return JSON.parse(text.slice(at + BOARDS_MARK.length, end)); }
+  catch (e) { throw new Error('content/boards.js is not valid JSON after window.TU_BOARDS = (' + e.message + ')'); }
+}
+function checkBoards(boards, { verses }) {
+  const textOf = ref => { const refs = expand(ref); return refs && refs.every(r => verses.has(r)) ? refs.map(r => verses.get(r)).join(' ') : null; };
+  for (const b of boards) {
+    const where = `board ${b.id || '?'}`;
+    const ids = new Set((b.lands || []).map(l => l.id));
+    if (ids.size !== (b.lands || []).length) failures.push(`${where}: land ids must be unique`);
+    for (const l of b.lands || []) {
+      if (!l.name || !Array.isArray(l.ring) || l.ring.length < 3) failures.push(`${where}: land ${l.id} needs a name and an outline`);
+      if (!Array.isArray(l.label) || l.label[0] < 0 || l.label[1] < 0 || l.label[0] > b.size[0] || l.label[1] > b.size[1]) failures.push(`${where}: land ${l.id}'s label is off the map`);
+    }
+    const adj = {};
+    for (const [x, y] of b.links || []) {
+      if (!ids.has(x) || !ids.has(y) || x === y) { failures.push(`${where}: border ${x}–${y} names a land that isn't on the map`); continue; }
+      (adj[x] = adj[x] || new Set()).add(y); (adj[y] = adj[y] || new Set()).add(x);
+    }
+    const first = [...ids][0], seen = new Set([first]), todo = [first];
+    while (todo.length) for (const n of adj[todo.pop()] || []) if (!seen.has(n)) { seen.add(n); todo.push(n); }
+    if (seen.size !== ids.size) failures.push(`${where}: every land must be reachable; can't reach ${[...ids].filter(i => !seen.has(i)).join(', ')}`);
+    const homes = new Set();
+    for (const k of b.kingdoms || []) {
+      if (!ids.has(k.home)) failures.push(`${where}: kingdom ${k.name}'s home ${k.home} isn't on the map`);
+      if (homes.has(k.home)) failures.push(`${where}: two kingdoms share the home ${k.home}`);
+      homes.add(k.home);
+      if (!/^#[0-9a-f]{6}$/i.test(k.color || '')) failures.push(`${where}: kingdom ${k.name} needs a color like #3b82f6`);
+    }
+    if ((b.kingdoms || []).length < 2) failures.push(`${where}: needs at least 2 kingdoms`);
+    if (b.walls && !ids.has(b.walls)) failures.push(`${where}: walls land ${b.walls} isn't on the map`);
+    for (const c of b.cards || []) {
+      const src = c.ref ? textOf(c.ref) : null;
+      if (!c.id || !c.title || !c.does) failures.push(`${where}: card ${c.id || '?'} needs an id, a title and what it does`);
+      if (src == null) failures.push(`${where}: card ${c.id}: reference "${c.ref}" does not exist`);
+      else if (!quoteMatches(c.quote || '', src)) failures.push(`${where}: card ${c.id}: "${c.quote}" is not in ${c.ref}`);
+    }
+    for (const m of (b.intro || '').matchAll(/\(([^)]+ \d+:\d+(?:[–-]\d+)?)\)/g)) if (textOf(m[1]) == null) failures.push(`${where}: intro reference "${m[1]}" does not exist`);
+    for (const m of (b.intro || '').matchAll(/\b(Daniel|Isaiah|Ezra) (\d+)(?!:)/g)) if (!verses.has(`${m[1]} ${m[2]}:1`)) failures.push(`${where}: intro chapter "${m[0]}" does not exist`);
+  }
+}
+
 // "September 28–October 4, 2026" -> "2026-09-28" (same rule as the app).
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 function weekStart(dates) {
@@ -566,6 +616,8 @@ const APP_BOOKS = appBooks();
   if (missing.length) failures.push(`index.html: BOOK_PATHS has no Gospel Library link for ${missing.join(', ')}`);
 }
 const weeks = loadWeeks();
+const boards = loadBoards();
+checkBoards(boards, scripture);
 const online = args.has('--online') || args.has('--lesson');
 const pages = new Map();
 if (online) {
@@ -614,6 +666,7 @@ for (const week of weeks) {
   console.log(`✓ ${week.title} (${week.dates}): ${week.reels.length} reels, ${quotes} quotes and ${bonuses} bonus answers checked` +
     (extras.length ? `, plus ${extras.join(' and ')}` : ''));
 }
+if (boards.length) console.log(`✓ ${boards.map(b => `${b.title}: ${b.lands.length} lands, ${b.links.length} borders, ${b.kingdoms.length} kingdoms, ${b.cards.length} prophecy cards`).join('; ')}`);
 if (online) {
   const loaded = [...pages.values()].filter(t => t != null).length;
   console.log(`✓ ${loaded} of ${pages.size} Gospel Library pages checked live`);
