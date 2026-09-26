@@ -553,6 +553,7 @@
   .rk-pass .rk-q { font-size: 26px; }
   .rk-wait { margin-top: 12px; padding: 12px 14px; border-radius: 14px; background: rgba(52,211,153,.08); border: 1px solid rgba(52,211,153,.4); }
   .rk-wait .eyebrow { color: var(--right); }
+  .rk-alert { margin: 4px 0 8px; padding: 8px 12px; border-radius: 12px; background: rgba(251,191,36,.14); border: 1px solid rgba(251,191,36,.55); font-weight: 800; font-size: 15px; line-height: 1.4; }
   .rk-nudge { margin-top: 12px; font-weight: 700; color: rgba(255,255,255,.85); }
   .rk-fort { position: fixed; z-index: 141; transform: translateX(-50%); padding: 8px 16px; border-radius: 999px; border: 2px solid; background: rgba(5,5,15,.85); font-weight: 900; font-size: clamp(15px, 2vw, 22px); white-space: nowrap; pointer-events: none; animation: rkFort .35s ease both; transition: opacity .45s; }
   .rk-fort.gone { opacity: 0; }
@@ -3651,7 +3652,7 @@ const TreasureUp = (function () {
     if (!riskCanFort(g, m.uid) || !L || L.o !== m.uid) return;
     L.a++;
     g.wait[m.uid].ready = 0;
-    g.fort = { n: ((g.fort && g.fort.n) || 0) + 1, uid: m.uid, land: m.a, a: L.a };
+    g.fort = { n: ((g.fort && g.fort.n) || 0) + 1, uid: m.uid, land: m.a, a: L.a, key: riskWaitKey(g) };
     riskLog(g, s.name + ' fortifies ' + landName(m.a) + ': ' + L.a + '.');
   }
 
@@ -4494,9 +4495,13 @@ const TreasureUp = (function () {
         : !sel.from ? 'Attack? Tap one of your lands to attack from.'
         : !sel.to ? `Tap a land next to ${landName(sel.from)} to attack it. Each tap rolls the dice.`
         : `Tap ${landName(sel.to)} again to roll again.`;
+      // Someone just fortified the land he's attacking, or one next to where he's attacking from.
+      const f = g.fort, hit = f && f.key === riskWaitKey(g) && g.lands[f.land] && g.lands[f.land].o !== me && seatOf(g, f.uid)
+        && (f.land === sel.to || (sel.from && adjacent(sel.from, f.land))) ? f : null;
+      const alert = hit ? `<p class="rk-alert">🛡️ ${esc(seatOf(g, hit.uid).name)} just fortified ${esc(landName(hit.land))}, ${hit.land === sel.to ? 'the land you’re attacking' : 'next to ' + esc(landName(sel.from))}: ${g.lands[hit.land].a} there now.</p>` : '';
       const walls = sel.from && g.lands[B.walls].o !== me && adjacent(sel.from, B.walls)
         ? `<p class="rk-note">${esc(landName(B.walls))} has walls: its defender rolls 3 dice.</p>` : '';
-      return `${riskSayHtml(g)}<p class="rk-q">${esc(next)}</p>${walls}${btns('<button class="btn" data-rk="done">Done attacking</button>', insightBtn)}${coach}${nudge}`;
+      return `${riskSayHtml(g)}<p class="rk-q">${esc(next)}</p>${alert}${walls}${btns('<button class="btn" data-rk="done">Done attacking</button>', insightBtn)}${coach}${nudge}`;
     }
     const m = t.moved;
     const next = m ? `${m.n} moved to ${landName(m.to)}.` + (g.lands[m.from].a >= 2 ? ` Tap ${landName(m.to)} again to move another.` : '')
