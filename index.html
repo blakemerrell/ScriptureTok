@@ -3389,7 +3389,7 @@ const TreasureUp = (function () {
     if (!q) return null;
     return { q, text: part === 'q' ? q.q : q.hunt || q.q, home: part === 'q' ? r.verse.ref : homeOf(r, q), bonus: part === 'q' ? null : q, week: (window.TU_WEEKS || []).find(w => w.reels.includes(r)) };
   }
-  // Easy: reel questions, this week's and earlier weeks' (a review). Hard:
+  // Easy: reel questions, half this week's and half earlier weeks' (a review). Hard:
   // this week's reading questions (the reel bonuses and Go deeper) as hunts:
   // they name only the chapter (or the page), never the verse. One that
   // names a verse plays only once it has a `hunt` wording (tools/verify.mjs
@@ -3399,7 +3399,8 @@ const TreasureUp = (function () {
     const start = weekStart(WEEK.dates);
     const earlier = (window.TU_WEEKS || []).filter(w => w !== WEEK && weekStart(w.dates) < start);
     return {
-      easy: WEEK.reels.concat(...earlier.map(w => w.reels)).map(r => r.id + ':q'),
+      easy: WEEK.reels.map(r => r.id + ':q'),
+      review: earlier.flatMap(w => w.reels).map(r => r.id + ':q'),
       hard: WEEK.reels.flatMap(r => bonusesOf(r).map((b, n) => huntable(b) ? r.id + ':b' + n : null)).filter(Boolean)
         .concat(deepItems().filter(huntable).map(d => 'deep:' + d.id))
     };
@@ -3491,7 +3492,7 @@ const TreasureUp = (function () {
     g.state = 'play';
     g.round = 1;
     g.insight = {};
-    g.used = { easy: [], hard: [] };
+    g.used = { easy: [], review: [], hard: [] };
     g.dice = null;
     g.log = [];
     g.turn = newTurn(0);
@@ -3504,12 +3505,17 @@ const TreasureUp = (function () {
     riskSay(g, 'Round 1 of ' + g.rounds + '. ' + kingdomOf(g.seats[0].k).name + ' moves first: ' + g.seats[0].name + ', raise your army!');
   }
 
+  // An easy question is a coin flip between this week's reels and earlier
+  // weeks' (a review), so it stays about half and half however many weeks
+  // have gone by. Each pile goes round before any question comes back.
   function riskNextQuestion(g, level) {
-    const pool = riskPools()[level];
-    const order = shuffled(pool, rk.code + '|' + level + '|' + Math.floor(g.used[level].length / pool.length));
-    let id = order.find(x => !g.used[level].includes(x));
-    if (!id) { g.used[level] = []; id = order[0]; }
-    g.used[level].push(id);
+    const pools = riskPools();
+    const kind = level === 'hard' ? 'hard' : pools.review.length && Math.random() < 0.5 ? 'review' : 'easy';
+    const pool = pools[kind], used = g.used[kind] = g.used[kind] || [];
+    const order = shuffled(pool, rk.code + '|' + kind + '|' + Math.floor(used.length / pool.length));
+    let id = order.find(x => !used.includes(x));
+    if (!id) { used.length = 0; id = order[0]; }
+    used.push(id);
     return id;
   }
 
