@@ -372,6 +372,8 @@
   .game-row .gd { font-size: 12.5px; color: rgba(255,255,255,.65); margin-top: 2px; line-height: 1.35; }
   .game-row .gs { font-size: 12px; font-weight: 800; margin-top: 4px; color: var(--gold); }
   .game-row.locked { opacity: .6; }
+  .games-head { margin: 18px 2px 0; font-size: 12px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: rgba(255,255,255,.55); }
+  .games-head:first-child { margin-top: 4px; }
 
   .pz-wrap { width: 100%; max-width: 560px; margin: 16px auto 0; }
   .pz-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
@@ -2302,7 +2304,7 @@ const TreasureUp = (function () {
     </button>`;
 
   function renderGames() {
-    const rows = [];
+    const rows = [], family = [];
     if (WEEK.puzzle) {
       rows.push(gameRow('puzzle', '🧩', 'Weekly puzzle', "Sort 16 ideas into this week's 4 lesson sections.", puzzleStatus(), reelsLeft() > 0));
     }
@@ -2313,11 +2315,11 @@ const TreasureUp = (function () {
     if (WEEK.words && WEEK.words.length) {
       rows.push(gameRow('word', '🔤', 'Verse Word', "Today's word is hiding in a verse. Six tries.", wordStatus(), false));
     }
-    rows.push(gameRow('climb', '🪜', 'Scripture Climb', 'Ten questions, each worth more. Three lifelines.', climbStatus(), false));
-    rows.push(gameRow('live', '📡', 'Live game', 'The TV shows the questions; everyone answers on their own phone or tablet.', 'Host or join with a code', false));
-    rows.push(gameRow('board', '📺', 'Scripture Showdown', 'A quiz-show game for the whole family, best on the TV.', 'Play together', false));
-    if (BOARD()) rows.push(gameRow('babylon', '🏰', BOARD().title, 'A Risk-style map game for 2 to 4: the map on a computer or TV and everyone on their own phone, or one screen passed around.', 'Put up the map, join with a code, or play on one screen', false));
-    $('gamesBody').innerHTML = rows.join('');
+    rows.push(gameRow('climb', '🪜', 'Scripture Climb', 'Ten questions, each worth more. Three lifelines.', climbStatus(), reelsLeft() > 0));
+    family.push(gameRow('live', '📡', 'Live game', 'A quiz on the TV, and everyone answers on their own phone. Quick right answers score a bit more.', 'Phones needed · host or join with a code', false));
+    family.push(gameRow('board', '📺', 'Scripture Showdown', 'A quiz-show board on one screen. A parent reads each question and gives the points; no phones needed.', 'One screen · play together', false));
+    if (BOARD()) family.push(gameRow('babylon', '🏰', BOARD().title, 'A Risk-style map game for 2 to 4: the map on the TV and everyone on their own phone, or one screen passed around.', 'Put up the map, join with a code, or play on one screen', false));
+    $('gamesBody').innerHTML = `<div class="games-head">Every day</div>${rows.join('')}<div class="games-head">Family night</div>${family.join('')}`;
   }
 
   function openGames() { renderGames(); $('games').hidden = false; }
@@ -2661,16 +2663,31 @@ const TreasureUp = (function () {
     return qs.slice(0, CLIMB_VALUES.length);
   }
 
-  const climbStatus = () => S.climbDay === dayKey() ? 'Climbed today · more climbs are practice' : 'Up to 20 XP today';
+  const climbStatus = () => reelsLeft() ? 'Answer all ' + WEEK.reels.length + ' reels to unlock · ' + reelsLeft() + ' left'
+    : S.climbDay === dayKey() ? 'Climbed today · more climbs are practice' : 'Up to 20 XP today';
 
+  // The first climb each day pays 2 XP for each right answer, as he gives
+  // it; the day's climb is taken from the first answer on, so leaving and
+  // starting over is practice. It opens once the week's reels are answered,
+  // so it can't give their answers away first.
   function openClimb() {
-    climb = { qs: climbQuestions(), at: 0, picked: null, hidden: null, used: {}, over: false };
+    climb = { qs: climbQuestions(), at: 0, picked: null, hidden: null, used: {}, over: false, xp: 0,
+              paid: S.climbDay !== dayKey(), seed: Math.random().toString(36).slice(2, 8) };
     openPlay('climb', 'Scripture Climb');
     renderClimb();
   }
 
   function renderClimb() {
     const c = climb, body = $('playBody');
+    if (reelsLeft()) {
+      body.innerHTML = `
+        <div class="clue">
+          <p class="clue-q">Locked for now</p>
+          <p class="board-help">Answer all ${WEEK.reels.length} reels this week to unlock Scripture Climb. ${reelsLeft()} left.</p>
+          <div class="board-actions"><button class="btn" data-climb="exit">Back</button></div>
+        </div>`;
+      return;
+    }
     const ladder = c.qs.map((_, i) => {
       const cls = i < c.at || (c.over && i < c.rungs) ? 'done'
         : (c.over && i === c.rungs && c.rungs < c.qs.length) ? 'missed'
@@ -2681,8 +2698,8 @@ const TreasureUp = (function () {
       body.innerHTML = `
         <div class="clue">
           <div class="climb-ladder">${ladder}</div>
-          <p class="clue-q">${c.rungs === c.qs.length ? 'To the top! ' : ''}You climbed to ${c.final.toLocaleString('en-US')}</p>
-          <p class="board-help">${c.rungs} of ${c.qs.length} right.${c.xp ? ' +' + c.xp + ' XP.' : ' This climb was practice (the first climb each day earns XP).'}</p>
+          <p class="clue-q">${c.rungs === c.qs.length ? 'To the top! ' : ''}You climbed to ${c.final.toLocaleString('en-US')} points</p>
+          <p class="board-help">${c.rungs} of ${c.qs.length} right. ${!c.paid ? 'This climb was practice: the first climb each day earns XP.' : c.xp ? '+' + c.xp + ' XP.' : 'No XP this time. More climbs today are practice.'}</p>
           <div class="board-actions">
             <button class="btn" data-climb="again">Climb again</button>
             <button class="btn ghost" data-climb="exit">Done</button>
@@ -2691,7 +2708,7 @@ const TreasureUp = (function () {
       return;
     }
     const cur = c.qs[c.at], shown = c.picked != null;
-    const choices = shuffled([cur.q.right].concat(cur.q.wrong), cur.q.q + '|climb').filter(x => x !== c.hidden).map(ch => {
+    const choices = shuffled([cur.q.right].concat(cur.q.wrong), cur.q.q + '|climb|' + c.seed).filter(x => x !== c.hidden).map(ch => {
       const cls = shown ? (ch === cur.q.right ? ' is-right' : ch === c.picked ? ' is-wrong' : '') : '';
       const mark = shown ? (ch === cur.q.right ? '✓' : ch === c.picked ? '✕' : '') : '';
       return `<button class="choice${cls}" data-climb-pick="${esc(ch)}"${shown ? ' disabled' : ''}><span class="mark">${mark}</span><span>${esc(ch)}</span></button>`;
@@ -2700,7 +2717,7 @@ const TreasureUp = (function () {
     body.innerHTML = `
       <div class="clue">
         <div class="climb-ladder">${ladder}</div>
-        <div class="eyebrow">Question ${c.at + 1} of ${c.qs.length} · for ${CLIMB_VALUES[c.at].toLocaleString('en-US')}</div>
+        <div class="eyebrow">Question ${c.at + 1} of ${c.qs.length} · for ${CLIMB_VALUES[c.at].toLocaleString('en-US')} points</div>
         <p class="clue-q">${shown ? linkRefs(cur.q.q, cur.home) : esc(cur.q.q)}</p>
         ${shown ? '' : `<div class="lifelines">
           <button class="lifeline${c.used.half ? ' used' : ''}" data-life="half">50:50</button>
@@ -2710,6 +2727,7 @@ const TreasureUp = (function () {
         ${c.askParent === c.at ? '<p class="parent-msg" style="margin-bottom:12px">Ask a parent! Talk it through together, then choose.</p>' : ''}
         <div class="quiz${shown ? ' done' : ''}"><div class="quiz-choices">${choices}</div></div>
         ${shown ? `<p class="quiz-why">${right ? '<b class="ok">Right.</b> ' : '<b class="no">Not quite.</b> '}${linkRefs(cur.q.why, cur.home)}</p>
+          ${sourceLink(cur.src) ? `<p class="board-help">Read it: <a class="ref-link" href="${esc(sourceLink(cur.src))}" target="_blank" rel="noopener noreferrer">${esc(sourceLabel(cur.src))} ↗</a></p>` : ''}
           <div class="board-actions"><button class="btn" data-climb="next">${right && c.at + 1 < c.qs.length ? 'Next question' : 'See how you did'}</button></div>` : ''}
       </div>`;
   }
@@ -2720,11 +2738,6 @@ const TreasureUp = (function () {
     c.final = c.rungs ? CLIMB_VALUES[c.rungs - 1] : 0;   // the highest rung reached
     c.over = true;
     markStudied();
-    if (S.climbDay !== dayKey()) {
-      S.climbDay = dayKey();
-      c.xp = c.rungs * 2;
-      if (c.xp) grantXp(c.xp, 'Scripture Climb');
-    }
     save();
   }
 
@@ -2736,6 +2749,11 @@ const TreasureUp = (function () {
     const cur = c.qs[c.at];
     if (el.dataset.climbPick != null && c.picked == null) {
       c.picked = el.dataset.climbPick;
+      if (c.paid) {
+        if (S.climbDay !== dayKey()) S.climbDay = dayKey();
+        if (c.picked === cur.q.right) { c.xp += 2; grantXp(2, 'Scripture Climb'); }
+        save();
+      }
     } else if (el.dataset.climb === 'next') {
       const right = c.picked === cur.q.right;
       if (right && c.at + 1 < c.qs.length) { c.at += 1; c.picked = null; c.hidden = null; }
