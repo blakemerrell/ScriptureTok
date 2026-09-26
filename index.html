@@ -372,6 +372,8 @@
   .game-row .gd { font-size: 12.5px; color: rgba(255,255,255,.65); margin-top: 2px; line-height: 1.35; }
   .game-row .gs { font-size: 12px; font-weight: 800; margin-top: 4px; color: var(--gold); }
   .game-row.locked { opacity: .6; }
+  .games-head { margin: 18px 2px 0; font-size: 12px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: rgba(255,255,255,.55); }
+  .games-head:first-child { margin-top: 4px; }
 
   .pz-wrap { width: 100%; max-width: 560px; margin: 16px auto 0; }
   .pz-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
@@ -392,6 +394,10 @@
   .pz-lives { display: flex; align-items: center; gap: 6px; justify-content: center; margin-top: 14px; font-size: 13px; color: rgba(255,255,255,.7); }
   .pz-lives i { width: 10px; height: 10px; border-radius: 99px; background: rgba(255,255,255,.8); display: inline-block; }
   .pz-lives i.gone { background: rgba(255,255,255,.18); }
+  .pz-targets { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 4px; font-size: 13.5px; font-weight: 700; color: rgba(255,255,255,.85); }
+  .pz-targets li::before { content: '• '; color: var(--gold); }
+  .pz-targets li.done { color: rgba(255,255,255,.45); }
+  .pz-targets li.done::before { content: ''; }
   .pz-msg { text-align: center; min-height: 22px; margin-top: 10px; font-weight: 800; color: var(--gold); }
 
   .say-quote { font-weight: 900; font-size: clamp(22px, 5.4vw, 40px); line-height: 1.2; margin: 10px 0 18px; text-wrap: balance; }
@@ -473,6 +479,11 @@
   .live-choice .lt { flex: 0 0 auto; width: 1.6em; height: 1.6em; border-radius: 10px; display: grid; place-items: center; background: rgba(0,0,0,.25); }
   .live-choice.dim { opacity: .3; }
   .live-choice.right { outline: 4px solid #fff; outline-offset: 2px; }
+  .live-choices.shown .live-choice { min-height: clamp(44px, 7vh, 76px); font-size: clamp(15px, 2vw, 26px); }
+  .live-scores { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .live-scores span { padding: 8px 14px; border-radius: 999px; background: rgba(255,255,255,.08); font-weight: 800; font-size: clamp(14px, 1.6vw, 20px); }
+  .live-scores b { color: var(--gold); }
+  .live-scores i { font-style: normal; color: var(--right); }
   .live-clock { font-weight: 900; font-size: clamp(28px, 5vw, 64px); font-variant-numeric: tabular-nums; color: var(--gold); }
   .live-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
   .live-bar { height: 10px; border-radius: 99px; background: rgba(255,255,255,.12); overflow: hidden; margin-top: 4px; }
@@ -553,8 +564,8 @@
   .rk-pass .rk-q { font-size: 26px; }
   .rk-wait { margin-top: 12px; padding: 12px 14px; border-radius: 14px; background: rgba(52,211,153,.08); border: 1px solid rgba(52,211,153,.4); }
   .rk-wait .eyebrow { color: var(--right); }
+  .rk-card .ls-opt:disabled, .rk-card .btn:disabled { opacity: .5; }   /* sent: waiting for the map screen */
   .rk-alert { margin: 4px 0 8px; padding: 8px 12px; border-radius: 12px; background: rgba(251,191,36,.14); border: 1px solid rgba(251,191,36,.55); font-weight: 800; font-size: 15px; line-height: 1.4; }
-  .rk-nudge { margin-top: 12px; font-weight: 700; color: rgba(255,255,255,.85); }
   .rk-fort { position: fixed; z-index: 141; transform: translateX(-50%); padding: 8px 16px; border-radius: 999px; border: 2px solid; background: rgba(5,5,15,.85); font-weight: 900; font-size: clamp(15px, 2vw, 22px); white-space: nowrap; pointer-events: none; animation: rkFort .35s ease both; transition: opacity .45s; }
   .rk-fort.gone { opacity: 0; }
   .rk-lab.pulse .badge { transform-box: fill-box; transform-origin: center; animation: rkPulse .9s ease 2; }
@@ -836,12 +847,13 @@
     <!-- Games -->
     <button id="gamesBtn" class="pointer-events-auto grid place-items-center w-9 h-9 rounded-full bg-black/45 backdrop-blur-md ring-1 ring-white/15 shrink-0 text-lg leading-none" aria-label="Games">🎮</button>
 
-    <!-- Family: sign in, or join with a link. Once this device is in a
-         family, 💬 takes its place (the family screen has People and Chat). -->
-    <button id="famBtn" class="relative pointer-events-auto grid place-items-center w-9 h-9 rounded-full bg-black/45 backdrop-blur-md ring-1 ring-white/15 shrink-0 text-lg leading-none" aria-label="Family">👪</button>
+    <!-- Family: sign in, or join with a link; once this device is in a
+         family, People (add someone, sign out) and Chat. The dot means a
+         new message. -->
+    <button id="famBtn" class="relative pointer-events-auto grid place-items-center w-9 h-9 rounded-full bg-black/45 backdrop-blur-md ring-1 ring-white/15 shrink-0 text-lg leading-none" aria-label="Family">👪<span id="chatDot" class="hud-dot" hidden></span></button>
 
-    <!-- Family chat. The dot means a new message. -->
-    <button id="chatBtn" class="relative pointer-events-auto grid place-items-center w-9 h-9 rounded-full bg-black/45 backdrop-blur-md ring-1 ring-white/15 shrink-0 text-lg leading-none" aria-label="Family chat" hidden>💬<span id="chatDot" class="hud-dot" hidden></span></button>
+    <!-- (Chat opens from the family screen; this button stays hidden.) -->
+    <button id="chatBtn" class="relative pointer-events-auto grid place-items-center w-9 h-9 rounded-full bg-black/45 backdrop-blur-md ring-1 ring-white/15 shrink-0 text-lg leading-none" aria-label="Family chat" hidden>💬</button>
 
     <!-- Study streak: days in a row he answered at least one question -->
     <div class="flex items-center gap-1 rounded-full bg-black/45 backdrop-blur-md px-2.5 py-1.5 ring-1 ring-white/15 shrink-0" title="Days in a row with a question answered">
@@ -1076,6 +1088,7 @@ const TreasureUp = (function () {
     words: {},    // Verse Word by day: { word, guesses, status, paid }
     climbDay: null,  // last day a Scripture Climb paid XP
     sayRecall: {},   // sayingId -> last day it came back in a warm-up
+    sayPos: null,    // Who said it?: where the current round was left { week, idx, right, seed }
     history: [],     // finished weeks, for the year trail: { title, num, right, answered }
     weekTitle: null, weekNum: null
   });
@@ -2021,18 +2034,25 @@ const TreasureUp = (function () {
   }
 
   function boardTiles() {
+    const seed = (game() && game().seed) || '';
     const cols = WEEK.sections.map((name, s) => {
       const reels = WEEK.reels.filter(r => r.section === s);
-      const clues = reels.map(r => ({ id: r.id + ':q', q: r.question }))
+      let clues = reels.map(r => ({ id: r.id + ':q', q: r.question }))
         .concat(reels.flatMap(r => bonusesOf(r).map((b, n) => ({ id: r.id + ':b' + n, q: b, bonus: true }))));
+      if (seed) clues = shuffled(clues, seed + '|' + s);   // "Play again": the tiles in a new order
       clues.forEach((c, k) => { c.value = 100 * (k + 1); c.col = s; });
       return { name, clues };
     });
     const all = cols.flatMap(c => c.clues);
     const bonuses = all.filter(c => c.bonus);
-    const dd = bonuses.length ? bonuses[hash(WEEK.title) % bonuses.length].id : null;
+    const dd = bonuses.length ? bonuses[hash(WEEK.title + seed) % bonuses.length].id : null;
     return { cols, all, dd };
   }
+  // Each week keeps its own family best (weeks have different boards).
+  const boardBest = () => (G.bests || {})[WEEK.title] || 0;
+  // Who got a tile: several players can (older games saved one number).
+  const byList = d => d.by == null ? [] : Array.isArray(d.by) ? d.by : [d.by];
+  let boardSure = 0;   // "Change players" asks again before clearing a game in progress
 
   const game = () => G.games[WEEK.title];
   const worthOf = (t, dd) => t.id === dd ? t.value * 2 : t.value;
@@ -2071,7 +2091,7 @@ const TreasureUp = (function () {
     if (boardView) {
       const t = all.find(c => c.id === boardView.tile);
       const shown = boardView.revealed;
-      const choices = choicesFor(t.q, 'board|' + t.id).map((c, n) => {
+      const choices = choicesFor(t.q, 'board|' + t.id + '|' + (g.seed || '')).map((c, n) => {
         const right = shown && c === t.q.right;
         return `<div class="choice${right ? ' is-right' : ''}"><span class="mark">${right ? '✓' : 'ABC'[n]}</span><span>${esc(c)}</span></div>`;
       }).join('');
@@ -2083,9 +2103,9 @@ const TreasureUp = (function () {
           <div class="quiz clue-choices${shown ? ' done' : ''}"><div class="quiz-choices">${choices}</div></div>
           ${shown
             ? `<p class="quiz-why"><b class="ok">Answer:</b> ${esc(t.q.right)}. ${linkRefs(t.q.why, homeOfId(t.id))}</p>
-               <p class="board-help" style="margin-top:16px">Who got it? (${worthOf(t, dd)} points)</p>
-               <div class="board-actions">${g.players.map((p, n) => `<button class="btn" data-award="${n}">${esc(p.name)}</button>`).join('')}
-                 <button class="btn ghost" data-award="-1">Nobody</button></div>`
+               <p class="board-help" style="margin-top:16px">Who got it? Tap everyone who did (${worthOf(t, dd)} points each).</p>
+               <div class="board-actions">${g.players.map((p, n) => `<button class="btn${(boardView.award || []).includes(n) ? '' : ' ghost'}" data-award="${n}" aria-pressed="${(boardView.award || []).includes(n)}">${(boardView.award || []).includes(n) ? '✓ ' : ''}${esc(p.name)}</button>`).join('')}</div>
+               <div class="board-actions"><button class="btn" data-act="give">${(boardView.award || []).length ? 'Give the points' : 'Nobody got it'}</button></div>`
             : `<div class="board-actions"><button class="btn" data-act="reveal">Show answer</button>
                  <button class="btn ghost" data-act="back">Back to the board</button></div>`}
         </div>`;
@@ -2099,7 +2119,7 @@ const TreasureUp = (function () {
         <div class="clue">
           <div class="eyebrow">Game over</div>
           <p class="clue-q">Family total: ${total}</p>
-          <p class="board-help">${g.newBest ? 'New family best!' : 'Family best: ' + G.best}</p>
+          <p class="board-help">${g.newBest ? 'New family best for this week!' : 'Family best this week: ' + boardBest()}</p>
           <div class="grid gap-2" style="margin-top:16px">${ranked.map(p => `<div class="score-row"><span>${esc(p.name)}</span><b>${p.score}</b></div>`).join('')}</div>
           <div class="board-actions">
             <button class="btn" data-act="again">Play again</button>
@@ -2118,13 +2138,13 @@ const TreasureUp = (function () {
         if (!t) return '<div class="tile empty"></div>';
         const d = g.done[t.id];
         return d
-          ? `<button class="tile" disabled>${d.by == null ? '—' : esc(g.players[d.by].name)}</button>`
+          ? `<button class="tile" disabled>${byList(d).length ? byList(d).map(i => esc(g.players[i].name)).join(', ') : '—'}</button>`
           : `<button class="tile" data-tile="${esc(t.id)}" aria-label="${esc(c.name)} for ${t.value}">${t.value}</button>`;
       }).join('');
     }
     body.innerHTML = `
       <div class="board-grid" style="grid-template-columns:repeat(${cols.length},minmax(0,1fr))">${grid}</div>
-      <div class="board-actions"><button class="btn ghost" data-act="players">Change players</button></div>`;
+      <div class="board-actions"><button class="btn ghost" data-act="players">${Date.now() - boardSure < 4000 ? 'This clears the game. Tap again' : 'Change players'}</button></div>`;
   }
 
   function boardClick(e) {
@@ -2135,16 +2155,18 @@ const TreasureUp = (function () {
     if (el.dataset.tile) {
       boardView = { tile: el.dataset.tile, revealed: false };
     } else if (el.dataset.award != null) {
+      const n = Number(el.dataset.award), a = boardView.award = boardView.award || [];
+      if (a.includes(n)) a.splice(a.indexOf(n), 1); else a.push(n);
+    } else if (el.dataset.act === 'give') {
       const { all, dd } = boardTiles();
-      const t = all.find(c => c.id === boardView.tile);
-      const by = Number(el.dataset.award);
-      if (by >= 0) g.players[by].score += worthOf(t, dd);
-      g.done[t.id] = { by: by >= 0 ? by : null };
+      const t = all.find(c => c.id === boardView.tile), by = (boardView.award || []).slice().sort();
+      by.forEach(i => { g.players[i].score += worthOf(t, dd); });
+      g.done[t.id] = { by };
       boardView = null;
       if (Object.keys(g.done).length >= all.length) {
         const total = g.players.reduce((n, p) => n + p.score, 0);
-        g.newBest = total > (G.best || 0);
-        if (g.newBest) G.best = total;
+        g.newBest = total > boardBest();
+        if (g.newBest) G.bests = Object.assign({}, G.bests, { [WEEK.title]: total });
       }
       saveBoard();
     } else {
@@ -2165,8 +2187,13 @@ const TreasureUp = (function () {
       } else if (act === 'again') {
         g.players.forEach(p => { p.score = 0; });
         g.done = {}; delete g.newBest;
+        g.seed = Math.random().toString(36).slice(2, 8);
         saveBoard();
       } else if (act === 'players') {
+        // In the middle of a game this clears it, so it asks first.
+        const playing = g && Object.keys(g.done).length && Object.keys(g.done).length < boardTiles().all.length;
+        if (playing && Date.now() - boardSure > 4000) { boardSure = Date.now(); setTimeout(() => { if (!$('board').hidden && !boardView) renderBoard(); }, 4100); renderBoard(); return; }
+        boardSure = 0;
         delete G.games[WEEK.title];
         saveBoard();
       } else if (act === 'exit') {
@@ -2297,7 +2324,7 @@ const TreasureUp = (function () {
     </button>`;
 
   function renderGames() {
-    const rows = [];
+    const rows = [], family = [];
     if (WEEK.puzzle) {
       rows.push(gameRow('puzzle', '🧩', 'Weekly puzzle', "Sort 16 ideas into this week's 4 lesson sections.", puzzleStatus(), reelsLeft() > 0));
     }
@@ -2308,11 +2335,11 @@ const TreasureUp = (function () {
     if (WEEK.words && WEEK.words.length) {
       rows.push(gameRow('word', '🔤', 'Verse Word', "Today's word is hiding in a verse. Six tries.", wordStatus(), false));
     }
-    rows.push(gameRow('climb', '🪜', 'Scripture Climb', 'Ten questions, each worth more. Three lifelines.', climbStatus(), false));
-    rows.push(gameRow('live', '📡', 'Live game', 'The TV shows the questions; everyone answers on their own phone or tablet.', 'Host or join with a code', false));
-    rows.push(gameRow('board', '📺', 'Scripture Showdown', 'A quiz-show game for the whole family, best on the TV.', 'Play together', false));
-    if (BOARD()) rows.push(gameRow('babylon', '🏰', BOARD().title, 'A Risk-style map game for 2 to 5: the map on a computer or TV and everyone on their own phone, or one screen passed around.', 'Put up the map, join with a code, or play on one screen', false));
-    $('gamesBody').innerHTML = rows.join('');
+    rows.push(gameRow('climb', '🪜', 'Scripture Climb', 'Ten questions, each worth more. Three lifelines.', climbStatus(), reelsLeft() > 0));
+    family.push(gameRow('live', '📡', 'Live game', 'A quiz on the TV, and everyone answers on their own phone. Quick right answers score a bit more.', 'Phones needed · host or join with a code', false));
+    family.push(gameRow('board', '📺', 'Scripture Showdown', 'A quiz-show board on one screen. A parent reads each question and gives the points; no phones needed.', 'One screen · play together', false));
+    if (BOARD()) family.push(gameRow('babylon', '🏰', BOARD().title, 'A Risk-style map game for 2 to 4: the map on the TV and everyone on their own phone, or one screen passed around.', 'Put up the map, join with a code, or play on one screen', false));
+    $('gamesBody').innerHTML = `<div class="games-head">Every day</div>${rows.join('')}<div class="games-head">Family night</div>${family.join('')}`;
   }
 
   function openGames() { renderGames(); $('games').hidden = false; }
@@ -2367,7 +2394,9 @@ const TreasureUp = (function () {
     const pz = puzzleState();
     const groups = WEEK.puzzle.groups;
     const done = pz.status !== 'playing';
-    const shownGroups = done ? groups.map((_, gi) => gi) : pz.solved;
+    // A loss shows only the groups he solved: the rest come back tomorrow,
+    // so showing where every tile goes would hand him the answers.
+    const shownGroups = pz.status === 'won' ? groups.map((_, gi) => gi) : pz.solved;
     const solvedHtml = shownGroups.map(gi => {
       const g = groups[gi];
       return `<div class="pz-solved pz-c${gi}"><b>${esc(WEEK.sections[g.section])}</b>
@@ -2381,7 +2410,8 @@ const TreasureUp = (function () {
           <p class="clue-q">${pz.status === 'won' ? 'Solved!' : 'Out of tries for today'}</p>
           <p class="board-help">${pz.status === 'won'
             ? 'Every idea is in its section. You earned ' + PUZZLE_XP + ' XP and a streak freeze ❄️.'
-            : "Here's where everything goes. Tomorrow you get a new try."}</p>
+            : 'Tomorrow you get a new try at the same puzzle. The four sections to sort into:'}</p>
+          ${pz.status === 'won' ? '' : `<ul class="pz-targets">${groups.map((g, gi) => `<li class="${pz.solved.includes(gi) ? 'done' : ''}">${pz.solved.includes(gi) ? '✓ ' : ''}${esc(WEEK.sections[g.section])}</li>`).join('')}</ul>`}
           <div style="margin-top:14px">${solvedHtml}</div>
           <div class="board-actions"><button class="btn" data-pz="exit">Back</button></div>
         </div>`;
@@ -2394,7 +2424,8 @@ const TreasureUp = (function () {
     }
     body.innerHTML = `
       <div class="pz-wrap">
-        <p class="board-help">Find four groups of four. Each group is one of this week's lesson sections.</p>
+        <p class="board-help">Find four groups of four. Each group is one of this week's lesson sections:</p>
+        <ul class="pz-targets">${groups.map((g, gi) => `<li class="${pz.solved.includes(gi) ? 'done' : ''}">${pz.solved.includes(gi) ? '✓ ' : ''}${esc(WEEK.sections[g.section])}</li>`).join('')}</ul>
         <div style="margin-top:12px">${solvedHtml}</div>
         <div class="pz-grid">${pzOrder.map(t =>
           `<button class="ptile${pzSel.includes(t) ? ' sel' : ''}" data-pt="${esc(t)}">${esc(t)}</button>`).join('')}</div>
@@ -2457,10 +2488,14 @@ const TreasureUp = (function () {
 
   /* ----- Who said it? ----- */
 
-  let sayIdx = 0, sayPicked = null;
+  // Where he is in a round, kept with his progress so a reload picks up at
+  // the same line; the round's own score; and a seed so each round shuffles.
+  let sayIdx = 0, sayPicked = null, sayRight = 0, saySeed = '';
+  const sayKeep = () => { S.sayPos = { week: WEEK.title, idx: sayIdx, right: sayRight, seed: saySeed }; save(); };
 
   function openSayings() {
-    sayIdx = 0; sayPicked = null;
+    const p = S.sayPos && S.sayPos.week === WEEK.title && S.sayPos.idx < WEEK.sayings.length ? S.sayPos : null;
+    sayIdx = p ? p.idx : 0; sayRight = p ? p.right || 0 : 0; saySeed = p && p.seed ? p.seed : Math.random().toString(36).slice(2, 8); sayPicked = null;
     openPlay('sayings', 'Who said it?');
     renderSayings();
   }
@@ -2472,8 +2507,8 @@ const TreasureUp = (function () {
       const got = list.filter(x => S.sayings[x.id] && S.sayings[x.id].right).length;
       body.innerHTML = `
         <div class="clue">
-          <p class="clue-q">${got} of ${list.length} right</p>
-          <p class="board-help">XP counts your first try at each line. Play again any time to practice.</p>
+          <p class="clue-q">${sayRight} of ${list.length} right</p>
+          <p class="board-help">XP counts your first try at each line: ${got} of ${list.length} right the first time. Play again any time to practice.</p>
           <div class="board-actions">
             <button class="btn" data-say="again">Play again</button>
             <button class="btn ghost" data-say="exit">Done</button>
@@ -2483,7 +2518,7 @@ const TreasureUp = (function () {
     }
     const x = list[sayIdx];
     const shown = sayPicked != null;
-    const buttons = shuffled([x.speaker].concat(x.wrong), x.id + '|say').map(c => {
+    const buttons = shuffled([x.speaker].concat(x.wrong), x.id + '|say|' + saySeed).map(c => {
       const cls = shown ? (c === x.speaker ? ' is-right' : c === sayPicked ? ' is-wrong' : '') : '';
       const mark = shown ? (c === x.speaker ? '✓' : c === sayPicked ? '✕' : '') : '';
       return `<button class="choice${cls}" data-say-pick="${esc(c)}"${shown ? ' disabled' : ''}><span class="mark">${mark}</span><span>${esc(c)}</span></button>`;
@@ -2505,6 +2540,7 @@ const TreasureUp = (function () {
     const x = WEEK.sayings[sayIdx];
     if (el.dataset.sayPick != null && sayPicked == null) {
       sayPicked = el.dataset.sayPick;
+      if (sayPicked === x.speaker) sayRight += 1;
       if (!S.sayings[x.id]) {                    // XP on the first try only
         const right = sayPicked === x.speaker;
         S.sayings[x.id] = { right };
@@ -2514,8 +2550,10 @@ const TreasureUp = (function () {
       }
     } else if (el.dataset.say === 'next') {
       sayIdx += 1; sayPicked = null;
+      sayKeep();
     } else if (el.dataset.say === 'again') {
-      sayIdx = 0; sayPicked = null;
+      sayIdx = 0; sayPicked = null; sayRight = 0; saySeed = Math.random().toString(36).slice(2, 8);
+      sayKeep();
     } else if (el.dataset.say === 'exit') {
       closePlay();
       return;
@@ -2594,7 +2632,7 @@ const TreasureUp = (function () {
     const n = st.guesses.length, done = st.status !== 'playing';
     const blank = done ? esc(w.word) : Array(L).fill('_').join(' ');
     const verse = `<p class="vw-clue">“${esc(w.clue).replace('____', '<b>' + blank + '</b>')}” <span class="text-white/55 text-[13px]">${done ? linkRefs(w.ref) : esc(w.ref)}</span></p>`;
-    const hints = done ? verse
+    const hints = done ? verse + (w.mean ? `<p class="board-help" style="text-align:center;margin:0 auto 12px">${linkRefs(w.mean, w.ref)}</p>` : '')
       : (n >= 2 ? `<p class="vw-clue">Hint: it's in <b>${esc(w.ref.replace(/:.*/, ''))}</b></p>` : '')
         + (n >= 4 ? verse : `<p class="board-help" style="text-align:center;margin:0 auto 12px">${n < 2 ? 'A hint after 2 guesses' : 'Another hint after 4 guesses'}</p>`);
     const paid = typeof st.paid === 'number' ? st.paid : st.paid ? 10 : 0;   // days solved before the XP tiers paid 10
@@ -2603,6 +2641,7 @@ const TreasureUp = (function () {
     $('playBody').innerHTML = `
       <div class="pz-wrap">
         <p class="board-help" style="text-align:center;margin:0 auto">Today's word is from this week's reading. Six tries.</p>
+        ${done ? '' : '<p class="board-help" style="text-align:center;margin:2px auto 0;font-size:12.5px">🟩 right letter, right spot · 🟨 in the word, wrong spot · ⬛ not in the word</p>'}
         ${hints}
         <div class="vw-grid">${rows.join('')}</div>
         <p class="pz-msg">${esc(msg)}</p>
@@ -2656,16 +2695,31 @@ const TreasureUp = (function () {
     return qs.slice(0, CLIMB_VALUES.length);
   }
 
-  const climbStatus = () => S.climbDay === dayKey() ? 'Climbed today · more climbs are practice' : 'Up to 20 XP today';
+  const climbStatus = () => reelsLeft() ? 'Answer all ' + WEEK.reels.length + ' reels to unlock · ' + reelsLeft() + ' left'
+    : S.climbDay === dayKey() ? 'Climbed today · more climbs are practice' : 'Up to 20 XP today';
 
+  // The first climb each day pays 2 XP for each right answer, as he gives
+  // it; the day's climb is taken from the first answer on, so leaving and
+  // starting over is practice. It opens once the week's reels are answered,
+  // so it can't give their answers away first.
   function openClimb() {
-    climb = { qs: climbQuestions(), at: 0, picked: null, hidden: null, used: {}, over: false };
+    climb = { qs: climbQuestions(), at: 0, picked: null, hidden: null, used: {}, over: false, xp: 0,
+              paid: S.climbDay !== dayKey(), seed: Math.random().toString(36).slice(2, 8) };
     openPlay('climb', 'Scripture Climb');
     renderClimb();
   }
 
   function renderClimb() {
     const c = climb, body = $('playBody');
+    if (reelsLeft()) {
+      body.innerHTML = `
+        <div class="clue">
+          <p class="clue-q">Locked for now</p>
+          <p class="board-help">Answer all ${WEEK.reels.length} reels this week to unlock Scripture Climb. ${reelsLeft()} left.</p>
+          <div class="board-actions"><button class="btn" data-climb="exit">Back</button></div>
+        </div>`;
+      return;
+    }
     const ladder = c.qs.map((_, i) => {
       const cls = i < c.at || (c.over && i < c.rungs) ? 'done'
         : (c.over && i === c.rungs && c.rungs < c.qs.length) ? 'missed'
@@ -2676,8 +2730,8 @@ const TreasureUp = (function () {
       body.innerHTML = `
         <div class="clue">
           <div class="climb-ladder">${ladder}</div>
-          <p class="clue-q">${c.rungs === c.qs.length ? 'To the top! ' : ''}You climbed to ${c.final.toLocaleString('en-US')}</p>
-          <p class="board-help">${c.rungs} of ${c.qs.length} right.${c.xp ? ' +' + c.xp + ' XP.' : ' This climb was practice (the first climb each day earns XP).'}</p>
+          <p class="clue-q">${c.rungs === c.qs.length ? 'To the top! ' : ''}You climbed to ${c.final.toLocaleString('en-US')} points</p>
+          <p class="board-help">${c.rungs} of ${c.qs.length} right. ${!c.paid ? 'This climb was practice: the first climb each day earns XP.' : c.xp ? '+' + c.xp + ' XP.' : 'No XP this time. More climbs today are practice.'}</p>
           <div class="board-actions">
             <button class="btn" data-climb="again">Climb again</button>
             <button class="btn ghost" data-climb="exit">Done</button>
@@ -2686,7 +2740,7 @@ const TreasureUp = (function () {
       return;
     }
     const cur = c.qs[c.at], shown = c.picked != null;
-    const choices = shuffled([cur.q.right].concat(cur.q.wrong), cur.q.q + '|climb').filter(x => x !== c.hidden).map(ch => {
+    const choices = shuffled([cur.q.right].concat(cur.q.wrong), cur.q.q + '|climb|' + c.seed).filter(x => x !== c.hidden).map(ch => {
       const cls = shown ? (ch === cur.q.right ? ' is-right' : ch === c.picked ? ' is-wrong' : '') : '';
       const mark = shown ? (ch === cur.q.right ? '✓' : ch === c.picked ? '✕' : '') : '';
       return `<button class="choice${cls}" data-climb-pick="${esc(ch)}"${shown ? ' disabled' : ''}><span class="mark">${mark}</span><span>${esc(ch)}</span></button>`;
@@ -2695,7 +2749,7 @@ const TreasureUp = (function () {
     body.innerHTML = `
       <div class="clue">
         <div class="climb-ladder">${ladder}</div>
-        <div class="eyebrow">Question ${c.at + 1} of ${c.qs.length} · for ${CLIMB_VALUES[c.at].toLocaleString('en-US')}</div>
+        <div class="eyebrow">Question ${c.at + 1} of ${c.qs.length} · for ${CLIMB_VALUES[c.at].toLocaleString('en-US')} points</div>
         <p class="clue-q">${shown ? linkRefs(cur.q.q, cur.home) : esc(cur.q.q)}</p>
         ${shown ? '' : `<div class="lifelines">
           <button class="lifeline${c.used.half ? ' used' : ''}" data-life="half">50:50</button>
@@ -2705,6 +2759,7 @@ const TreasureUp = (function () {
         ${c.askParent === c.at ? '<p class="parent-msg" style="margin-bottom:12px">Ask a parent! Talk it through together, then choose.</p>' : ''}
         <div class="quiz${shown ? ' done' : ''}"><div class="quiz-choices">${choices}</div></div>
         ${shown ? `<p class="quiz-why">${right ? '<b class="ok">Right.</b> ' : '<b class="no">Not quite.</b> '}${linkRefs(cur.q.why, cur.home)}</p>
+          ${sourceLink(cur.src) ? `<p class="board-help">Read it: <a class="ref-link" href="${esc(sourceLink(cur.src))}" target="_blank" rel="noopener noreferrer">${esc(sourceLabel(cur.src))} ↗</a></p>` : ''}
           <div class="board-actions"><button class="btn" data-climb="next">${right && c.at + 1 < c.qs.length ? 'Next question' : 'See how you did'}</button></div>` : ''}
       </div>`;
   }
@@ -2715,11 +2770,6 @@ const TreasureUp = (function () {
     c.final = c.rungs ? CLIMB_VALUES[c.rungs - 1] : 0;   // the highest rung reached
     c.over = true;
     markStudied();
-    if (S.climbDay !== dayKey()) {
-      S.climbDay = dayKey();
-      c.xp = c.rungs * 2;
-      if (c.xp) grantXp(c.xp, 'Scripture Climb');
-    }
     save();
   }
 
@@ -2731,6 +2781,11 @@ const TreasureUp = (function () {
     const cur = c.qs[c.at];
     if (el.dataset.climbPick != null && c.picked == null) {
       c.picked = el.dataset.climbPick;
+      if (c.paid) {
+        if (S.climbDay !== dayKey()) S.climbDay = dayKey();
+        if (c.picked === cur.q.right) { c.xp += 2; grantXp(2, 'Scripture Climb'); }
+        save();
+      }
     } else if (el.dataset.climb === 'next') {
       const right = c.picked === cur.q.right;
       if (right && c.at + 1 < c.qs.length) { c.at += 1; c.picked = null; c.hidden = null; }
@@ -2760,9 +2815,11 @@ const TreasureUp = (function () {
     S.daily.sayDone = { picked, right };
     S.sayRecall = S.sayRecall || {};
     S.sayRecall[x.id] = dayKey();
-    if (!S.sayings[x.id] || !S.sayings[x.id].right) S.sayings[x.id] = { right };
+    // XP counts a line's first answer only, here or in the game.
+    const first = !S.sayings[x.id];
+    if (first) S.sayings[x.id] = { right };
     markStudied();
-    if (right) grantXp(SAY_XP, 'Who said it?');
+    if (right && first) grantXp(SAY_XP, 'Who said it?');
     save();
     return true;
   }
@@ -2906,6 +2963,7 @@ const TreasureUp = (function () {
       async setScores(c, scores) {
         Object.entries(scores).forEach(([u, v]) => { const p = get(c + '.p.' + u); if (p) put(c, c + '.p.' + u, Object.assign(p, v)); });
       },
+      async clearAnswers(c) { keys(c + '.a.').forEach(k => { try { localStorage.removeItem(PRE + k); } catch (e) {} }); notify(c); },
       async endGame(c) { keys(c + '.').forEach(k => { try { localStorage.removeItem(PRE + k); } catch (e) {} }); notify(c); }
     };
   }
@@ -2966,6 +3024,11 @@ const TreasureUp = (function () {
         Object.entries(scores).forEach(([u, v]) => b.update(gameRef(c).collection('players').doc(u), v));
         await b.commit();
       },
+      async clearAnswers(c) {
+        const b = db.batch();
+        (await gameRef(c).collection('answers').get()).docs.forEach(d => b.delete(d.ref));
+        await b.commit();
+      },
       async endGame(c) {
         const b = db.batch();
         for (const sub of ['answers', 'players']) (await gameRef(c).collection(sub).get()).docs.forEach(d => b.delete(d.ref));
@@ -2993,7 +3056,8 @@ const TreasureUp = (function () {
     for (const x of easy.slice(6)) if (ids.length < LIVE_QUESTIONS) ids.push(x);
     return ids.slice(0, LIVE_QUESTIONS);
   }
-  const liveChoices = id => { const q = liveQuestion(id); return shuffled([q.right].concat(q.wrong), 'live|' + id); };
+  const liveGid = () => Math.random().toString(36).slice(2, 10);
+  const liveChoices = id => { const q = liveQuestion(id); return shuffled([q.right].concat(q.wrong), 'live|' + ((lv && lv.game && lv.game.gid) || '') + '|' + id); };
 
   let lv = null;   // this screen's part in a game
 
@@ -3010,7 +3074,33 @@ const TreasureUp = (function () {
     const was = lv;
     stopLive();
     $('live').hidden = true;
-    if (was && was.role === 'host' && was.code) { try { await liveConn().endGame(was.code); } catch (e) {} }
+    $('liveExit').textContent = 'Exit';
+    if (was && was.role === 'host' && was.code) {
+      try { sessionStorage.removeItem(NS + 'live.host'); } catch (e) {}
+      try { await liveConn().endGame(was.code); } catch (e) {}
+    }
+  }
+  // Exit on the TV ends the game for everyone, so mid-game it asks twice.
+  function liveExit() {
+    const s = lv && lv.role === 'host' && lv.game && lv.game.state;
+    if ((s === 'question' || s === 'reveal') && !lv.sure) {
+      lv.sure = true;
+      $('liveExit').textContent = 'End the game? Tap again';
+      setTimeout(() => { if (lv) lv.sure = false; $('liveExit').textContent = 'Exit'; }, 4000);
+      return;
+    }
+    closeLive();
+  }
+  // A TV tab that was hosting picks its game back up after a reload.
+  async function liveResume() {
+    let code = null;
+    try { code = sessionStorage.getItem(NS + 'live.host'); } catch (e) {}
+    if (!code) return;
+    const L = liveConn();
+    try { await L.init(); } catch (e) { return; }
+    const g = await new Promise(ok => { const off = L.watchGame(code, g => { ok(g); setTimeout(() => off && off(), 0); }); });
+    if (g && g.host === L.uid()) hostLive();
+    else try { sessionStorage.removeItem(NS + 'live.host'); } catch (e) {}
   }
 
   const modeNote = () => liveConn().kind === 'local'
@@ -3023,7 +3113,7 @@ const TreasureUp = (function () {
     liveBody(`
       <div class="clue">
         <p class="clue-q">Play live</p>
-        <p class="board-help">The TV or laptop shows the questions. Everyone answers on their own phone or tablet, and the fastest right answers score the most.</p>
+        <p class="board-help">The TV or laptop shows the questions. Everyone answers on their own phone or tablet. A right answer scores 700, and a quick one up to 300 more.</p>
         <div class="board-actions">
           <button class="btn" data-live="host">Host on this screen</button>
           <button class="btn ghost" data-live="join">Join with a code</button>
@@ -3041,13 +3131,30 @@ const TreasureUp = (function () {
     const L = liveConn();
     try { await L.init(); } catch (e) { liveBody(`<div class="clue"><p class="clue-q">Can't start the game</p><p class="board-help">${esc(e.message)}</p></div>`); return; }
     let code = null;
+    try { code = sessionStorage.getItem(NS + 'live.host'); } catch (e) {}
+    if (code) {
+      const g = await new Promise(ok => { const off = L.watchGame(code, g => { ok(g); setTimeout(() => off && off(), 0); }); });
+      if (!g || g.host !== L.uid()) code = null;
+    }
     for (let i = 0; i < 20 && !code; i++) {
       const c = String(1000 + Math.floor(Math.random() * 9000));
-      if (await L.createGame(c, { week: WEEK.title, qs: liveQuestionIds(c), state: 'lobby', qi: -1, seconds: LIVE_SECONDS })) code = c;
+      if (await L.createGame(c, { week: WEEK.title, gid: liveGid(), qs: liveQuestionIds(c), state: 'lobby', qi: -1, seconds: LIVE_SECONDS })) code = c;
     }
     if (!code) { liveBody('<div class="clue"><p class="clue-q">Couldn&rsquo;t get a game code. Try again.</p></div>'); return; }
+    try { sessionStorage.setItem(NS + 'live.host', code); } catch (e) {}
     lv = { role: 'host', code, game: null, players: [], answers: [], unsub: [] };
-    lv.unsub.push(L.watchGame(code, g => { if (!lv) return; lv.game = g; renderHost(); }));
+    lv.unsub.push(L.watchGame(code, g => {
+      if (!lv) return;
+      const first = !lv.game;
+      lv.game = g;
+      // Picked back up in the middle of a question or its answer: watch its
+      // answers again, and give the question a fresh clock.
+      if (first && g && (g.state === 'question' || g.state === 'reveal')) {
+        watchAnswersFor(g.qi);
+        if (g.state === 'question') { lv.localStart = Date.now(); liveClock(); }
+      }
+      renderHost();
+    }));
     lv.unsub.push(L.watchPlayers(code, ps => { if (!lv) return; lv.players = ps; renderHost(); checkAllAnswered(); }));
   }
 
@@ -3063,6 +3170,9 @@ const TreasureUp = (function () {
     lv.revealedQi = null;                        // a new question (or a new game) starts unrevealed
     watchAnswersFor(qi);
     await liveConn().updateGame(lv.code, { state: 'question', qi, qStart: 'now' });
+    liveClock();
+  }
+  function liveClock() {
     clearInterval(lv.tick);
     lv.tick = setInterval(() => {
       if (!lv || !lv.game || lv.game.state !== 'question') return;
@@ -3073,9 +3183,14 @@ const TreasureUp = (function () {
     }, 250);
   }
 
+  // Everyone is waited for unless they've missed two questions in a row: a
+  // player who has left holds up two questions at most, and one who is just
+  // slow once is still waited for.
+  const liveExpected = () => lv.players.filter(p => !(p.missed >= 2) || lv.answers.some(a => a.uid === p.uid));
   function checkAllAnswered() {
     if (!lv || lv.role !== 'host' || !lv.game || lv.game.state !== 'question' || !lv.players.length) return;
-    if (lv.players.every(p => lv.answers.some(a => a.uid === p.uid))) reveal();
+    const exp = liveExpected();
+    if (exp.length && exp.every(p => lv.answers.some(a => a.uid === p.uid))) reveal();
   }
 
   // Reveal once per question. The guard is per question, not a single busy
@@ -3093,9 +3208,9 @@ const TreasureUp = (function () {
       let pts = 0;
       if (right) {
         const secs = Math.max(0, ((a.at || 0) - (g.qStart || 0)) / 1000);
-        pts = 500 + Math.round(500 * Math.max(0, 1 - secs / LIVE_SECONDS));
+        pts = 700 + Math.round(300 * Math.max(0, 1 - secs / LIVE_SECONDS));
       }
-      scores[p.uid] = { score: (p.score || 0) + pts, last: pts, lastRight: right, lastAnswered: !!a };
+      scores[p.uid] = { score: (p.score || 0) + pts, last: pts, lastRight: right, lastAnswered: !!a, missed: a ? 0 : (p.missed || 0) + 1 };
     });
     try {
       await liveConn().setScores(lv.code, scores);
@@ -3115,21 +3230,26 @@ const TreasureUp = (function () {
       if (g.qi + 1 < g.qs.length) await askQuestion(g.qi + 1);
       else await L.updateGame(lv.code, { state: 'final' });
     } else if (act === 'again') {
+      // A new game: last game's answers go first, or its first question
+      // would count them and reveal at once.
       const code = lv.code;
-      await L.setScores(code, Object.fromEntries(lv.players.map(p => [p.uid, { score: 0, last: 0 }])));
-      await L.updateGame(code, { state: 'lobby', qi: -1, qs: liveQuestionIds(code + '|' + Date.now()) });
+      await L.clearAnswers(code);
+      lv.answers = [];
+      await L.setScores(code, Object.fromEntries(lv.players.map(p => [p.uid, { score: 0, last: 0, lastRight: false, lastAnswered: true, missed: 0 }])));
+      await L.updateGame(code, { state: 'lobby', qi: -1, gid: liveGid(), qs: liveQuestionIds(code + '|' + Date.now()) });
     } else if (act === 'end') {
       await closeLive();
     }
   }
 
   const ranked = ps => ps.slice().sort((a, b) => (b.score || 0) - (a.score || 0));
+  const placeOf = (ps, p) => 1 + ps.filter(x => (x.score || 0) > (p.score || 0)).length;   // ties share a place
   const fmt = n => Number(n || 0).toLocaleString('en-US');
 
   function choicesHtml(id, g, counts) {
     const q = liveQuestion(id);
     const shown = g.state !== 'question';
-    return `<div class="live-choices">${liveChoices(id).map((c, n) => {
+    return `<div class="live-choices${shown ? ' shown' : ''}">${liveChoices(id).map((c, n) => {
       const right = c === q.right;
       const cls = shown ? (right ? ' right' : ' dim') : '';
       const count = counts ? `<span style="margin-left:auto;font-variant-numeric:tabular-nums">${counts[c] || 0}</span>` : '';
@@ -3163,14 +3283,14 @@ const TreasureUp = (function () {
       if (g.state === 'reveal') lv.answers.forEach(a => { counts[a.choice] = (counts[a.choice] || 0) + 1; });
       const board = g.state === 'reveal' ? `
         <p class="quiz-why" style="margin-top:14px"><b class="ok">Answer:</b> ${esc(q.right)}. ${linkRefs(q.why, homeOfId(id))}</p>
-        <div class="grid gap-2" style="margin-top:14px">${players.slice(0, 5).map((p, i) =>
-          `<div class="score-row"><span>${i + 1}. ${esc(p.name)} ${p.last ? `<span style="color:var(--right)">+${fmt(p.last)}</span>` : ''}</span><b>${fmt(p.score)}</b></div>`).join('')}</div>
+        <div class="live-scores">${players.map(p =>
+          `<span>${placeOf(players, p)}. ${esc(p.name)} <b>${fmt(p.score)}</b>${p.last ? ` <i>+${fmt(p.last)}</i>` : ''}</span>`).join('')}</div>
         <div class="board-actions"><button class="btn" data-host="next">${g.qi + 1 < g.qs.length ? 'Next question' : 'Final scores'}</button></div>` : `
         <div class="board-actions"><button class="btn ghost" data-host="reveal">Show the answer now</button></div>`;
       liveBody(`
         <div class="clue">
           <div class="live-row">
-            <div class="eyebrow">Question ${g.qi + 1} of ${g.qs.length}${g.state === 'question' ? ` · ${lv.answers.length} of ${players.length} answered` : ''}</div>
+            <div class="eyebrow">Question ${g.qi + 1} of ${g.qs.length}${g.state === 'question' ? ` · ${lv.answers.length} of ${Math.max(liveExpected().length, lv.answers.length)} answered` : ''}</div>
             ${g.state === 'question' ? `<div class="live-clock" id="liveClock">${Math.max(0, LIVE_SECONDS - Math.floor((Date.now() - (lv.localStart || Date.now())) / 1000))}</div>` : ''}
           </div>
           <p class="clue-q">${g.state === 'reveal' ? linkRefs(q.q, homeOfId(id)) : esc(q.q)}</p>
@@ -3185,8 +3305,8 @@ const TreasureUp = (function () {
         <div class="clue">
           <div class="eyebrow">Final scores</div>
           <p class="clue-q">Together you scored ${fmt(total)}</p>
-          <div class="grid gap-2" style="margin-top:12px">${players.map((p, i) =>
-            `<div class="score-row"><span>${['🥇', '🥈', '🥉'][i] || (i + 1) + '.'} ${esc(p.name)}</span><b>${fmt(p.score)}</b></div>`).join('')}</div>
+          <div class="grid gap-2" style="margin-top:12px">${players.map(p => { const n = placeOf(players, p);
+            return `<div class="score-row"><span>${['🥇', '🥈', '🥉'][n - 1] || n + '.'} ${esc(p.name)}</span><b>${fmt(p.score)}</b></div>`; }).join('')}</div>
           <div class="board-actions">
             <button class="btn" data-host="again">Play again</button>
             <button class="btn ghost" data-host="end">Done</button>
@@ -3226,7 +3346,12 @@ const TreasureUp = (function () {
     const err = await L.join(code, name);
     if (err) return joinForm(code, err);
     lv = { role: 'player', code, name, game: null, players: [], picked: {}, unsub: [] };
-    lv.unsub.push(L.watchGame(code, g => { if (!lv) return; lv.game = g; renderPlayer(); }));
+    lv.unsub.push(L.watchGame(code, g => {
+      if (!lv) return;
+      if (g && lv.gid !== g.gid) { lv.gid = g.gid; lv.picked = {}; }   // "Play again": a new game
+      lv.game = g;
+      renderPlayer();
+    }));
     lv.unsub.push(L.watchPlayers(code, ps => { if (!lv) return; lv.players = ps; renderPlayer(); }));
   }
 
@@ -3245,9 +3370,10 @@ const TreasureUp = (function () {
     if (g.week !== WEEK.title) { liveBody('<div class="live-big">This game is for a different week.</div><p class="live-sub">Refresh Treasure Up and join again.</p>'); return; }
     const players = ranked(lv.players);
     const me = players.find(p => p.uid === L.uid()) || { score: 0 };
-    const place = players.findIndex(p => p.uid === L.uid()) + 1;
+    const mine = players.find(p => p.uid === L.uid()), place = mine ? placeOf(players, mine) : 0;
+    const tied = mine && players.some(p => p !== mine && (p.score || 0) === (mine.score || 0));
     const ord = n => n === 1 ? '1st' : n === 2 ? '2nd' : n === 3 ? '3rd' : n + 'th';
-    const standing = `<p class="live-sub">${fmt(me.score)} points${place ? ' · ' + ord(place) + ' place' : ''}</p>`;
+    const standing = `<p class="live-sub">${fmt(me.score)} points${place ? ' · ' + (tied ? 'tied for ' : '') + ord(place) + ' place' : ''}</p>`;
     if (g.state === 'lobby') { liveBody(`<div class="live-big">You're in, ${esc(lv.name)}!</div><p class="live-sub">Watch the TV. The game starts soon.</p>`); return; }
     if (g.state === 'question') {
       const id = g.qs[g.qi], q = liveQuestion(id);
@@ -3262,20 +3388,21 @@ const TreasureUp = (function () {
       return;
     }
     if (g.state === 'reveal') {
-      const right = me.lastRight, answered = me.lastAnswered;
-      liveBody(`<div class="live-big">${right ? 'Right! +' + fmt(me.last) : answered ? 'Not this time' : 'Too slow!'}</div>${standing}`);
+      const right = me.lastRight, answered = me.lastAnswered, id = g.qs[g.qi], q = liveQuestion(id);
+      liveBody(`<div class="live-big" style="margin-top:8vh">${right ? 'Right! +' + fmt(me.last) : answered ? 'Not this time' : 'No answer this time'}</div>${standing}
+        <div class="clue" style="margin-top:18px"><p class="quiz-why"><b class="ok">Answer:</b> ${esc(q.right)}. ${linkRefs(q.why, homeOfId(id))}</p></div>`);
       return;
     }
     if (g.state === 'final') {
       const total = players.reduce((n, p) => n + (p.score || 0), 0);
-      liveBody(`<div class="live-big">${place === 1 ? '🥇 You won!' : 'You finished ' + ord(place)}</div>
+      liveBody(`<div class="live-big">${place === 1 ? (tied ? '🥇 You tied for 1st!' : '🥇 You won!') : (tied ? 'You tied for ' : 'You finished ') + ord(place)}</div>
         <p class="live-sub">${fmt(me.score)} points · Together: ${fmt(total)}</p>`);
     }
   }
 
   /* ---------------- Babylon Falls: the family map game ---------------- */
 
-  // Risk-style, for 2 to 5 players. The map (content/boards.js) is on a
+  // Risk-style, for 2 to 4 players. The map (content/boards.js) is on a
   // computer or TV; everyone plays on their own phone or tablet. The
   // computer runs the game: it holds the whole state, and each phone sends
   // moves, which the computer checks before applying, so a phone can't make
@@ -3288,7 +3415,7 @@ const TreasureUp = (function () {
   // done by tapping the map, and one narrator card says what happened and
   // what's next. After the last round the most land wins, Babylonia
   // counting 3. Nothing here changes anyone's XP.
-  const RISK = { easy: 3, hard: 5, miss: 1, perLands: 3, start: 4, neutral: 2, wallsNeutral: 3, insightMax: 3, fortify: 3, rounds: [5, 8, 12], time: { easy: 30, hard: 180 } };
+  const RISK = { easy: 3, hard: 5, miss: 1, perLands: 3, start: 4, neutral: 2, wallsNeutral: 3, insightMax: 3, fort: { easy: 1, hard: 2 }, rounds: [5, 8, 12], time: { easy: 30, hard: 180 } };
   const BOARD = () => (window.TU_BOARDS || [])[0] || null;
 
   function RiskLocal() {
@@ -3414,7 +3541,7 @@ const TreasureUp = (function () {
         .concat(deepItems().filter(huntable).map(d => 'deep:' + d.id))
     };
   }
-  const riskChoices = id => { const Q = gameQuestion(id); return shuffled([Q.q.right].concat(Q.q.wrong), 'risk|' + id); };
+  const riskChoices = id => { const Q = gameQuestion(id); return shuffled([Q.q.right].concat(Q.q.wrong), 'risk|' + ((rk && rk.g && rk.g.gid) || '') + '|' + id); };
   // Where to hunt for a hard question's answer: the chapter, from its top
   // (not at the verse), or the page.
   function riskReading(Q) {
@@ -3451,6 +3578,9 @@ const TreasureUp = (function () {
     riskLog(g, text);
   }
   const kName = (g, uid) => { const s = uid && seatOf(g, uid); return s ? kingdomOf(s.k).name : 'the neutral army'; };
+  // "Media attacks Media!" reads as a kingdom fighting itself, so a kingdom
+  // named like the land in the same line goes by its player: "Mom's army".
+  const kCall = (g, uid, land) => { const s = uid && seatOf(g, uid), k = kName(g, uid); return s && k === landName(land) ? s.name + "'s army" : k; };
   const fmtClock = n => Math.floor(n / 60) + ':' + String(n % 60).padStart(2, '0');
 
   // An insight's odds: every way one roll can go (ad attacking dice against
@@ -3499,9 +3629,11 @@ const TreasureUp = (function () {
     B.lands.forEach(l => { g.lands[l.id] = { o: null, a: l.id === B.walls ? RISK.wallsNeutral : RISK.neutral }; });
     g.seats.forEach(s => { g.lands[kingdomOf(s.k).home] = { o: s.uid, a: RISK.start }; });
     g.state = 'play';
+    g.gid = Math.random().toString(36).slice(2, 10);
     g.round = 1;
     g.insight = {};
     g.wait = {};
+    riskWaitSetup(g);
     g.fort = null;
     g.used = { easy: [], review: [], hard: [] };
     g.dice = null;
@@ -3509,6 +3641,7 @@ const TreasureUp = (function () {
     g.turn = newTurn(0);
     g.story = true;                            // the narrator opens with the hook
     g.say = null;
+    g.says = [];
   }
   // After the opening: round 1 begins.
   function riskStoryDone(g) {
@@ -3542,6 +3675,8 @@ const TreasureUp = (function () {
     }
     if (g.round > g.rounds) return riskOver(g);
     g.turn = newTurn(i);
+    const w = (g.wait || {})[g.seats[i].uid];
+    if (w) { w.q = null; w.tok = ''; }
     riskSay(g, (i === 0 || g.seats.slice(0, i).every(s => s.out) ? 'Round ' + g.round + ' of ' + g.rounds + '. ' : '') + kingdomOf(g.seats[i].k).name + "'s turn: " + g.seats[i].name + ', raise your army!');
   }
 
@@ -3550,7 +3685,7 @@ const TreasureUp = (function () {
   function riskAnswered(g, right, picked, timeout) {
     const t = g.turn, seat = g.seats[t.i], K = kingdomOf(seat.k).name;
     const got = right ? RISK[t.level] : RISK.miss, bonus = Math.floor(landsOf(g, seat.uid).length / RISK.perLands);
-    const had = (g.insight || {})[seat.uid] || 0, insight = right && t.level === 'hard' && had < RISK.insightMax;
+    const had = (g.insight || {})[seat.uid] || 0, insight = g.insightOn !== false && right && t.level === 'hard' && had < RISK.insightMax;
     if (insight) g.insight = Object.assign({}, g.insight, { [seat.uid]: had + 1 });
     const w = (g.wait || {})[seat.uid], saved = (w && w.ready) || 0;   // an army earned while waiting and not yet put down
     if (saved) w.ready = 0;
@@ -3604,57 +3739,60 @@ const TreasureUp = (function () {
     riskSay(g, 'The game is over. ' + kingdomOf(w.k).name + ' wins, holding ' + w.lands + (w.lands === 1 ? ' land' : ' lands') + (w.babylon ? ', Babylon among them' : '') + '!');
   }
 
-  // Fortifying: while someone else places, attacks or moves, each other
-  // phone gets a reel question (half this week's, half review). A right
-  // answer earns an army to put on one of that player's lands right away,
-  // up to RISK.fortify a turn; a miss ends it until the next turn. No new
-  // question while a turn's own question is being answered, so everyone
-  // reads that one along. An army not yet put down joins that player's own
-  // next turn. The host deals the questions and checks every move.
+  // Fortifying: each time another player's turn gets going (placing,
+  // attacking or moving; not while a question is answered, so everyone
+  // reads that one along), every other phone gets one chance: a quick
+  // question for 1 army, or a deep one, a hunt in the reading, for 2. The
+  // answer counts until that player's own turn starts. Armies earned go
+  // onto their lands right away, one a tap; any not put down join their
+  // next turn. The host deals the questions and checks every move. Each
+  // question carries its own tag, so an answer can only count for it.
   const riskWaitKey = g => g.round + '|' + g.turn.i;
   const riskWaitOpen = g => g.state === 'play' && !g.story && !!g.turn && ['place', 'attack', 'move'].includes(g.turn.phase);
-  const riskFortsNow = (g, uid) => { const w = (g.wait || {})[uid]; return w && g.turn && w.gotKey === riskWaitKey(g) ? w.got || 0 : 0; };
-  function riskCanWait(g, uid) {
-    const s = seatOf(g, uid), w = (g.wait || {})[uid];
-    return !!(riskWaitOpen(g) && s && !s.out && g.seats[g.turn.i].uid !== uid && !(w && (w.ready || w.off === riskWaitKey(g))) && riskFortsNow(g, uid) < RISK.fortify);
+  const riskWaiting = (g, uid) => { const s = seatOf(g, uid); return !!(g.state === 'play' && !g.story && g.turn && s && !s.out && g.seats[g.turn.i].uid !== uid); };
+  // A new chance: this turn's, not taken yet, with nothing still open.
+  function riskCanChoose(g, uid) {
+    const w = (g.wait || {})[uid];
+    return riskWaitOpen(g) && riskWaiting(g, uid) && !!w && !w.q && !w.ready && w.took !== riskWaitKey(g);
   }
-  // An earned army can be put down any time but on one's own turn.
-  function riskCanFort(g, uid) {
-    const s = seatOf(g, uid), w = (g.wait || {})[uid];
-    return !!(g.state === 'play' && !g.story && g.turn && s && !s.out && g.seats[g.turn.i].uid !== uid && w && w.ready);
-  }
-  function riskDeal(g) {
-    if (!rk || rk.role !== 'host' || g.state !== 'play' || !g.turn) return;
+  const riskCanFort = (g, uid) => { const w = (g.wait || {})[uid]; return riskWaiting(g, uid) && !!w && w.ready > 0; };
+  function riskWaitSetup(g) {
     g.wait = g.wait || {};
-    const pools = riskPools();
-    g.seats.forEach(s => {
-      const w = g.wait[s.uid] = g.wait[s.uid] || { q: null, used: {}, off: '', last: null, n: 0, ready: 0, got: 0, gotKey: '' };
-      if (w.q || !riskCanWait(g, s.uid)) return;
-      const kind = pools.review.length && Math.random() < 0.5 ? 'review' : 'easy';
-      w.used[kind] = w.used[kind] || [];
-      w.q = riskPick(pools[kind], w.used[kind], rk.code + '|wait|' + s.uid + '|' + kind);
-    });
+    (g.seats || []).forEach(s => { g.wait[s.uid] = g.wait[s.uid] || { q: null, level: null, tok: '', used: {}, took: '', last: null, n: 0, ready: 0 }; });
+  }
+  function riskFortAsk(g, m) {
+    riskWaitSetup(g);
+    const w = g.wait[m.uid], pools = riskPools();
+    if (!riskCanChoose(g, m.uid) || !RISK.fort[m.a] || (m.a === 'hard' && !pools.hard.length)) return;
+    const kind = m.a === 'hard' ? 'hard' : pools.review.length && Math.random() < 0.5 ? 'review' : 'easy';
+    w.used[kind] = w.used[kind] || [];
+    w.q = riskPick(pools[kind], w.used[kind], rk.code + '|wait|' + m.uid + '|' + kind);
+    w.level = m.a;
+    w.tok = Math.random().toString(36).slice(2, 10);
+    w.took = riskWaitKey(g);
   }
   function riskWaitAnswer(g, m) {
     const w = (g.wait || {})[m.uid];
-    if (!w || !w.q || w.q !== m.b || !riskCanWait(g, m.uid)) return;
-    const right = m.a === gameQuestion(w.q).q.right, key = riskWaitKey(g);
-    w.last = { q: w.q, right, picked: m.a || '' };
+    if (!w || !w.q || !w.tok || w.tok !== m.b || !riskWaiting(g, m.uid)) return;
+    const right = m.a === gameQuestion(w.q).q.right;
+    w.last = { q: w.q, right, picked: m.a || '', level: w.level };
     w.n = (w.n || 0) + 1;
+    if (right) w.ready = RISK.fort[w.level] || 1;
     w.q = null;
-    if (!right) { w.off = key; return; }
-    w.got = riskFortsNow(g, m.uid) + 1;
-    w.gotKey = key;
-    w.ready = 1;
+    w.tok = '';
   }
   function riskFortify(g, m) {
     const L = g.lands[m.a], s = seatOf(g, m.uid);
     if (!riskCanFort(g, m.uid) || !L || L.o !== m.uid) return;
     L.a++;
-    g.wait[m.uid].ready = 0;
+    g.wait[m.uid].ready--;
     g.fort = { n: ((g.fort && g.fort.n) || 0) + 1, uid: m.uid, land: m.a, a: L.a, key: riskWaitKey(g) };
     riskLog(g, s.name + ' fortifies ' + landName(m.a) + ': ' + L.a + '.');
   }
+  // A phone's taps wait for the host's answer, but never for long: a move
+  // that was refused or lost frees the buttons again after a few seconds.
+  const riskLocked = (sent, key) => !!(sent && sent.key === key && Date.now() - sent.at < 6000);
+  function riskLock(name, key) { rk[name] = { key, at: Date.now() }; setTimeout(() => riskRender(), 6100); }
 
   // Apply one move from a phone, if it's allowed; one that isn't is
   // dropped. 'wait' means try it again once this screen has caught up
@@ -3674,6 +3812,7 @@ const TreasureUp = (function () {
     if (g.state !== 'play' || !g.turn || g.story) return;
     if (m.kind === 'wait') return riskWaitAnswer(g, m);
     if (m.kind === 'fort') return riskFortify(g, m);
+    if (m.kind === 'fortask') return riskFortAsk(g, m);
     const t = g.turn, seat = g.seats[t.i];
     if (!seat || seat.uid !== m.uid) return;                             // not your turn
     const uid = m.uid, K = kingdomOf(seat.k).name;
@@ -3707,9 +3846,9 @@ const TreasureUp = (function () {
       D.a -= ld;
       const was = D.o;
       g.dice = { a: ra, d: rd, from: m.a, to: m.b, la, ld, walls, won: false, by: uid, n: ((g.dice && g.dice.n) || 0) + 1 };
-      const defK = kName(g, was);
-      riskSay(g, K + ' attacks ' + landName(m.b) + (walls ? ', behind Babylon’s walls' : '') + '! ' +
-        (ld && !la ? defK.charAt(0).toUpperCase() + defK.slice(1) + ' loses ' + ld + '.' : la && !ld ? 'The defenders hold: ' + K + ' loses ' + la + '.' : K + ' loses ' + la + ', ' + defK + ' loses ' + ld + '.'));
+      const Kx = kCall(g, uid, m.b), defK = kCall(g, was, m.b);
+      riskSay(g, Kx + ' attacks ' + landName(m.b) + (walls ? ', behind Babylon’s walls' : '') + '! ' +
+        (ld && !la ? defK.charAt(0).toUpperCase() + defK.slice(1) + ' loses ' + ld + '.' : la && !ld ? 'The defenders hold: ' + Kx + ' loses ' + la + '.' : Kx + ' loses ' + la + ', ' + defK + ' loses ' + ld + '.'));
       if (D.a <= 0) {
         // A capture never costs the attacker anything, so there are always
         // armies to move in: as many as the dice rolled.
@@ -3717,7 +3856,7 @@ const TreasureUp = (function () {
         D.a = ad;
         A.a -= ad;
         g.dice.won = true;
-        riskSay(g, landName(m.b) + ' falls to ' + K + '!');
+        riskSay(g, landName(m.b) + ' falls to ' + Kx + '!');
         const loser = was && seatOf(g, was);
         if (loser && !landsOf(g, was).length) {
           loser.out = true;
@@ -3738,7 +3877,7 @@ const TreasureUp = (function () {
       D.a++;
       t.moved = { from: m.a, to: m.b, n: ((t.moved && t.moved.n) || 0) + 1 };
     } else if (m.kind === 'end' && (t.phase === 'attack' || t.phase === 'move')) {
-      if (t.moved) riskLog(g, K + ' moves ' + t.moved.n + (t.moved.n === 1 ? ' army' : ' armies') + ' to ' + landName(t.moved.to) + '.');
+      if (t.moved) riskLog(g, kCall(g, uid, t.moved.to) + ' moves ' + t.moved.n + (t.moved.n === 1 ? ' army' : ' armies') + ' to ' + landName(t.moved.to) + '.');
       riskNextTurn(g);
     }
   }
@@ -3861,10 +4000,19 @@ const TreasureUp = (function () {
       speechSynthesis.speak(u);
     } catch (e) {}
   }
+  // "Play again" starts a new game with a new id: forget what this screen
+  // remembered about the last one (lines read out, dice shown, taps sent).
+  function riskSeeGame(g) {
+    if (!rk || !g || !g.gid || rk.gid === g.gid) return;
+    const first = rk.gid === undefined;
+    rk.gid = g.gid;
+    if (first) return;
+    Object.assign(rk, { spoken: 0, rolled: 0, forted: 0, waitSent: null, fortSent: null, askSent: null, waitSeen: null, pulse: null, sel: {}, view: null });
+  }
   function riskNarrate(g) {
     if (!rk || !g) return;
-    if (g.state === 'play' && g.story && rk.told !== rk.code) {       // the opening, once
-      rk.told = rk.code;
+    if (g.state === 'play' && g.story && rk.told !== (g.gid || rk.code)) {       // the opening, once a game
+      rk.told = g.gid || rk.code;
       const B = BOARD();
       riskSpeak(B.hook + ' How to win: ' + B.goal);
     }
@@ -3915,15 +4063,11 @@ const TreasureUp = (function () {
     const pct = x => Math.round(x * 100) + '%', armies = n => n + (n === 1 ? ' army' : ' armies');
     const odds = (f, to) => takeOdds(g.lands[f].a, g.lands[to].a, to === B.walls);
     const front = id => nearOf(id).some(n => g.lands[n].o !== me);
-    const points = s => { const ls = landsOf(g, s.uid); return ls.length + (ls.includes(B.walls) ? 2 : 0); };
-    const score = `<p class="rk-note">Points now: ${g.seats.filter(s => !s.out).map(s => ({ s, p: points(s) })).sort((a, b) => b.p - a.p)
-      .map(x => esc(x.s.uid === me ? 'you' : x.s.name) + ' ' + x.p).join(' · ')}. Babylonia counts 3.</p>`;
     if (t.phase === 'place') {
       const spots = [];
       mine.forEach(f => nearOf(f).forEach(to => { if (g.lands[to].o !== me) spots.push({ f, to, d: g.lands[to].a }); }));
       spots.sort((a, b) => a.d - b.d);
-      return (spots.length ? `<p>Put them where you'll attack from. An idea: ${esc(landName(spots[0].f))}, next to ${esc(landName(spots[0].to))} (${armies(spots[0].d)}).</p>` : '') +
-        `<p>Babylonia is worth 3 lands at the end, but behind its walls its defender rolls 3 dice.</p>${score}`;
+      return spots.length ? `<p>Put them where you'll attack from. An idea: ${esc(landName(spots[0].f))}, next to ${esc(landName(spots[0].to))} (${armies(spots[0].d)}).</p>` : "<p>Put them where you'll attack from next.</p>";
     }
     if (t.phase === 'attack') {
       if (sel.from && sel.to) {
@@ -3936,8 +4080,7 @@ const TreasureUp = (function () {
         .forEach(f => nearOf(f).forEach(to => { if (g.lands[to].o !== me) best.push({ f, to, o: odds(f, to) }); }));
       best.sort((a, b) => b.o.win - a.o.win);
       return (best.length ? `<p><b>${sel.from ? 'From ' + esc(landName(sel.from)) + ', your odds' : 'Best odds right now'}:</b> ${best.slice(0, 3).map(x => `${sel.from ? '' : esc(landName(x.f)) + ' → '}${esc(landName(x.to))}, ${pct(x.o.win)}`).join('; ')}.</p>`
-        : '<p>None of your lands can attack this turn.</p>') +
-        `<p>Every roll can cost you armies, and a land left with 1 army is easy to take. Stop when the odds turn against you.</p>${score}`;
+        : '<p>None of your lands can attack this turn.</p>');
     }
     const pairs = [];
     riskMovers(g, me).filter(f => !front(f)).forEach(f => nearOf(f).forEach(to => { if (g.lands[to].o === me && front(to)) pairs.push({ f, to }); }));
@@ -3977,7 +4120,7 @@ const TreasureUp = (function () {
       <div class="clue" style="max-width:640px">
         <p class="clue-q">${esc(B.title)}</p>
         <p class="board-help">${linkRefs(B.intro)}</p>
-        <p class="board-help">A map game for 2 to 5, like Risk. The map goes on a computer or TV; everyone plays on their own phone or tablet. Answer this week's questions to raise armies, then take land. Babylon has walls.</p>
+        <p class="board-help">A map game for 2 to 4, like Risk. The map goes on a computer or TV; everyone plays on their own phone or tablet. Answer this week's questions to raise armies, then take land. Babylon has walls.</p>
         <div class="board-actions">
           <button class="btn" data-rk="host">Put the map on this screen</button>
           <button class="btn ghost" data-rk="join">Join with a code</button>
@@ -3992,10 +4135,10 @@ const TreasureUp = (function () {
   // Who's playing, how many lands each holds, and whose turn it is.
   function riskStripHtml(g, me) {
     return `<div class="rk-strip">${g.state === 'play' && !g.story ? `<span class="rk-round">Round ${g.round} of ${g.rounds}</span>` : ''}${g.seats.map((s, i) => {
-      const n = landsOf(g, s.uid).length, k = kingdomOf(s.k), ins = (g.insight || {})[s.uid] || 0;
+      const ls = landsOf(g, s.uid), pts = ls.length + (ls.includes(BOARD().walls) ? 2 : 0), k = kingdomOf(s.k), ins = g.insightOn !== false ? (g.insight || {})[s.uid] || 0 : 0;
       const now = g.state === 'play' && !g.story && g.turn && g.turn.i === i;
       return `<span class="rk-pl${now ? ' now' : ''}${s.out ? ' out' : ''}${s.uid === me ? ' me' : ''}" style="--c:${k.color}" title="${esc(k.name)}">
-        <span class="rk-dot" style="background:${k.color}"></span>${esc(s.name)}${s.uid === me ? ' (you)' : ''}<small>${s.out ? 'fallen' : n + (n === 1 ? ' land' : ' lands')}${ins ? ' · 💡' + ins : ''}</small></span>`;
+        <span class="rk-dot" style="background:${k.color}"></span>${esc(s.name)}${s.uid === me ? ' (you)' : ''}<small>${s.out ? 'fallen' : pts + (pts === 1 ? ' point' : ' points')}${ins ? ' · 💡' + ins : ''}</small></span>`;
     }).join('')}</div>`;
   }
   function riskScreen(g, card, ui) {
@@ -4075,7 +4218,7 @@ const TreasureUp = (function () {
     try {
       for (let i = 0; i < 20 && !code; i++) {
         const c = String(1000 + Math.floor(Math.random() * 9000));
-        if (await C.create(c, { board: BOARD().id, week: WEEK.title, state: 'lobby', rounds: RISK.rounds[1], timer: true, seats: [] })) code = c;
+        if (await C.create(c, { board: BOARD().id, week: WEEK.title, state: 'lobby', rounds: RISK.rounds[0], timer: true, insightOn: true, seats: [] })) code = c;
       }
     } catch (e) {
       riskBody(`<div class="clue"><p class="clue-q">Can't start the game</p><p class="board-help">${esc(e.message)}</p></div>`);
@@ -4098,9 +4241,9 @@ const TreasureUp = (function () {
   async function riskSave() {
     const g = rk && rk.g;
     if (!g) return;
-    riskDeal(g);
+    if (g.state === 'play') riskWaitSetup(g);
     const fields = {};
-    ['state', 'rounds', 'timer', 'round', 'seats', 'lands', 'insight', 'wait', 'fort', 'used', 'turn', 'dice', 'log', 'final', 'say', 'says', 'story'].forEach(k => { if (g[k] !== undefined) fields[k] = g[k]; });
+    ['state', 'gid', 'rounds', 'timer', 'insightOn', 'round', 'seats', 'lands', 'insight', 'wait', 'fort', 'used', 'turn', 'dice', 'log', 'final', 'say', 'says', 'story'].forEach(k => { if (g[k] !== undefined) fields[k] = g[k]; });
     try { await riskConn().save(rk.code, JSON.parse(JSON.stringify(fields))); }
     catch (e) { toast("Couldn't reach the game", 'Check the internet'); }
   }
@@ -4123,6 +4266,7 @@ const TreasureUp = (function () {
     if (!g) return;
     if (act === 'rounds' && g.state === 'lobby') g.rounds = Number(el.dataset.n) || RISK.rounds[1];
     else if (act === 'timer' && g.state === 'lobby') g.timer = el.dataset.v !== 'off';
+    else if (act === 'insight' && g.state === 'lobby') g.insightOn = el.dataset.v !== 'off';
     else if (act === 'begin' && g.state === 'play' && g.story) riskStoryDone(g);
     else if (act === 'start' && g.state === 'lobby' && g.seats.length >= 2) riskBegin(g);
     else if (act === 'skip' && g.state === 'play' && !g.story) { riskLog(g, g.seats[g.turn.i].name + "'s turn was skipped."); riskNextTurn(g); }
@@ -4139,6 +4283,7 @@ const TreasureUp = (function () {
     if (!rk || rk.role !== 'host') return;
     const g = rk.g;
     if (!g) { riskBody('<div class="live-big">The game has ended.</div>'); return; }
+    riskSeeGame(g);
     if (g.state === 'lobby') {
       const B = BOARD(), taken = {};
       g.seats.forEach(s => { taken[s.k] = s; });
@@ -4156,6 +4301,8 @@ const TreasureUp = (function () {
             <div class="rk-len">${RISK.rounds.map((n, i) => `<button class="btn ${g.rounds === n ? '' : 'ghost'}" data-rkh="rounds" data-n="${n}">${['Short', 'Standard', 'Long'][i]} · ${n} rounds</button>`).join('')}</div>
             <div class="eyebrow" style="margin-top:14px">Timer</div>
             <div class="rk-len"><button class="btn ${g.timer !== false ? '' : 'ghost'}" data-rkh="timer" data-v="on">On: ${RISK.time.easy} s, hunts ${RISK.time.hard / 60} min</button><button class="btn ${g.timer === false ? '' : 'ghost'}" data-rkh="timer" data-v="off">Relaxed: no timer</button></div>
+            <div class="eyebrow" style="margin-top:14px">💡 Insight</div>
+            <div class="rk-len"><button class="btn ${g.insightOn !== false ? '' : 'ghost'}" data-rkh="insight" data-v="on">On: a right hunt earns the odds for a turn</button><button class="btn ${g.insightOn === false ? '' : 'ghost'}" data-rkh="insight" data-v="off">Off</button></div>
             <div class="board-actions"><button class="btn" data-rkh="start"${g.seats.length >= 2 ? '' : ' disabled style="opacity:.4"'}>Start · ${g.seats.length} ${g.seats.length === 1 ? 'kingdom' : 'kingdoms'}</button></div>
             <p class="board-help" style="font-size:13px">${linkRefs(B.intro)}</p>
             ${riskModeNote()}
@@ -4222,7 +4369,7 @@ const TreasureUp = (function () {
   // A move: sent to the computer with the map, or on the one shared screen,
   // checked and applied right here by the same rules.
   function riskSend(m) {
-    if (rk.role !== 'solo') return riskConn().move(rk.code, m).catch(() => toast("Couldn't reach the game", 'Check the internet'));
+    if (rk.role !== 'solo') return riskConn().move(rk.code, m).catch(() => { if (rk) { rk.waitSent = rk.fortSent = rk.askSent = null; riskRender(); } toast("Couldn't reach the game", 'Check the internet'); });
     const g = rk.g, at = () => g.turn ? g.turn.i + '|' + g.turn.phase : '', before = at(), was = g.turn ? g.turn.i : -1;
     riskApply(g, Object.assign({}, m, { uid: riskMe() }));
     if (at() !== before) rk.sel = {};
@@ -4269,8 +4416,8 @@ const TreasureUp = (function () {
     const g = rk && rk.g, me = riskMe();
     if (!g || rk.role === 'host' || rk.view) return;
     const w = rk.role === 'player' && (g.wait || {})[me];
-    if (w && riskCanFort(g, me) && rk.fortSent !== w.n) {
-      if (g.lands[id] && g.lands[id].o === me) { rk.fortSent = w.n; riskSend({ kind: 'fort', a: id }); riskRender(); }
+    if (w && riskCanFort(g, me)) {
+      if (g.lands[id] && g.lands[id].o === me && !riskLocked(rk.fortSent, w.n + '|' + w.ready)) { riskLock('fortSent', w.n + '|' + w.ready); riskSend({ kind: 'fort', a: id }); riskRender(); }
       return;
     }
     if (!riskCan(g, me).includes(id)) return;
@@ -4290,40 +4437,48 @@ const TreasureUp = (function () {
     riskRender();
   }
 
-  // A waiting phone's part of the card: the question to fortify with; a
-  // right answer and why, while he taps a land for the army; a miss and why.
+  // A waiting phone's part of the card: quick or deep; then the question;
+  // then, if it was right, why, while he taps his lands for the armies;
+  // if not, the answer and why.
   function riskWaitHtml(g, me) {
     const w = (g.wait || {})[me];
-    if (!w || g.state !== 'play' || g.story || g.seats[g.turn.i].uid === me) return '';
-    const box = html => `<div class="rk-wait"><div class="eyebrow">🛡️ While you wait: fortify</div>${html}</div>`, now = riskFortsNow(g, me);
-    if (w.ready && w.last) {
-      const Q = gameQuestion(w.last.q);
-      return box(`<p class="rk-note">${linkRefs(Q.text, Q.home)}</p>
-        <p class="rk-result ok">Right! ${rk.fortSent === w.n ? 'Putting your army down…' : 'Tap one of your lands on the map to put an army there.'}</p>
-        <p class="quiz-why">${linkRefs(Q.q.why, Q.home)}</p>`);
+    if (!w || !riskWaiting(g, me)) return '';
+    const box = html => `<div class="rk-wait"><div class="eyebrow">🛡️ While you wait: fortify</div>${html}</div>`;
+    const last = w.last && gameQuestion(w.last.q);
+    if (w.ready > 0 && last) {
+      const busy = riskLocked(rk.fortSent, w.n + '|' + w.ready);
+      return box(`<p class="rk-note">${linkRefs(last.text, last.home)}</p>
+        <p class="rk-result ok">Right! ${busy ? 'Putting your army down…' : `Tap your lands on the map to put ${w.ready === 1 ? 'an army' : w.ready + ' armies'} there, one a tap.`}</p>
+        <p class="quiz-why">${linkRefs(last.q.why, last.home)}</p>`);
     }
-    if (!riskWaitOpen(g)) return '';
-    if (w.last && !w.last.right && rk.waitSeen !== w.n) {
-      const Q = gameQuestion(w.last.q);
-      return box(`<p class="rk-note">${linkRefs(Q.text, Q.home)}</p>
-        <p class="rk-result no">Not this time. The answer: ${esc(Q.q.right)}.</p>
-        <p class="quiz-why">${linkRefs(Q.q.why, Q.home)}</p>
-        <p class="rk-note">That ends fortifying until the next turn.</p>
+    if (last && !w.last.right && rk.waitSeen !== w.n) {
+      return box(`<p class="rk-note">${linkRefs(last.text, last.home)}</p>
+        <p class="rk-result no">Not this time. The answer: ${esc(last.q.right)}.</p>
+        <p class="quiz-why">${linkRefs(last.q.why, last.home)}</p>
+        <p class="rk-note">Your next chance comes on the next turn.</p>
         <div class="rk-btns"><button class="btn ghost" data-rk="waitnext">OK</button></div>`);
     }
-    if (now >= RISK.fortify) return box(`<p class="rk-note">${now} this turn: that's the most. Watch the map!</p>`);
-    if (!riskCanWait(g, me) || !w.q) return '';
-    const Q = gameQuestion(w.q);
-    return box(`<p class="rk-note">Answer right to put an army on one of your lands now (${now} of ${RISK.fortify} this turn). A miss ends it until the next turn.</p>
-      <p class="rk-q">${esc(Q.text)}</p>
-      <div class="rk-btns">${riskChoices(w.q).map(c => `<button class="ls-opt" data-rk="wait" data-v="${esc(c)}"${rk.waitSent === w.n ? ' disabled' : ''}>${esc(c)}</button>`).join('')}</div>`);
+    if (w.q) {
+      const Q = gameQuestion(w.q), read = w.level === 'hard' && riskReading(Q), busy = riskLocked(rk.waitSent, w.tok);
+      return box(`<p class="rk-note">${w.level === 'hard' ? `Deep: find it in ${read ? esc(read.label) : 'the reading'}, for ${RISK.fort.hard} armies.` : `Quick: ${RISK.fort.easy} army if you know it.`} Your answer counts until your own turn starts.</p>
+        <p class="rk-q">${esc(Q.text)}</p>
+        ${read ? `<a class="deep-open" href="${esc(read.url)}" target="_blank" rel="noopener noreferrer">Open ${esc(read.label)} ↗</a>` : ''}
+        <div class="rk-btns">${riskChoices(w.q).map(c => `<button class="ls-opt" data-rk="wait" data-v="${esc(c)}"${busy ? ' disabled' : ''}>${esc(c)}</button>`).join('')}</div>`);
+    }
+    if (riskCanChoose(g, me)) {
+      const busy = riskLocked(rk.askSent, riskWaitKey(g)) ? ' disabled' : '', deep = riskPools().hard.length;
+      return box(`<p class="rk-note">One chance this turn: answer right to put armies on your lands now.</p>
+        <div class="rk-btns${deep ? ' two' : ''}"><button class="btn" data-rk="fortask" data-v="easy"${busy}>Quick · ${RISK.fort.easy} army</button>${deep ? `<button class="btn" data-rk="fortask" data-v="hard"${busy}>Deep · ${RISK.fort.hard} armies</button>` : ''}</div>`);
+    }
+    return '';
   }
 
   function riskPlayerAction(act, el) {
     const g = rk && rk.g, sel = rk.sel;
     if (!g) return;
     const w = (g.wait || {})[riskConn().uid()];
-    if (act === 'wait' && w && w.q) { rk.waitSent = w.n; riskSend({ kind: 'wait', a: el.dataset.v, b: w.q }); }
+    if (act === 'wait' && w && w.q && !riskLocked(rk.waitSent, w.tok)) { riskLock('waitSent', w.tok); riskSend({ kind: 'wait', a: el.dataset.v, b: w.tok }); }
+    else if (act === 'fortask' && w && !riskLocked(rk.askSent, riskWaitKey(g))) { riskLock('askSent', riskWaitKey(g)); riskSend({ kind: 'fortask', a: el.dataset.v }); }
     else if (act === 'waitnext' && w) rk.waitSeen = w.n;
     else if (act === 'pick') riskSend({ kind: 'pick', a: el.dataset.k });
     else if (act === 'level') riskSend({ kind: 'level', a: el.dataset.v });
@@ -4337,6 +4492,7 @@ const TreasureUp = (function () {
     if (!rk || rk.role !== 'player') return;
     const g = rk.g, me = riskConn().uid(), B = BOARD();
     if (!g) { riskBody('<div class="live-big">The game has ended.</div><p class="live-sub">Thanks for playing!</p>'); return; }
+    riskSeeGame(g);
     const seat = seatOf(g, me);
     if (g.state === 'lobby') {
       const taken = {}, k = seat && kingdomOf(seat.k);
@@ -4360,7 +4516,7 @@ const TreasureUp = (function () {
       card = (!seat ? '<p class="rk-note">You joined after the game started. Watch the map!</p>'
         : seat.out ? '<p class="rk-note">Your kingdom has fallen. Watch how it ends!</p>' : '') + riskSayHtml(g) + riskWatchHtml(g, riskWaitHtml(g, me));
       const w = (g.wait || {})[me];
-      if (w && riskCanFort(g, me) && rk.fortSent !== w.n && !rk.view) ui = { can: landsOf(g, me) };   // where the army can go
+      if (w && riskCanFort(g, me) && !riskLocked(rk.fortSent, w.n + '|' + w.ready) && !rk.view) ui = { can: landsOf(g, me) };   // where the armies can go
     }
     riskScreen(g, card, Object.assign({ me }, ui));
     riskMaybeRoll(g);
@@ -4376,7 +4532,7 @@ const TreasureUp = (function () {
     try { localStorage.setItem(SOLO_KEY, JSON.stringify(Object.assign({}, rk.g, { code: rk.code, pass: !!rk.pass }))); } catch (e) {}
   }
   function riskSoloSaved() {
-    try { const g = JSON.parse(localStorage.getItem(SOLO_KEY)); return g && g.state === 'play' && g.board === BOARD().id ? g : null; } catch (e) { return null; }
+    try { const g = JSON.parse(localStorage.getItem(SOLO_KEY)); return g && g.state === 'play' && g.board === BOARD().id && (g.seats || []).every(s => kingdomOf(s.k)) ? g : null; } catch (e) { return null; }
   }
 
   function riskSoloSetup(err, names) {
@@ -4386,14 +4542,16 @@ const TreasureUp = (function () {
     riskBody(`
       <div class="clue" style="max-width:560px">
         <p class="clue-q">Play on this one screen</p>
-        <p class="board-help">Type a name next to each kingdom that's playing (2 to 5), then pass this phone, tablet or computer around: each turn is played here.</p>
+        <p class="board-help">Type a name next to each kingdom that's playing (2 to 4), then pass this phone, tablet or computer around: each turn is played here.</p>
         ${saved ? `<div class="board-actions"><button class="btn" data-rk="solocontinue">Continue your game · round ${saved.round} of ${saved.rounds}</button></div>` : ''}
         <div class="rk-soloset">${B.kingdoms.map(k => `<label class="rk-soloking"><span class="rk-dot" style="background:${k.color}"></span><b>${esc(k.name)}</b>
           <input class="field" data-solo-k="${k.id}" maxlength="16" placeholder="Name" autocomplete="off" value="${esc(n[k.id] || '')}"></label>`).join('')}</div>
         <label class="block mt-3 text-[12px] text-white/60" for="riskSoloRounds">How long</label>
-        <select id="riskSoloRounds" class="field">${RISK.rounds.map((r, i) => `<option value="${r}"${i === 1 ? ' selected' : ''}>${['Short', 'Standard', 'Long'][i]} · ${r} rounds</option>`).join('')}</select>
+        <select id="riskSoloRounds" class="field">${RISK.rounds.map((r, i) => `<option value="${r}"${i === 0 ? ' selected' : ''}>${['Short', 'Standard', 'Long'][i]} · ${r} rounds</option>`).join('')}</select>
         <label class="block mt-3 text-[12px] text-white/60" for="riskSoloTimer">Timer</label>
         <select id="riskSoloTimer" class="field"><option value="on">On: ${RISK.time.easy} seconds, hunts ${RISK.time.hard / 60} minutes</option><option value="off">Relaxed: no timer</option></select>
+        <label class="block mt-3 text-[12px] text-white/60" for="riskSoloInsight">💡 Insight</label>
+        <select id="riskSoloInsight" class="field"><option value="on">On: a right hunt earns the odds for a turn</option><option value="off">Off</option></select>
         ${err ? `<p class="parent-msg">${esc(err)}</p>` : ''}
         <div class="board-actions"><button class="btn" data-rk="solostart">${saved ? 'Start a new game' : 'Start'}</button></div>
       </div>`);
@@ -4404,7 +4562,7 @@ const TreasureUp = (function () {
     const seats = [...document.querySelectorAll('[data-solo-k]')].map(i => ({ k: i.dataset.soloK, name: i.value.trim() }))
       .filter(x => { names[x.k] = x.name; return x.name; }).map((x, n) => ({ uid: 'p' + (n + 1), name: x.name, k: x.k }));
     if (seats.length < 2) return riskSoloSetup('Type at least 2 names.', names);
-    rk = { role: 'solo', code: 'solo' + Date.now(), g: { board: BOARD().id, state: 'lobby', rounds: Number($('riskSoloRounds').value) || RISK.rounds[1], timer: $('riskSoloTimer').value !== 'off', seats }, sel: {}, unsub: [] };
+    rk = { role: 'solo', code: 'solo' + Date.now(), g: { board: BOARD().id, state: 'lobby', rounds: Number($('riskSoloRounds').value) || RISK.rounds[1], timer: $('riskSoloTimer').value !== 'off', insightOn: $('riskSoloInsight').value !== 'off', seats }, sel: {}, unsub: [] };
     rk.tick = setInterval(riskTick, 500);
     riskBegin(rk.g);
     riskSoloSave();
@@ -4424,7 +4582,7 @@ const TreasureUp = (function () {
     else if (act === 'soloskip' && g.state === 'play' && !g.story) { riskLog(g, g.seats[g.turn.i].name + "'s turn was skipped."); riskNextTurn(g); rk.sel = {}; rk.pass = g.state === 'play'; }
     else if (act === 'solofinish' && g.state === 'play') riskOver(g);
     else if (act === 'soloagain') {
-      rk.g = { board: g.board, state: 'lobby', rounds: g.rounds, timer: g.timer, seats: g.seats.map(x => ({ uid: x.uid, name: x.name, k: x.k })) };
+      rk.g = { board: g.board, state: 'lobby', rounds: g.rounds, timer: g.timer, insightOn: g.insightOn, seats: g.seats.map(x => ({ uid: x.uid, name: x.name, k: x.k })) };
       rk.code = 'solo' + Date.now();
       riskBegin(rk.g);
       rk.sel = {};
@@ -4441,6 +4599,7 @@ const TreasureUp = (function () {
   function renderRiskSolo() {
     if (!rk || rk.role !== 'solo') return;
     const g = rk.g;
+    riskSeeGame(g);
     let card, ui = g.dice ? { from: g.dice.from, to: g.dice.to } : {};
     if (g.state === 'over') card = riskOverCard(g, null);
     else if (g.story) card = riskStartCard();
@@ -4467,14 +4626,11 @@ const TreasureUp = (function () {
     const have = (g.insight || {})[me] || 0;
     const insightBtn = !t.insight && have ? `<button class="btn ghost" data-rk="insight">💡 Show the odds (${have} left)</button>` : '';
     const coach = t.insight ? `<div class="rk-coach"><div class="eyebrow">💡 Insight</div>${riskCoach(g, me)}</div>` : '';
-    // While he plays, the others can fortify: saying so keeps a turn moving.
-    const forts = g.seats.filter(x => x.uid !== me && !x.out && riskFortsNow(g, x.uid)).map(x => `${esc(x.name)} ${riskFortsNow(g, x.uid)}`);
-    const nudge = forts.length ? `<p class="rk-note rk-nudge">🛡️ Fortifying while you play: ${forts.join(' · ')}</p>` : '';
     const btns = (...b) => b.some(Boolean) ? `<div class="rk-btns${b.filter(Boolean).length > 1 ? ' two' : ''}">${b.filter(Boolean).join('')}</div>` : '';
     if (t.phase === 'choose') {
       return `${riskSayHtml(g)}<p class="rk-q">Your turn, ${esc(s.name)}. Raise your army!</p>
         <div class="rk-btns two"><button class="btn" data-rk="level" data-v="easy">Easy · ${RISK.easy} armies</button><button class="btn" data-rk="level" data-v="hard">Hunt · ${RISK.hard} armies</button></div>
-        <p class="rk-note">A hunt means finding the answer in the chapter; get it right and you also earn a 💡 insight. A miss still gets ${RISK.miss}.</p>`;
+        <p class="rk-note">A hunt means finding the answer in the reading${g.insightOn !== false ? '; get it right and you also earn a 💡 insight' : ''}. A miss still gets ${RISK.miss}.</p>`;
     }
     if (t.phase === 'answer') {
       const Q = gameQuestion(t.q), read = t.level === 'hard' && riskReading(Q);
@@ -4487,7 +4643,7 @@ const TreasureUp = (function () {
       const Q = gameQuestion(t.q);
       return `<p class="rk-note">${linkRefs(Q.text, Q.home)}</p>${riskResultHtml(g)}
         <p class="rk-q">Tap your lands to place ${t.armies} ${t.armies === 1 ? 'army' : 'armies'}, one a tap.</p>
-        ${btns(sel.place && t.armies > 1 ? `<button class="btn ghost" data-rk="allhere">All ${t.armies} on ${esc(landName(sel.place))}</button>` : '', insightBtn)}${coach}${nudge}`;
+        ${btns(sel.place && t.armies > 1 ? `<button class="btn ghost" data-rk="allhere">All ${t.armies} on ${esc(landName(sel.place))}</button>` : '', insightBtn)}${coach}`;
     }
     if (t.phase === 'attack') {
       const can = riskAttackers(g, me);
@@ -4501,7 +4657,7 @@ const TreasureUp = (function () {
       const alert = hit ? `<p class="rk-alert">🛡️ ${esc(seatOf(g, hit.uid).name)} just fortified ${esc(landName(hit.land))}, ${hit.land === sel.to ? 'the land you’re attacking' : 'next to ' + esc(landName(sel.from))}: ${g.lands[hit.land].a} there now.</p>` : '';
       const walls = sel.from && g.lands[B.walls].o !== me && adjacent(sel.from, B.walls)
         ? `<p class="rk-note">${esc(landName(B.walls))} has walls: its defender rolls 3 dice.</p>` : '';
-      return `${riskSayHtml(g)}<p class="rk-q">${esc(next)}</p>${alert}${walls}${btns('<button class="btn" data-rk="done">Done attacking</button>', insightBtn)}${coach}${nudge}`;
+      return `${riskSayHtml(g)}<p class="rk-q">${esc(next)}</p>${alert}${walls}${btns('<button class="btn" data-rk="done">Done attacking</button>', insightBtn)}${coach}`;
     }
     const m = t.moved;
     const next = m ? `${m.n} moved to ${landName(m.to)}.` + (g.lands[m.from].a >= 2 ? ` Tap ${landName(m.to)} again to move another.` : '')
@@ -4510,7 +4666,7 @@ const TreasureUp = (function () {
       : `Now tap a land of yours next to ${landName(sel.from)}, one army a tap.`;
     return `${riskSayHtml(g)}<p class="rk-q">${esc(next)}</p>
       <p class="rk-note">One move a turn, from one land to a neighbour. Each land keeps at least 1.</p>
-      ${btns('<button class="btn" data-rk="end">End turn</button>', insightBtn)}${coach}${nudge}`;
+      ${btns('<button class="btn" data-rk="end">End turn</button>', insightBtn)}${coach}`;
   }
 
 
@@ -4547,10 +4703,12 @@ const TreasureUp = (function () {
     try { F ? localStorage.setItem(FAM_KEY, JSON.stringify(F)) : localStorage.removeItem(FAM_KEY); } catch (e) {}
     famButtons();
   }
-  // One family button on the main page: 👪 to sign in or join, then 💬.
+  // One family button on the main page: 👪 opens People (add someone, sign
+  // out) with Chat a tab away, and a dot on it means a new message.
   function famButtons() {
-    $('famBtn').hidden = !!F;
-    $('chatBtn').hidden = !F;
+    $('famBtn').hidden = false;
+    $('chatBtn').hidden = true;
+    $('famBtn').setAttribute('aria-label', F ? 'Family: people, chat, add someone, sign out' : 'Family');
   }
   const store = (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} };
   const stored = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
@@ -4840,6 +4998,15 @@ const TreasureUp = (function () {
     for (const k in L.deep || {}) if (!has(B.deep, k) && has(R.deep, k) && L.deep[k].right) gained -= XP.bonus;
     for (const k in L.notes || {}) {
       if (L.notes[k].rewarded && !(has(B.notes, k) && B.notes[k].rewarded) && has(R.notes, k) && R.notes[k].rewarded) gained -= NOTE_XP;
+    }
+    // The games, the same way: a Who said it? line, the week's puzzle, or a
+    // day's Verse Word that both devices were paid for since they last met.
+    for (const k in L.sayings || {}) if (!has(B.sayings, k) && has(R.sayings, k) && L.sayings[k].right) gained -= SAY_XP;
+    const pzPaid = p => !!(p && p.rewarded && p.week === (L.puzzle && L.puzzle.week));
+    if (pzPaid(L.puzzle) && pzPaid(R.puzzle) && !pzPaid(B.puzzle)) gained -= PUZZLE_XP;
+    for (const d in L.words || {}) {
+      const a = L.words[d], r = (R.words || {})[d], b0 = (B.words || {})[d];
+      if (a && a.paid && r && r.paid && !(b0 && b0.paid)) gained -= typeof a.paid === 'number' ? a.paid : 10;
     }
     M.xp = (R.xp || 0) + Math.max(0, gained);
     for (const key of ['answers', 'bonus', 'deep', 'sayings', 'recall', 'sayRecall']) M[key] = Object.assign({}, L[key] || {}, R[key] || {});
@@ -6420,7 +6587,7 @@ const TreasureUp = (function () {
     });
 
     // Live game.
-    $('liveExit').addEventListener('click', closeLive);
+    $('liveExit').addEventListener('click', liveExit);
     $('live').addEventListener('click', e => {
       const el = e.target.closest('[data-live],[data-host],[data-lpick]');
       if (!el || el.disabled) return;
@@ -6505,7 +6672,7 @@ const TreasureUp = (function () {
         if (e.key === 'Backspace') { e.preventDefault(); wordKey('back'); return; }
         if (/^[a-z]$/i.test(e.key)) { wordKey(e.key.toUpperCase()); return; }
       }
-      if (e.key === 'Escape') { closeParent(); closeBoard(); closeGames(); closeFam(); closeView(); if (!$('lesson').hidden) closeLesson(); if (!$('play').hidden) closePlay(); if (!$('live').hidden) closeLive(); }
+      if (e.key === 'Escape') { closeParent(); closeBoard(); closeGames(); closeFam(); closeView(); if (!$('lesson').hidden) closeLesson(); if (!$('play').hidden) closePlay(); if (!$('live').hidden) liveExit(); }
     });
 
     // Coming back after midnight brings the new day's warm-up without a reload.
@@ -6575,6 +6742,8 @@ const TreasureUp = (function () {
     else if (location.hash === '#babylon' && BOARD()) riskHost();
     else if (/^#babylon-join(-\d{4})?$/.test(location.hash) && BOARD()) riskJoinForm(location.hash.slice(14));
     else if (location.hash === '#babylon-here' && BOARD()) riskSoloSetup();
+    // A TV tab that was hosting a live game, reloaded: pick the game back up.
+    else if ((() => { try { return !!sessionStorage.getItem(NS + 'live.host'); } catch (e) { return false; } })()) liveResume();
 
     familyBoot();
   }
