@@ -847,12 +847,13 @@
     <!-- Games -->
     <button id="gamesBtn" class="pointer-events-auto grid place-items-center w-9 h-9 rounded-full bg-black/45 backdrop-blur-md ring-1 ring-white/15 shrink-0 text-lg leading-none" aria-label="Games">🎮</button>
 
-    <!-- Family: sign in, or join with a link. Once this device is in a
-         family, 💬 takes its place (the family screen has People and Chat). -->
-    <button id="famBtn" class="relative pointer-events-auto grid place-items-center w-9 h-9 rounded-full bg-black/45 backdrop-blur-md ring-1 ring-white/15 shrink-0 text-lg leading-none" aria-label="Family">👪</button>
+    <!-- Family: sign in, or join with a link; once this device is in a
+         family, People (add someone, sign out) and Chat. The dot means a
+         new message. -->
+    <button id="famBtn" class="relative pointer-events-auto grid place-items-center w-9 h-9 rounded-full bg-black/45 backdrop-blur-md ring-1 ring-white/15 shrink-0 text-lg leading-none" aria-label="Family">👪<span id="chatDot" class="hud-dot" hidden></span></button>
 
-    <!-- Family chat. The dot means a new message. -->
-    <button id="chatBtn" class="relative pointer-events-auto grid place-items-center w-9 h-9 rounded-full bg-black/45 backdrop-blur-md ring-1 ring-white/15 shrink-0 text-lg leading-none" aria-label="Family chat" hidden>💬<span id="chatDot" class="hud-dot" hidden></span></button>
+    <!-- (Chat opens from the family screen; this button stays hidden.) -->
+    <button id="chatBtn" class="relative pointer-events-auto grid place-items-center w-9 h-9 rounded-full bg-black/45 backdrop-blur-md ring-1 ring-white/15 shrink-0 text-lg leading-none" aria-label="Family chat" hidden>💬</button>
 
     <!-- Study streak: days in a row he answered at least one question -->
     <div class="flex items-center gap-1 rounded-full bg-black/45 backdrop-blur-md px-2.5 py-1.5 ring-1 ring-white/15 shrink-0" title="Days in a row with a question answered">
@@ -2033,18 +2034,25 @@ const TreasureUp = (function () {
   }
 
   function boardTiles() {
+    const seed = (game() && game().seed) || '';
     const cols = WEEK.sections.map((name, s) => {
       const reels = WEEK.reels.filter(r => r.section === s);
-      const clues = reels.map(r => ({ id: r.id + ':q', q: r.question }))
+      let clues = reels.map(r => ({ id: r.id + ':q', q: r.question }))
         .concat(reels.flatMap(r => bonusesOf(r).map((b, n) => ({ id: r.id + ':b' + n, q: b, bonus: true }))));
+      if (seed) clues = shuffled(clues, seed + '|' + s);   // "Play again": the tiles in a new order
       clues.forEach((c, k) => { c.value = 100 * (k + 1); c.col = s; });
       return { name, clues };
     });
     const all = cols.flatMap(c => c.clues);
     const bonuses = all.filter(c => c.bonus);
-    const dd = bonuses.length ? bonuses[hash(WEEK.title) % bonuses.length].id : null;
+    const dd = bonuses.length ? bonuses[hash(WEEK.title + seed) % bonuses.length].id : null;
     return { cols, all, dd };
   }
+  // Each week keeps its own family best (weeks have different boards).
+  const boardBest = () => (G.bests || {})[WEEK.title] || 0;
+  // Who got a tile: several players can (older games saved one number).
+  const byList = d => d.by == null ? [] : Array.isArray(d.by) ? d.by : [d.by];
+  let boardSure = 0;   // "Change players" asks again before clearing a game in progress
 
   const game = () => G.games[WEEK.title];
   const worthOf = (t, dd) => t.id === dd ? t.value * 2 : t.value;
@@ -2083,7 +2091,7 @@ const TreasureUp = (function () {
     if (boardView) {
       const t = all.find(c => c.id === boardView.tile);
       const shown = boardView.revealed;
-      const choices = choicesFor(t.q, 'board|' + t.id).map((c, n) => {
+      const choices = choicesFor(t.q, 'board|' + t.id + '|' + (g.seed || '')).map((c, n) => {
         const right = shown && c === t.q.right;
         return `<div class="choice${right ? ' is-right' : ''}"><span class="mark">${right ? '✓' : 'ABC'[n]}</span><span>${esc(c)}</span></div>`;
       }).join('');
@@ -2095,9 +2103,9 @@ const TreasureUp = (function () {
           <div class="quiz clue-choices${shown ? ' done' : ''}"><div class="quiz-choices">${choices}</div></div>
           ${shown
             ? `<p class="quiz-why"><b class="ok">Answer:</b> ${esc(t.q.right)}. ${linkRefs(t.q.why, homeOfId(t.id))}</p>
-               <p class="board-help" style="margin-top:16px">Who got it? (${worthOf(t, dd)} points)</p>
-               <div class="board-actions">${g.players.map((p, n) => `<button class="btn" data-award="${n}">${esc(p.name)}</button>`).join('')}
-                 <button class="btn ghost" data-award="-1">Nobody</button></div>`
+               <p class="board-help" style="margin-top:16px">Who got it? Tap everyone who did (${worthOf(t, dd)} points each).</p>
+               <div class="board-actions">${g.players.map((p, n) => `<button class="btn${(boardView.award || []).includes(n) ? '' : ' ghost'}" data-award="${n}" aria-pressed="${(boardView.award || []).includes(n)}">${(boardView.award || []).includes(n) ? '✓ ' : ''}${esc(p.name)}</button>`).join('')}</div>
+               <div class="board-actions"><button class="btn" data-act="give">${(boardView.award || []).length ? 'Give the points' : 'Nobody got it'}</button></div>`
             : `<div class="board-actions"><button class="btn" data-act="reveal">Show answer</button>
                  <button class="btn ghost" data-act="back">Back to the board</button></div>`}
         </div>`;
@@ -2111,7 +2119,7 @@ const TreasureUp = (function () {
         <div class="clue">
           <div class="eyebrow">Game over</div>
           <p class="clue-q">Family total: ${total}</p>
-          <p class="board-help">${g.newBest ? 'New family best!' : 'Family best: ' + G.best}</p>
+          <p class="board-help">${g.newBest ? 'New family best for this week!' : 'Family best this week: ' + boardBest()}</p>
           <div class="grid gap-2" style="margin-top:16px">${ranked.map(p => `<div class="score-row"><span>${esc(p.name)}</span><b>${p.score}</b></div>`).join('')}</div>
           <div class="board-actions">
             <button class="btn" data-act="again">Play again</button>
@@ -2130,13 +2138,13 @@ const TreasureUp = (function () {
         if (!t) return '<div class="tile empty"></div>';
         const d = g.done[t.id];
         return d
-          ? `<button class="tile" disabled>${d.by == null ? '—' : esc(g.players[d.by].name)}</button>`
+          ? `<button class="tile" disabled>${byList(d).length ? byList(d).map(i => esc(g.players[i].name)).join(', ') : '—'}</button>`
           : `<button class="tile" data-tile="${esc(t.id)}" aria-label="${esc(c.name)} for ${t.value}">${t.value}</button>`;
       }).join('');
     }
     body.innerHTML = `
       <div class="board-grid" style="grid-template-columns:repeat(${cols.length},minmax(0,1fr))">${grid}</div>
-      <div class="board-actions"><button class="btn ghost" data-act="players">Change players</button></div>`;
+      <div class="board-actions"><button class="btn ghost" data-act="players">${Date.now() - boardSure < 4000 ? 'This clears the game. Tap again' : 'Change players'}</button></div>`;
   }
 
   function boardClick(e) {
@@ -2147,16 +2155,18 @@ const TreasureUp = (function () {
     if (el.dataset.tile) {
       boardView = { tile: el.dataset.tile, revealed: false };
     } else if (el.dataset.award != null) {
+      const n = Number(el.dataset.award), a = boardView.award = boardView.award || [];
+      if (a.includes(n)) a.splice(a.indexOf(n), 1); else a.push(n);
+    } else if (el.dataset.act === 'give') {
       const { all, dd } = boardTiles();
-      const t = all.find(c => c.id === boardView.tile);
-      const by = Number(el.dataset.award);
-      if (by >= 0) g.players[by].score += worthOf(t, dd);
-      g.done[t.id] = { by: by >= 0 ? by : null };
+      const t = all.find(c => c.id === boardView.tile), by = (boardView.award || []).slice().sort();
+      by.forEach(i => { g.players[i].score += worthOf(t, dd); });
+      g.done[t.id] = { by };
       boardView = null;
       if (Object.keys(g.done).length >= all.length) {
         const total = g.players.reduce((n, p) => n + p.score, 0);
-        g.newBest = total > (G.best || 0);
-        if (g.newBest) G.best = total;
+        g.newBest = total > boardBest();
+        if (g.newBest) G.bests = Object.assign({}, G.bests, { [WEEK.title]: total });
       }
       saveBoard();
     } else {
@@ -2177,8 +2187,13 @@ const TreasureUp = (function () {
       } else if (act === 'again') {
         g.players.forEach(p => { p.score = 0; });
         g.done = {}; delete g.newBest;
+        g.seed = Math.random().toString(36).slice(2, 8);
         saveBoard();
       } else if (act === 'players') {
+        // In the middle of a game this clears it, so it asks first.
+        const playing = g && Object.keys(g.done).length && Object.keys(g.done).length < boardTiles().all.length;
+        if (playing && Date.now() - boardSure > 4000) { boardSure = Date.now(); setTimeout(() => { if (!$('board').hidden && !boardView) renderBoard(); }, 4100); renderBoard(); return; }
+        boardSure = 0;
         delete G.games[WEEK.title];
         saveBoard();
       } else if (act === 'exit') {
@@ -4688,10 +4703,12 @@ const TreasureUp = (function () {
     try { F ? localStorage.setItem(FAM_KEY, JSON.stringify(F)) : localStorage.removeItem(FAM_KEY); } catch (e) {}
     famButtons();
   }
-  // One family button on the main page: 👪 to sign in or join, then 💬.
+  // One family button on the main page: 👪 opens People (add someone, sign
+  // out) with Chat a tab away, and a dot on it means a new message.
   function famButtons() {
-    $('famBtn').hidden = !!F;
-    $('chatBtn').hidden = !F;
+    $('famBtn').hidden = false;
+    $('chatBtn').hidden = true;
+    $('famBtn').setAttribute('aria-label', F ? 'Family: people, chat, add someone, sign out' : 'Family');
   }
   const store = (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} };
   const stored = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
@@ -4981,6 +4998,15 @@ const TreasureUp = (function () {
     for (const k in L.deep || {}) if (!has(B.deep, k) && has(R.deep, k) && L.deep[k].right) gained -= XP.bonus;
     for (const k in L.notes || {}) {
       if (L.notes[k].rewarded && !(has(B.notes, k) && B.notes[k].rewarded) && has(R.notes, k) && R.notes[k].rewarded) gained -= NOTE_XP;
+    }
+    // The games, the same way: a Who said it? line, the week's puzzle, or a
+    // day's Verse Word that both devices were paid for since they last met.
+    for (const k in L.sayings || {}) if (!has(B.sayings, k) && has(R.sayings, k) && L.sayings[k].right) gained -= SAY_XP;
+    const pzPaid = p => !!(p && p.rewarded && p.week === (L.puzzle && L.puzzle.week));
+    if (pzPaid(L.puzzle) && pzPaid(R.puzzle) && !pzPaid(B.puzzle)) gained -= PUZZLE_XP;
+    for (const d in L.words || {}) {
+      const a = L.words[d], r = (R.words || {})[d], b0 = (B.words || {})[d];
+      if (a && a.paid && r && r.paid && !(b0 && b0.paid)) gained -= typeof a.paid === 'number' ? a.paid : 10;
     }
     M.xp = (R.xp || 0) + Math.max(0, gained);
     for (const key of ['answers', 'bonus', 'deep', 'sayings', 'recall', 'sayRecall']) M[key] = Object.assign({}, L[key] || {}, R[key] || {});

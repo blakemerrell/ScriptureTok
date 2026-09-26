@@ -109,12 +109,19 @@ Each reel:
 
 - `puzzle.groups`: exactly 4 groups of 4 tiles, one group per lesson
   section. Each tile is `{ text, ref }`; the ref must be inside the week's
-  reading.
+  reading. A tile must not hand over a reading question's answer (the
+  checker flags a tile sharing two main words with one).
 - `sayings`: at least 6 `{ id, text, ref, speaker, wrong: [two], why }`.
-  `text` must be quoted exactly from `ref`.
-- `words`: Verse Word, one a day. `{ word, clue, ref }`: a 4–7 letter word in
-  capitals, and the verse's own words with `____` where the word goes. The
-  word must be in `scripture-words.js` so it can be typed as a guess.
+  `text` must be quoted exactly from `ref`, and be one speaker's words only.
+  Keep the three choices alike in length and form, so the right one can't
+  be picked out by its shape.
+- `words`: Verse Word, seven, one a day, Sunday first. `{ word, clue, ref, mean }`:
+  a 4–7 letter word in capitals, and the verse's own words with `____` where
+  the word goes. The word must be in `scripture-words.js` so it can be typed
+  as a guess, and not be in the week's title. `mean`: one plain line on what
+  the verse means, shown when the game ends.
+- Nothing in the puzzle, the sayings or the Verse Word clues may give away
+  a reading question's answer: the checker looks there too.
 - `approved` (and `wordsApproved` for the Verse Words): written by developer
   mode. Don't write these by hand.
 
