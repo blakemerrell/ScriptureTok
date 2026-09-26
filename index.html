@@ -532,6 +532,10 @@
   .rk-king.mine { border-color: var(--gold); }
   .rk-king.taken, .rk-king.open { opacity: .5; }
   .rk-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .rk-soloset { display: grid; gap: 8px; margin-top: 10px; }
+  .rk-soloking { display: grid; grid-template-columns: auto 90px 1fr; gap: 10px; align-items: center; }
+  .rk-pass { padding: 16px; border-radius: 14px; background: rgba(0,0,0,.35); border: 3px solid rgba(255,255,255,.2); text-align: center; }
+  .rk-pass .rk-q { font-size: 26px; }
   .rk-chips .lbl { width: 100%; font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: rgba(255,255,255,.55); }
   .rk-chip { padding: 9px 12px; border-radius: 999px; font: inherit; font-size: 14px; font-weight: 800; color: #fff; background: rgba(255,255,255,.1); border: 2px solid rgba(255,255,255,.2); cursor: pointer; }
   .rk-chip.on { border-color: #fff; background: rgba(255,255,255,.22); }
@@ -2254,7 +2258,7 @@ const TreasureUp = (function () {
     rows.push(gameRow('climb', '🪜', 'Scripture Climb', 'Ten questions, each worth more. Three lifelines.', climbStatus(), false));
     rows.push(gameRow('live', '📡', 'Live game', 'The TV shows the questions; everyone answers on their own phone or tablet.', 'Host or join with a code', false));
     rows.push(gameRow('board', '📺', 'Scripture Showdown', 'A quiz-show game for the whole family, best on the TV.', 'Play together', false));
-    if (BOARD()) rows.push(gameRow('babylon', '🏰', BOARD().title, 'A Risk-style map game for 2 to 5: the map on a computer or TV, everyone on their own phone or tablet.', 'Put up the map, or join with a code', false));
+    if (BOARD()) rows.push(gameRow('babylon', '🏰', BOARD().title, 'A Risk-style map game for 2 to 5: the map on a computer or TV and everyone on their own phone, or one screen passed around.', 'Put up the map, join with a code, or play on one screen', false));
     $('gamesBody').innerHTML = rows.join('');
   }
 
@@ -3606,6 +3610,7 @@ const TreasureUp = (function () {
           <button class="btn" data-rk="host">Put the map on this screen</button>
           <button class="btn ghost" data-rk="join">Join with a code</button>
         </div>
+        <p class="board-help">No TV? <button class="today-alt" style="display:inline;margin:0" data-rk="solo">Play on this one screen</button>, passing it around.</p>
         ${riskModeNote()}
       </div>`);
   }
@@ -3808,7 +3813,18 @@ const TreasureUp = (function () {
     }));
   }
 
-  const riskSend = m => riskConn().move(rk.code, m).catch(() => toast("Couldn't reach the game", 'Check the internet'));
+  const riskMe = () => rk && rk.role === 'solo' ? (rk.g.turn ? rk.g.seats[rk.g.turn.i].uid : null) : riskConn().uid();
+  const riskRender = () => rk && (rk.role === 'solo' ? renderRiskSolo() : rk.role === 'player' ? renderRiskPlayer() : renderRiskHost());
+  // A move: sent to the computer with the map, or on the one shared screen,
+  // checked and applied right here by the same rules.
+  function riskSend(m) {
+    if (rk.role !== 'solo') return riskConn().move(rk.code, m).catch(() => toast("Couldn't reach the game", 'Check the internet'));
+    const g = rk.g, was = g.turn ? g.turn.i : -1, phase = g.turn && g.turn.phase, rolls = g.dice && g.dice.n;
+    riskApply(g, Object.assign({}, m, { uid: riskMe() }));
+    if (!g.turn || g.turn.i !== was || g.turn.phase !== phase || (g.dice && g.dice.won && g.dice.n !== rolls)) rk.sel = {};
+    if (g.turn && g.turn.i !== was) rk.pass = true;                    // hand the screen on
+    riskSoloSave();
+  }
 
   // What a phone can tap on the map right now.
   function riskCan(g, me) {
@@ -3825,8 +3841,8 @@ const TreasureUp = (function () {
   }
 
   function riskTap(id) {
-    const g = rk && rk.g, me = riskConn().uid();
-    if (!g || rk.role !== 'player' || !riskCan(g, me).includes(id)) return;
+    const g = rk && rk.g, me = riskMe();
+    if (!g || rk.role === 'host' || !riskCan(g, me).includes(id)) return;
     const t = g.turn, sel = rk.sel, own = g.lands[id].o === me;
     if (t.phase === 'place') {                                          // one army a tap
       sel.place = id;
@@ -3836,7 +3852,7 @@ const TreasureUp = (function () {
       else { sel.from = id; sel.to = null; }
     } else if (own) { sel.from = id; sel.to = null; }                   // attack from here…
     else sel.to = id;                                                   // …to there
-    renderRiskPlayer();
+    riskRender();
   }
 
   function riskPlayerAction(act, el) {
@@ -3855,7 +3871,7 @@ const TreasureUp = (function () {
     else if (act === 'more') sel.n = Math.min(g.lands[sel.from].a - 1, (sel.n || 1) + 1);
     else if (act === 'domove' && sel.from && sel.to) riskSend({ kind: 'move', a: sel.from, b: sel.to, n: sel.n || 1 });
     else if (act === 'end') riskSend({ kind: 'end' });
-    renderRiskPlayer();
+    riskRender();
   }
 
   function renderRiskPlayer() {
@@ -3883,12 +3899,111 @@ const TreasureUp = (function () {
         <p class="live-sub">${f[0] ? esc(f[0].name) + ' wins with ' + f[0].pts + ' points.' : ''}</p>`);
       return;
     }
+    const c = riskControls(g, me, true);
+    riskBody(`${head}${c.map}<div class="rk-panel">${c.panel}</div>`);
+  }
+
+  // ----- one screen: a phone, tablet or computer passed around -----
+
+  // No TV and no join code: everyone's turn is played on this screen, by the
+  // same rules. The game is kept on this device, so it can be continued later.
+  const SOLO_KEY = NS + 'risk.solo';
+  function riskSoloSave() {
+    try { localStorage.setItem(SOLO_KEY, JSON.stringify(Object.assign({}, rk.g, { code: rk.code, pass: !!rk.pass }))); } catch (e) {}
+  }
+  function riskSoloSaved() {
+    try { const g = JSON.parse(localStorage.getItem(SOLO_KEY)); return g && g.state === 'play' && g.board === BOARD().id ? g : null; } catch (e) { return null; }
+  }
+
+  function riskSoloSetup(err, names) {
+    stopRisk();
+    openRisk();
+    const B = BOARD(), saved = riskSoloSaved(), n = names || {};
+    riskBody(`
+      <div class="clue" style="max-width:560px">
+        <p class="clue-q">Play on this one screen</p>
+        <p class="board-help">Type a name next to each kingdom that's playing (2 to 5), then pass this phone, tablet or computer around: each turn is played here.</p>
+        ${saved ? `<div class="board-actions"><button class="btn" data-rk="solocontinue">Continue your game · round ${saved.round} of ${saved.rounds}</button></div>` : ''}
+        <div class="rk-soloset">${B.kingdoms.map(k => `<label class="rk-soloking"><span class="rk-dot" style="background:${k.color}"></span><b>${esc(k.name)}</b>
+          <input class="field" data-solo-k="${k.id}" maxlength="16" placeholder="Name" autocomplete="off" value="${esc(n[k.id] || '')}"></label>`).join('')}</div>
+        <label class="block mt-3 text-[12px] text-white/60" for="riskSoloRounds">How long</label>
+        <select id="riskSoloRounds" class="field">${RISK.rounds.map((r, i) => `<option value="${r}"${i === 1 ? ' selected' : ''}>${['Short', 'Standard', 'Long'][i]} · ${r} rounds</option>`).join('')}</select>
+        ${err ? `<p class="parent-msg">${esc(err)}</p>` : ''}
+        <div class="board-actions"><button class="btn" data-rk="solostart">${saved ? 'Start a new game' : 'Start'}</button></div>
+      </div>`);
+  }
+
+  function riskSoloStart() {
+    const names = {};
+    const seats = [...document.querySelectorAll('[data-solo-k]')].map(i => ({ k: i.dataset.soloK, name: i.value.trim() }))
+      .filter(x => { names[x.k] = x.name; return x.name; }).map((x, n) => ({ uid: 'p' + (n + 1), name: x.name, k: x.k }));
+    if (seats.length < 2) return riskSoloSetup('Type at least 2 names.', names);
+    rk = { role: 'solo', code: 'solo' + Date.now(), g: { board: BOARD().id, state: 'lobby', rounds: Number($('riskSoloRounds').value) || RISK.rounds[1], seats }, sel: {}, unsub: [] };
+    riskBegin(rk.g);
+    riskSoloSave();
+    renderRiskSolo();
+  }
+  function riskSoloContinue() {
+    const g = riskSoloSaved();
+    if (!g) return riskSoloSetup();
+    rk = { role: 'solo', code: g.code || 'solo', g, sel: {}, pass: !!g.pass, unsub: [] };
+    renderRiskSolo();
+  }
+  function riskSoloAction(act) {
+    const g = rk.g;
+    if (act === 'soloready') rk.pass = false;
+    else if (act === 'soloskip' && g.state === 'play') { riskLog(g, g.seats[g.turn.i].name + "'s turn was skipped."); riskNextTurn(g); rk.sel = {}; rk.pass = g.state === 'play'; }
+    else if (act === 'solofinish' && g.state === 'play') riskOver(g);
+    else if (act === 'soloagain') {
+      rk.g = { board: g.board, state: 'lobby', rounds: g.rounds, seats: g.seats.map(x => ({ uid: x.uid, name: x.name, k: x.k })) };
+      rk.code = 'solo' + Date.now();
+      riskBegin(rk.g);
+      rk.sel = {};
+      rk.pass = false;
+    } else if (act === 'solodone') {
+      try { localStorage.removeItem(SOLO_KEY); } catch (e) {}
+      return closeRisk();
+    }
+    riskSoloSave();
+    renderRiskSolo();
+  }
+
+  function renderRiskSolo() {
+    if (!rk || rk.role !== 'solo') return;
+    const g = rk.g, small = window.matchMedia && window.matchMedia('(max-width: 900px)').matches;
+    const log = `<div class="rk-log">${(g.log || []).slice().reverse().map(x => `<div>${esc(x)}</div>`).join('')}</div>`;
+    if (g.state === 'over') {
+      riskBody(`<div class="rk-host"><div class="rk-mapbox">${riskMap(g)}</div><div class="rk-side">${riskFinalHtml(g)}${riskSeatsHtml(g)}
+        <div class="board-actions"><button class="btn" data-rk="soloagain">Play again</button><button class="btn ghost" data-rk="solodone">Done</button></div></div></div>`);
+      return;
+    }
+    const s = g.seats[g.turn.i], k = kingdomOf(s.k);
+    const who = `<div class="rk-turn" style="border-color:${k.color}"><div class="eyebrow">Round ${g.round} of ${g.rounds}</div>
+      <div class="rk-who"><span class="rk-dot" style="background:${k.color}"></span>${esc(s.name)} <small>${esc(k.name)}</small></div></div>`;
+    if (rk.pass) {
+      riskBody(`<div class="rk-host"><div class="rk-mapbox">${riskMap(g, g.dice ? { from: g.dice.from, to: g.dice.to } : null)}</div><div class="rk-side">
+        <div class="rk-pass" style="border-color:${k.color}"><div class="eyebrow">Round ${g.round} of ${g.rounds}</div>
+          <p class="rk-q">Pass to ${esc(s.name)}</p><p class="rk-note">${esc(k.name)}'s turn.</p>
+          <div class="rk-btns"><button class="btn" data-rk="soloready">I'm ${esc(s.name)}: go</button></div></div>
+        ${riskSeatsHtml(g, s.uid)}${log}</div></div>`);
+      return;
+    }
+    const c = riskControls(g, s.uid, small);
+    riskBody(`<div class="rk-host">${c.map}<div class="rk-side">${who}<div class="rk-panel" style="margin-top:0">${c.panel}</div>
+      ${riskSeatsHtml(g, s.uid)}${log}
+      <div class="board-actions"><button class="btn ghost" data-rk="soloskip">Skip this turn</button><button class="btn ghost" data-rk="solofinish">End the game now</button></div></div></div>`);
+  }
+
+  // A player's map and controls during the game: on their own phone, or on
+  // the one screen everyone shares.
+  function riskControls(g, me, small) {
+    const B = BOARD(), seat = seatOf(g, me);
     const t = g.turn, mine = t && g.seats[t.i] && g.seats[t.i].uid === me, sel = rk.sel;
     const can = riskCan(g, me);
     const chip = id => `<button class="rk-chip${sel.from === id || sel.place === id ? ' on' : ''}${sel.to === id ? ' to' : ''}" data-rk="land" data-v="${id}">${esc(landName(id))} · ${g.lands[id].a}</button>`;
     const chips = (label, ids) => ids.length ? `<div class="rk-chips"><span class="lbl">${label}</span>${ids.map(chip).join('')}</div>` : '';
     const own = can.filter(id => g.lands[id].o === me), other = can.filter(id => g.lands[id].o !== me);
-    const map = `<div class="rk-mapbox small">${riskMap(g, { small: true, can: riskCan(g, me), from: sel.from || sel.place, to: sel.to })}</div>`;
+    const map = `<div class="rk-mapbox${small ? ' small' : ''}">${riskMap(g, { small, can, from: sel.from || sel.place, to: sel.to })}</div>`;
     let panel = '';
     if (!seat) panel = '<p class="rk-note">You joined after the game started. Watch the map!</p>';
     else if (seat.out) panel = '<p class="rk-note">Your kingdom has fallen. Watch how it ends!</p>';
@@ -3939,8 +4054,9 @@ const TreasureUp = (function () {
           <div class="rk-btns"><button class="btn ghost" data-rk="movemode">Move armies, then end turn</button><button class="btn ghost" data-rk="end">End turn</button></div>`;
       }
     }
-    riskBody(`${head}${map}<div class="rk-panel">${panel}</div>`);
+    return { map, panel };
   }
+
 
   /* ---------------- family: accounts, progress, chat ---------------- */
 
@@ -5874,7 +5990,7 @@ const TreasureUp = (function () {
     $('riskExit').addEventListener('click', riskExit);
     $('risk').addEventListener('click', e => {
       const land = e.target.closest('[data-land]');
-      if (land && rk && rk.role === 'player') { riskTap(land.dataset.land); return; }
+      if (land && rk && rk.role !== 'host') { riskTap(land.dataset.land); return; }
       const h = e.target.closest('[data-rkh]');
       if (h && !h.disabled) { riskHostAction(h.dataset.rkh, h); return; }
       const el = e.target.closest('[data-rk]');
@@ -5883,7 +5999,11 @@ const TreasureUp = (function () {
       if (act === 'host') riskHost();
       else if (act === 'join') riskJoinForm('');
       else if (act === 'joinnow') riskJoin();
-      else if (rk && rk.role === 'player') riskPlayerAction(act, el);
+      else if (act === 'solo') riskSoloSetup();
+      else if (act === 'solostart') riskSoloStart();
+      else if (act === 'solocontinue') riskSoloContinue();
+      else if (/^solo/.test(act) && rk && rk.role === 'solo') riskSoloAction(act);
+      else if (rk && (rk.role === 'player' || rk.role === 'solo')) riskPlayerAction(act, el);
     });
     $('risk').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.closest('#riskCode, #riskName')) riskJoin(); });
 
@@ -5995,6 +6115,7 @@ const TreasureUp = (function () {
     // …/#babylon puts up the map game's map; …/#babylon-join-1234 joins it.
     else if (location.hash === '#babylon' && BOARD()) riskHost();
     else if (/^#babylon-join(-\d{4})?$/.test(location.hash) && BOARD()) riskJoinForm(location.hash.slice(14));
+    else if (location.hash === '#babylon-here' && BOARD()) riskSoloSetup();
 
     familyBoot();
   }
