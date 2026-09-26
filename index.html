@@ -2814,6 +2814,9 @@ const TreasureUp = (function () {
     const notify = c => { subs.forEach(f => f(c)); if (bc) bc.postMessage(c); };
     const put = (c, k, v) => { try { v == null ? localStorage.removeItem(PRE + k) : localStorage.setItem(PRE + k, JSON.stringify(v)); } catch (e) {} notify(c); };
     if (bc) bc.onmessage = e => subs.forEach(f => f(e.data));
+    // The message can arrive before another tab's write has reached this
+    // one; the storage event comes once it has, so read again then.
+    window.addEventListener('storage', e => { if (e.key && e.key.startsWith(PRE)) { const c = e.key.slice(PRE.length).split('.')[0]; subs.forEach(f => f(c)); } });
     const watch = (c, read, cb) => { const f = x => { if (x === c) cb(read()); }; subs.add(f); cb(read()); return () => subs.delete(f); };
     return {
       kind: 'local',
