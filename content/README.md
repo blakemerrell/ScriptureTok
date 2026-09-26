@@ -87,6 +87,12 @@ Each reel:
             /study/… link). `find` is the exact words that settle it:
             they must be in the source and nowhere in the app. For a web
             page, write `why` in your own words, no “quotes”.
+  hunt      optional, on a bonus or Go deeper whose question names a verse:
+            the same question naming only the chapter, for the map game's
+            chapter hunts ("In Isaiah 14, what do people ask…"). The answer
+            (`find`) must be in that chapter just once; the checker says so.
+            A question that names a verse and has no hunt stays out of the
+            map game.
   media     optional. A picture on any reel it truly fits (a picture of
             Jesus Christ never goes on a reel about Satan); at most 2
             clips a week, only where they show something the words can't.

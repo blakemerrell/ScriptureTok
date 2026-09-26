@@ -202,6 +202,15 @@ function checkBoards(boards, { verses }) {
       else if (!quoteMatches(c.quote || '', src)) failures.push(`${where}: card ${c.id}: "${c.quote}" is not in ${c.ref}`);
     }
     for (const m of (b.intro || '').matchAll(/\(([^)]+ \d+:\d+(?:[–-]\d+)?)\)/g)) if (textOf(m[1]) == null) failures.push(`${where}: intro reference "${m[1]}" does not exist`);
+    // The narrator's story: each “quote” must be in the verse cited after it.
+    for (const line of b.story || []) {
+      for (const m of line.matchAll(/“([^”]+)”[^(“]*\(([^)]+)\)/g)) {
+        const src = textOf(m[2]);
+        if (src == null) failures.push(`${where}: story reference "${m[2]}" does not exist`);
+        else if (!quoteMatches(m[1], src)) failures.push(`${where}: story: “${m[1]}” is not in ${m[2]}`);
+      }
+      if ((line.match(/“/g) || []).length !== (line.match(/\(/g) || []).length) failures.push(`${where}: story: every quote needs its reference: ${line}`);
+    }
     for (const m of (b.intro || '').matchAll(/\b(Daniel|Isaiah|Ezra) (\d+)(?!:)/g)) if (!verses.has(`${m[1]} ${m[2]}:1`)) failures.push(`${where}: intro chapter "${m[0]}" does not exist`);
   }
 }
@@ -376,8 +385,36 @@ async function main(scripture, week, pages, online) {
   // A question only the reading answers (a bonus, or a Go-deeper item):
   // its answer words are in the verse or Gospel Library page it cites, and
   // nowhere in the app.
+  // A whole chapter's text, for the map game's hunts.
+  const chapters = new Map();
+  const chapterOf = (book, ch) => {
+    const key = book + ' ' + ch;
+    if (!chapters.has(key)) {
+      const out = [];
+      for (let v = 1; verses.has(`${key}:${v}`); v++) out.push(verses.get(`${key}:${v}`));
+      chapters.set(key, out.length ? out.join(' ') : null);
+    }
+    return chapters.get(key);
+  };
+  const countIn = (needle, hay) => { const n = trimPunct(norm(needle)), h = norm(hay); let c = 0; for (let i = h.indexOf(n); i >= 0; i = h.indexOf(n, i + 1)) c++; return c; };
+
   function checkReading(where, label, b) {
     checkQuestion(where, b, label);
+    // The map game's hard questions are hunts through a chapter: its wording
+    // (`hunt`) names only the chapter, and the answer is there just once.
+    if (b.hunt != null) {
+      const src = /^(.+?) (\d+):\d+/.exec(b.source || '');
+      if (/\d+:\d+/.test(b.hunt)) fail(where, `${label} hunt must name only the chapter, not a verse: "${b.hunt}"`);
+      if (!src) fail(where, `${label} hunt needs a scripture source to hunt in`);
+      else if (!b.hunt.includes(src[1] + ' ' + src[2])) fail(where, `${label} hunt must say which chapter to search ("${src[1]} ${src[2]}")`);
+      else {
+        const text = chapterOf(src[1], src[2]);
+        const n = text == null ? 0 : countIn(b.find || '', text);
+        if (n !== 1) fail(where, `${label} hunt: "${b.find}" is in ${src[1]} ${src[2]} ${n} times; a hunt's answer must be there once`);
+      }
+    } else if (/\b\d+:\d+/.test(b.q || '')) {
+      note(`${where}: ${label} names a verse, so the map game leaves it out until it has a \`hunt\` wording`);
+    }
     const url = webSource(b, week);
     if (!b.source || !b.find) fail(where, `${label} needs source and find`);
     else if (url) {
