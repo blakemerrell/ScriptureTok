@@ -67,7 +67,7 @@ window.TU_WEEKS = [
               "ref": "Isaiah 29:13"
             },
             {
-              "text": "Precepts of men",
+              "text": "Near with their mouth",
               "ref": "Isaiah 29:13"
             },
             {
@@ -96,7 +96,7 @@ window.TU_WEEKS = [
               "ref": "Isaiah 35:1"
             },
             {
-              "text": "Way of holiness",
+              "text": "A highway shall be there",
               "ref": "Isaiah 35:8"
             }
           ]
@@ -122,7 +122,7 @@ window.TU_WEEKS = [
         "speaker": "Jesus Christ",
         "wrong": [
           "Lucifer",
-          "Isaiah"
+          "The king of Babylon"
         ],
         "why": "The Lord's Beloved Son said it in the premortal council, the opposite of Lucifer's “I will” (Isaiah 14:13)."
       },
@@ -133,13 +133,13 @@ window.TU_WEEKS = [
         "speaker": "Charles Anthon",
         "wrong": [
           "Martin Harris",
-          "Joseph Smith"
+          "Oliver Cowdery"
         ],
         "why": "Martin Harris reported that Professor Anthon said it after hearing an angel was involved."
       },
       {
         "id": "say-learned",
-        "text": "Read this, I pray thee: and he saith, I cannot; for it is sealed",
+        "text": "I cannot; for it is sealed",
         "ref": "Isaiah 29:11",
         "speaker": "The learned man in Isaiah 29",
         "wrong": [
@@ -154,7 +154,7 @@ window.TU_WEEKS = [
         "ref": "Isaiah 30:10",
         "speaker": "The rebellious people",
         "wrong": [
-          "The prophets",
+          "The seers and the prophets",
           "The Lord"
         ],
         "why": "The rebellious people said it to their seers and prophets: they only wanted to hear what felt good."
@@ -163,7 +163,7 @@ window.TU_WEEKS = [
         "id": "say-the-way",
         "text": "This is the way, walk ye in it",
         "ref": "Isaiah 30:21",
-        "speaker": "A word behind you, from the Lord",
+        "speaker": "A word behind you",
         "wrong": [
           "The king of Babylon",
           "The rebellious people"
@@ -188,7 +188,7 @@ window.TU_WEEKS = [
         "speaker": "Jesus Christ",
         "wrong": [
           "Nephi",
-          "Moroni"
+          "Samuel the Lamanite"
         ],
         "why": "The resurrected Savior told the Nephites to search Isaiah diligently."
       }
@@ -197,37 +197,44 @@ window.TU_WEEKS = [
       {
         "word": "REFUGE",
         "clue": "a ____ from the storm, a shadow from the heat",
-        "ref": "Isaiah 25:4"
+        "ref": "Isaiah 25:4",
+        "mean": "The Lord is a safe place to go when life feels like a storm."
       },
       {
         "word": "SEALED",
         "clue": "the words of a book that is ____",
-        "ref": "Isaiah 29:11"
+        "ref": "Isaiah 29:11",
+        "mean": "Isaiah saw a book so sealed that even a learned man could not read it. Nephi tells how it would come forth (2 Nephi 27)."
       },
       {
         "word": "DESERT",
         "clue": "the ____ shall rejoice, and blossom as the rose",
-        "ref": "Isaiah 35:1"
+        "ref": "Isaiah 35:1",
+        "mean": "Even dry, empty places will bloom. The Lord can make what is broken beautiful again."
       },
       {
-        "word": "WONDER",
-        "clue": "a marvellous work and a ____",
-        "ref": "Isaiah 29:14"
+        "word": "PERISH",
+        "clue": "for the wisdom of their wise men shall ____",
+        "ref": "Isaiah 29:14",
+        "mean": "When the Lord does His marvelous work, the wisdom of the world can’t stand up to His."
       },
       {
         "word": "SMOOTH",
         "clue": "speak unto us ____ things",
-        "ref": "Isaiah 30:10"
+        "ref": "Isaiah 30:10",
+        "mean": "The people wanted to hear only easy, pleasant things, not the truth they needed."
       },
       {
         "word": "BEHIND",
         "clue": "thine ears shall hear a word ____ thee",
-        "ref": "Isaiah 30:21"
+        "ref": "Isaiah 30:21",
+        "mean": "When we start to turn aside, the Lord can guide us back onto His way."
       },
       {
-        "word": "STAYED",
-        "clue": "whose mind is ____ on thee",
-        "ref": "Isaiah 26:3"
+        "word": "LEAP",
+        "clue": "Then shall the lame man ____ as an hart",
+        "ref": "Isaiah 35:6",
+        "mean": "When the Lord comes, people who could not walk will leap like a deer (a hart). He heals."
       }
     ],
     "deep": [
@@ -828,7 +835,7 @@ window.TU_WEEKS = [
               "ref": "Isaiah 47:1"
             },
             {
-              "text": "Stars called by name",
+              "text": "Lift up your eyes",
               "ref": "Isaiah 40:26"
             }
           ]
@@ -849,7 +856,7 @@ window.TU_WEEKS = [
               "ref": "Isaiah 49:16"
             },
             {
-              "text": "Mercy on the afflicted",
+              "text": "Sing, O heavens",
               "ref": "Isaiah 49:13"
             }
           ]
@@ -886,7 +893,7 @@ window.TU_WEEKS = [
         "speaker": "Proud Babylon",
         "wrong": [
           "The Lord",
-          "Isaiah"
+          "The king of Assyria"
         ],
         "why": "Babylon said it in its heart. Only the Lord can truly say “I am God, and there is none else” (Isaiah 46:9)."
       },
@@ -894,10 +901,10 @@ window.TU_WEEKS = [
         "id": "say-deliver-me",
         "text": "Deliver me; for thou art my god",
         "ref": "Isaiah 44:17",
-        "speaker": "A man praying to his carved idol",
+        "speaker": "A man praying to an idol",
         "wrong": [
-          "Nephi",
-          "King Cyrus"
+          "The Lord, speaking to Israel",
+          "Nephi"
         ],
         "why": "He carved the idol himself, then prayed to it."
       },
@@ -907,8 +914,8 @@ window.TU_WEEKS = [
         "ref": "Isaiah 49:14",
         "speaker": "Zion, the Lord's people",
         "wrong": [
-          "Babylon",
-          "The Lord"
+          "The Lord, about Babylon",
+          "Cyrus, the Lord’s shepherd"
         ],
         "why": "Zion felt forgotten. The Lord answered, “yet will I not forget thee” (Isaiah 49:15)."
       },
@@ -938,7 +945,7 @@ window.TU_WEEKS = [
         "id": "say-refined",
         "text": "I have refined thee, I have chosen thee in the furnace of affliction",
         "ref": "1 Nephi 20:10",
-        "speaker": "The Lord, in the Isaiah that Nephi read",
+        "speaker": "The Lord",
         "wrong": [
           "Laman",
           "King Cyrus"
@@ -950,37 +957,44 @@ window.TU_WEEKS = [
       {
         "word": "EAGLES",
         "clue": "they shall mount up with wings as ____",
-        "ref": "Isaiah 40:31"
+        "ref": "Isaiah 40:31",
+        "mean": "Waiting on the Lord renews our strength, like eagles lifted up on their wings."
       },
       {
         "word": "PALMS",
         "clue": "I have graven thee upon the ____ of my hands",
-        "ref": "Isaiah 49:16"
+        "ref": "Isaiah 49:16",
+        "mean": "The Lord says He has written us on His hands, so He can never forget us."
       },
       {
         "word": "BUCKET",
         "clue": "the nations are as a drop of a ____",
-        "ref": "Isaiah 40:15"
+        "ref": "Isaiah 40:15",
+        "mean": "Next to God, even the biggest nations are as small as one drop from a bucket."
       },
       {
         "word": "FURNACE",
         "clue": "I have chosen thee in the ____ of affliction",
-        "ref": "Isaiah 48:10"
+        "ref": "Isaiah 48:10",
+        "mean": "Hard times can refine us like metal in a furnace, and the Lord chooses us even there."
       },
       {
         "word": "RIVER",
         "clue": "then had thy peace been as a ____",
-        "ref": "Isaiah 48:18"
+        "ref": "Isaiah 48:18",
+        "mean": "Keeping the commandments brings peace that keeps on flowing, like a river."
       },
       {
         "word": "REED",
         "clue": "A bruised ____ shall he not break",
-        "ref": "Isaiah 42:3"
+        "ref": "Isaiah 42:3",
+        "mean": "The Savior is gentle: He won’t break someone who is already hurting."
       },
       {
         "word": "FORGET",
         "clue": "yet will I not ____ thee",
-        "ref": "Isaiah 49:15"
+        "ref": "Isaiah 49:15",
+        "mean": "A mother might forget her baby, but the Lord will never forget you."
       }
     ],
     "deep": [

@@ -371,12 +371,18 @@ async function main(scripture, week, pages, online) {
   const used = new Set();
   let clipCount = 0;
 
-  // Everything he can read in the app without opening the reading.
+  // Everything he can read in the app without opening the reading: the
+  // reels and Go deeper…
   const appText = norm(week.reels.map(r => [
     r.hook, r.body, r.verse && r.verse.text,
     r.question && [r.question.q, r.question.right, ...(r.question.wrong || []), r.question.why].join(' '),
     ...bonusesOf(r).map(b => [b.q, ...(b.wrong || [])].join(' '))
-  ].join(' ')).join(' ') + ' ' + (week.deep || []).map(d => [d.intro, d.q, ...(d.wrong || [])].join(' ')).join(' '));
+  ].join(' ')).join(' ') + ' ' + (week.deep || []).map(d => [d.intro, d.q, ...(d.wrong || [])].join(' ')).join(' ') + ' ' +
+    // …and in the games: puzzle tiles, Who said it? lines, and Verse Word clues
+    // with their word filled in (which he sees once the game ends).
+    ((week.puzzle && week.puzzle.groups) || []).flatMap(g => (g.tiles || []).map(x => x.text)).join(' ') + ' ' +
+    (week.sayings || []).map(s => [s.text, s.speaker, ...(s.wrong || []), s.why].join(' ')).join(' ') + ' ' +
+    (week.words || []).map(x => String(x.clue || '').replace(/_+/g, x.word || '')).join(' '));
 
   // A question only the reading answers (a bonus, or a Go-deeper item):
   // its answer words are in the verse or Gospel Library page it cites, and
@@ -566,6 +572,11 @@ async function main(scripture, week, pages, online) {
     if (used.has(i) && n < 3) fail('week', `section "${s}" has ${n} question${n === 1 ? '' : 's'}; the family board needs at least 3 per section (add a bonus)`);
   });
 
+  // The main words of a phrase, roughly stemmed ("calls" and "called" match).
+  const STOP = new Set('the and of a an to in on by his her him he she it is was be for with from that this them they their thee thou thy ye you your will shall not all one every upon have hath unto who what lord god are were its as at or but'.split(' '));
+  const keyWords = s => String(s || '').toLowerCase().replace(/[^a-z\s]/g, ' ').split(/\s+/).filter(x => x.length >= 3 && !STOP.has(x)).map(x => x.length > 4 ? x.replace(/(eth|ed|s)$/, '') : x);
+  const readingQs = week.reels.flatMap(r => bonusesOf(r)).concat(week.deep || []).filter(x => x && x.right);
+
   // Weekly puzzle: 4 groups of 4, one per section, every tile from this week's reading.
   if (week.puzzle) {
     const where = 'puzzle';
@@ -590,6 +601,13 @@ async function main(scripture, week, pages, online) {
         if (/[“”"]/.test(t.text || '')) fail(where, `tile "${t.text}": no quote marks on tiles`);
         if (!t.ref || textOf(t.ref) == null) fail(where, `tile "${t.text}": reference "${t.ref}" does not exist`);
         else if (block.size && !block.has(t.ref.replace(/:.*/, ''))) fail(where, `tile "${t.text}": ${t.ref} is outside this week's reading (${week.reference})`);
+        // A tile shouldn't hand over a reading question's answer: the lesson's
+        // match step and the puzzle both show it before he's read.
+        const tw = keyWords(t.text);
+        for (const x of readingQs) {
+          const aw = new Set(keyWords(x.right + ' ' + (x.find || '')));
+          if (tw.filter(k => aw.has(k)).length >= 2) fail(where, `tile "${t.text}" gives away the answer to "${x.q}" (${x.right})`);
+        }
       }
     }
   }
@@ -618,6 +636,8 @@ async function main(scripture, week, pages, online) {
   // and must be on the guess list (scripture-words.js) so it can be typed.
   if (week.words) {
     const seen = new Set();
+    // One a day, Sunday first: the app picks words[day of the week].
+    if (week.words.length !== 7) fail('words', `needs 7 words, one a day with Sunday first (has ${week.words.length})`);
     const listFile = path.join(ROOT, 'scripture-words.js');
     const guessable = fs.existsSync(listFile) ? new Set((/"([A-Z ]+)"/.exec(fs.readFileSync(listFile, 'utf8')) || [, ''])[1].split(' ')) : null;
     if (!guessable) fail('words', 'scripture-words.js is missing: run node tools/build-words.mjs');
@@ -631,6 +651,13 @@ async function main(scripture, week, pages, online) {
       const src = w.ref ? textOf(w.ref) : null;
       if (src == null) fail(where, `reference "${w.ref}" does not exist`);
       else if (!quoteMatches((w.clue || '').replace('____', w.word || ''), src)) fail(where, `"${(w.clue || '').replace('____', w.word)}" is not in ${w.ref}`);
+      // What the verse means, shown when the game ends.
+      if (!w.mean) fail(where, 'needs mean: one plain line on what the verse means, shown when the game ends');
+      else if (w.mean.split(/\s+/).length > LIMITS.whyWords) fail(where, `mean is over ${LIMITS.whyWords} words`);
+      checkText(where, 'mean', w.mean, w.ref);
+      checkRefs(where, 'mean', w.mean, w.ref);
+      // The day's word shouldn't be sitting in the week's title above it.
+      if (w.word && new RegExp('\\b' + w.word + '\\b', 'i').test(week.title)) fail(where, `is in the week's title ("${week.title}"), shown above the game`);
     }
   }
 
