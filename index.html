@@ -473,6 +473,11 @@
   .live-choice .lt { flex: 0 0 auto; width: 1.6em; height: 1.6em; border-radius: 10px; display: grid; place-items: center; background: rgba(0,0,0,.25); }
   .live-choice.dim { opacity: .3; }
   .live-choice.right { outline: 4px solid #fff; outline-offset: 2px; }
+  .live-choices.shown .live-choice { min-height: clamp(44px, 7vh, 76px); font-size: clamp(15px, 2vw, 26px); }
+  .live-scores { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .live-scores span { padding: 8px 14px; border-radius: 999px; background: rgba(255,255,255,.08); font-weight: 800; font-size: clamp(14px, 1.6vw, 20px); }
+  .live-scores b { color: var(--gold); }
+  .live-scores i { font-style: normal; color: var(--right); }
   .live-clock { font-weight: 900; font-size: clamp(28px, 5vw, 64px); font-variant-numeric: tabular-nums; color: var(--gold); }
   .live-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
   .live-bar { height: 10px; border-radius: 99px; background: rgba(255,255,255,.12); overflow: hidden; margin-top: 4px; }
@@ -2906,6 +2911,7 @@ const TreasureUp = (function () {
       async setScores(c, scores) {
         Object.entries(scores).forEach(([u, v]) => { const p = get(c + '.p.' + u); if (p) put(c, c + '.p.' + u, Object.assign(p, v)); });
       },
+      async clearAnswers(c) { keys(c + '.a.').forEach(k => { try { localStorage.removeItem(PRE + k); } catch (e) {} }); notify(c); },
       async endGame(c) { keys(c + '.').forEach(k => { try { localStorage.removeItem(PRE + k); } catch (e) {} }); notify(c); }
     };
   }
@@ -2966,6 +2972,11 @@ const TreasureUp = (function () {
         Object.entries(scores).forEach(([u, v]) => b.update(gameRef(c).collection('players').doc(u), v));
         await b.commit();
       },
+      async clearAnswers(c) {
+        const b = db.batch();
+        (await gameRef(c).collection('answers').get()).docs.forEach(d => b.delete(d.ref));
+        await b.commit();
+      },
       async endGame(c) {
         const b = db.batch();
         for (const sub of ['answers', 'players']) (await gameRef(c).collection(sub).get()).docs.forEach(d => b.delete(d.ref));
@@ -2993,7 +3004,8 @@ const TreasureUp = (function () {
     for (const x of easy.slice(6)) if (ids.length < LIVE_QUESTIONS) ids.push(x);
     return ids.slice(0, LIVE_QUESTIONS);
   }
-  const liveChoices = id => { const q = liveQuestion(id); return shuffled([q.right].concat(q.wrong), 'live|' + id); };
+  const liveGid = () => Math.random().toString(36).slice(2, 10);
+  const liveChoices = id => { const q = liveQuestion(id); return shuffled([q.right].concat(q.wrong), 'live|' + ((lv && lv.game && lv.game.gid) || '') + '|' + id); };
 
   let lv = null;   // this screen's part in a game
 
@@ -3010,7 +3022,33 @@ const TreasureUp = (function () {
     const was = lv;
     stopLive();
     $('live').hidden = true;
-    if (was && was.role === 'host' && was.code) { try { await liveConn().endGame(was.code); } catch (e) {} }
+    $('liveExit').textContent = 'Exit';
+    if (was && was.role === 'host' && was.code) {
+      try { sessionStorage.removeItem(NS + 'live.host'); } catch (e) {}
+      try { await liveConn().endGame(was.code); } catch (e) {}
+    }
+  }
+  // Exit on the TV ends the game for everyone, so mid-game it asks twice.
+  function liveExit() {
+    const s = lv && lv.role === 'host' && lv.game && lv.game.state;
+    if ((s === 'question' || s === 'reveal') && !lv.sure) {
+      lv.sure = true;
+      $('liveExit').textContent = 'End the game? Tap again';
+      setTimeout(() => { if (lv) lv.sure = false; $('liveExit').textContent = 'Exit'; }, 4000);
+      return;
+    }
+    closeLive();
+  }
+  // A TV tab that was hosting picks its game back up after a reload.
+  async function liveResume() {
+    let code = null;
+    try { code = sessionStorage.getItem(NS + 'live.host'); } catch (e) {}
+    if (!code) return;
+    const L = liveConn();
+    try { await L.init(); } catch (e) { return; }
+    const g = await new Promise(ok => { const off = L.watchGame(code, g => { ok(g); setTimeout(() => off && off(), 0); }); });
+    if (g && g.host === L.uid()) hostLive();
+    else try { sessionStorage.removeItem(NS + 'live.host'); } catch (e) {}
   }
 
   const modeNote = () => liveConn().kind === 'local'
@@ -3023,7 +3061,7 @@ const TreasureUp = (function () {
     liveBody(`
       <div class="clue">
         <p class="clue-q">Play live</p>
-        <p class="board-help">The TV or laptop shows the questions. Everyone answers on their own phone or tablet, and the fastest right answers score the most.</p>
+        <p class="board-help">The TV or laptop shows the questions. Everyone answers on their own phone or tablet. A right answer scores 700, and a quick one up to 300 more.</p>
         <div class="board-actions">
           <button class="btn" data-live="host">Host on this screen</button>
           <button class="btn ghost" data-live="join">Join with a code</button>
@@ -3041,13 +3079,30 @@ const TreasureUp = (function () {
     const L = liveConn();
     try { await L.init(); } catch (e) { liveBody(`<div class="clue"><p class="clue-q">Can't start the game</p><p class="board-help">${esc(e.message)}</p></div>`); return; }
     let code = null;
+    try { code = sessionStorage.getItem(NS + 'live.host'); } catch (e) {}
+    if (code) {
+      const g = await new Promise(ok => { const off = L.watchGame(code, g => { ok(g); setTimeout(() => off && off(), 0); }); });
+      if (!g || g.host !== L.uid()) code = null;
+    }
     for (let i = 0; i < 20 && !code; i++) {
       const c = String(1000 + Math.floor(Math.random() * 9000));
-      if (await L.createGame(c, { week: WEEK.title, qs: liveQuestionIds(c), state: 'lobby', qi: -1, seconds: LIVE_SECONDS })) code = c;
+      if (await L.createGame(c, { week: WEEK.title, gid: liveGid(), qs: liveQuestionIds(c), state: 'lobby', qi: -1, seconds: LIVE_SECONDS })) code = c;
     }
     if (!code) { liveBody('<div class="clue"><p class="clue-q">Couldn&rsquo;t get a game code. Try again.</p></div>'); return; }
+    try { sessionStorage.setItem(NS + 'live.host', code); } catch (e) {}
     lv = { role: 'host', code, game: null, players: [], answers: [], unsub: [] };
-    lv.unsub.push(L.watchGame(code, g => { if (!lv) return; lv.game = g; renderHost(); }));
+    lv.unsub.push(L.watchGame(code, g => {
+      if (!lv) return;
+      const first = !lv.game;
+      lv.game = g;
+      // Picked back up in the middle of a question or its answer: watch its
+      // answers again, and give the question a fresh clock.
+      if (first && g && (g.state === 'question' || g.state === 'reveal')) {
+        watchAnswersFor(g.qi);
+        if (g.state === 'question') { lv.localStart = Date.now(); liveClock(); }
+      }
+      renderHost();
+    }));
     lv.unsub.push(L.watchPlayers(code, ps => { if (!lv) return; lv.players = ps; renderHost(); checkAllAnswered(); }));
   }
 
@@ -3063,6 +3118,9 @@ const TreasureUp = (function () {
     lv.revealedQi = null;                        // a new question (or a new game) starts unrevealed
     watchAnswersFor(qi);
     await liveConn().updateGame(lv.code, { state: 'question', qi, qStart: 'now' });
+    liveClock();
+  }
+  function liveClock() {
     clearInterval(lv.tick);
     lv.tick = setInterval(() => {
       if (!lv || !lv.game || lv.game.state !== 'question') return;
@@ -3073,9 +3131,14 @@ const TreasureUp = (function () {
     }, 250);
   }
 
+  // Everyone is waited for unless they've missed two questions in a row: a
+  // player who has left holds up two questions at most, and one who is just
+  // slow once is still waited for.
+  const liveExpected = () => lv.players.filter(p => !(p.missed >= 2) || lv.answers.some(a => a.uid === p.uid));
   function checkAllAnswered() {
     if (!lv || lv.role !== 'host' || !lv.game || lv.game.state !== 'question' || !lv.players.length) return;
-    if (lv.players.every(p => lv.answers.some(a => a.uid === p.uid))) reveal();
+    const exp = liveExpected();
+    if (exp.length && exp.every(p => lv.answers.some(a => a.uid === p.uid))) reveal();
   }
 
   // Reveal once per question. The guard is per question, not a single busy
@@ -3093,9 +3156,9 @@ const TreasureUp = (function () {
       let pts = 0;
       if (right) {
         const secs = Math.max(0, ((a.at || 0) - (g.qStart || 0)) / 1000);
-        pts = 500 + Math.round(500 * Math.max(0, 1 - secs / LIVE_SECONDS));
+        pts = 700 + Math.round(300 * Math.max(0, 1 - secs / LIVE_SECONDS));
       }
-      scores[p.uid] = { score: (p.score || 0) + pts, last: pts, lastRight: right, lastAnswered: !!a };
+      scores[p.uid] = { score: (p.score || 0) + pts, last: pts, lastRight: right, lastAnswered: !!a, missed: a ? 0 : (p.missed || 0) + 1 };
     });
     try {
       await liveConn().setScores(lv.code, scores);
@@ -3115,21 +3178,26 @@ const TreasureUp = (function () {
       if (g.qi + 1 < g.qs.length) await askQuestion(g.qi + 1);
       else await L.updateGame(lv.code, { state: 'final' });
     } else if (act === 'again') {
+      // A new game: last game's answers go first, or its first question
+      // would count them and reveal at once.
       const code = lv.code;
-      await L.setScores(code, Object.fromEntries(lv.players.map(p => [p.uid, { score: 0, last: 0 }])));
-      await L.updateGame(code, { state: 'lobby', qi: -1, qs: liveQuestionIds(code + '|' + Date.now()) });
+      await L.clearAnswers(code);
+      lv.answers = [];
+      await L.setScores(code, Object.fromEntries(lv.players.map(p => [p.uid, { score: 0, last: 0, lastRight: false, lastAnswered: true, missed: 0 }])));
+      await L.updateGame(code, { state: 'lobby', qi: -1, gid: liveGid(), qs: liveQuestionIds(code + '|' + Date.now()) });
     } else if (act === 'end') {
       await closeLive();
     }
   }
 
   const ranked = ps => ps.slice().sort((a, b) => (b.score || 0) - (a.score || 0));
+  const placeOf = (ps, p) => 1 + ps.filter(x => (x.score || 0) > (p.score || 0)).length;   // ties share a place
   const fmt = n => Number(n || 0).toLocaleString('en-US');
 
   function choicesHtml(id, g, counts) {
     const q = liveQuestion(id);
     const shown = g.state !== 'question';
-    return `<div class="live-choices">${liveChoices(id).map((c, n) => {
+    return `<div class="live-choices${shown ? ' shown' : ''}">${liveChoices(id).map((c, n) => {
       const right = c === q.right;
       const cls = shown ? (right ? ' right' : ' dim') : '';
       const count = counts ? `<span style="margin-left:auto;font-variant-numeric:tabular-nums">${counts[c] || 0}</span>` : '';
@@ -3163,14 +3231,14 @@ const TreasureUp = (function () {
       if (g.state === 'reveal') lv.answers.forEach(a => { counts[a.choice] = (counts[a.choice] || 0) + 1; });
       const board = g.state === 'reveal' ? `
         <p class="quiz-why" style="margin-top:14px"><b class="ok">Answer:</b> ${esc(q.right)}. ${linkRefs(q.why, homeOfId(id))}</p>
-        <div class="grid gap-2" style="margin-top:14px">${players.slice(0, 5).map((p, i) =>
-          `<div class="score-row"><span>${i + 1}. ${esc(p.name)} ${p.last ? `<span style="color:var(--right)">+${fmt(p.last)}</span>` : ''}</span><b>${fmt(p.score)}</b></div>`).join('')}</div>
+        <div class="live-scores">${players.map(p =>
+          `<span>${placeOf(players, p)}. ${esc(p.name)} <b>${fmt(p.score)}</b>${p.last ? ` <i>+${fmt(p.last)}</i>` : ''}</span>`).join('')}</div>
         <div class="board-actions"><button class="btn" data-host="next">${g.qi + 1 < g.qs.length ? 'Next question' : 'Final scores'}</button></div>` : `
         <div class="board-actions"><button class="btn ghost" data-host="reveal">Show the answer now</button></div>`;
       liveBody(`
         <div class="clue">
           <div class="live-row">
-            <div class="eyebrow">Question ${g.qi + 1} of ${g.qs.length}${g.state === 'question' ? ` · ${lv.answers.length} of ${players.length} answered` : ''}</div>
+            <div class="eyebrow">Question ${g.qi + 1} of ${g.qs.length}${g.state === 'question' ? ` · ${lv.answers.length} of ${Math.max(liveExpected().length, lv.answers.length)} answered` : ''}</div>
             ${g.state === 'question' ? `<div class="live-clock" id="liveClock">${Math.max(0, LIVE_SECONDS - Math.floor((Date.now() - (lv.localStart || Date.now())) / 1000))}</div>` : ''}
           </div>
           <p class="clue-q">${g.state === 'reveal' ? linkRefs(q.q, homeOfId(id)) : esc(q.q)}</p>
@@ -3185,8 +3253,8 @@ const TreasureUp = (function () {
         <div class="clue">
           <div class="eyebrow">Final scores</div>
           <p class="clue-q">Together you scored ${fmt(total)}</p>
-          <div class="grid gap-2" style="margin-top:12px">${players.map((p, i) =>
-            `<div class="score-row"><span>${['🥇', '🥈', '🥉'][i] || (i + 1) + '.'} ${esc(p.name)}</span><b>${fmt(p.score)}</b></div>`).join('')}</div>
+          <div class="grid gap-2" style="margin-top:12px">${players.map(p => { const n = placeOf(players, p);
+            return `<div class="score-row"><span>${['🥇', '🥈', '🥉'][n - 1] || n + '.'} ${esc(p.name)}</span><b>${fmt(p.score)}</b></div>`; }).join('')}</div>
           <div class="board-actions">
             <button class="btn" data-host="again">Play again</button>
             <button class="btn ghost" data-host="end">Done</button>
@@ -3226,7 +3294,12 @@ const TreasureUp = (function () {
     const err = await L.join(code, name);
     if (err) return joinForm(code, err);
     lv = { role: 'player', code, name, game: null, players: [], picked: {}, unsub: [] };
-    lv.unsub.push(L.watchGame(code, g => { if (!lv) return; lv.game = g; renderPlayer(); }));
+    lv.unsub.push(L.watchGame(code, g => {
+      if (!lv) return;
+      if (g && lv.gid !== g.gid) { lv.gid = g.gid; lv.picked = {}; }   // "Play again": a new game
+      lv.game = g;
+      renderPlayer();
+    }));
     lv.unsub.push(L.watchPlayers(code, ps => { if (!lv) return; lv.players = ps; renderPlayer(); }));
   }
 
@@ -3245,9 +3318,10 @@ const TreasureUp = (function () {
     if (g.week !== WEEK.title) { liveBody('<div class="live-big">This game is for a different week.</div><p class="live-sub">Refresh Treasure Up and join again.</p>'); return; }
     const players = ranked(lv.players);
     const me = players.find(p => p.uid === L.uid()) || { score: 0 };
-    const place = players.findIndex(p => p.uid === L.uid()) + 1;
+    const mine = players.find(p => p.uid === L.uid()), place = mine ? placeOf(players, mine) : 0;
+    const tied = mine && players.some(p => p !== mine && (p.score || 0) === (mine.score || 0));
     const ord = n => n === 1 ? '1st' : n === 2 ? '2nd' : n === 3 ? '3rd' : n + 'th';
-    const standing = `<p class="live-sub">${fmt(me.score)} points${place ? ' · ' + ord(place) + ' place' : ''}</p>`;
+    const standing = `<p class="live-sub">${fmt(me.score)} points${place ? ' · ' + (tied ? 'tied for ' : '') + ord(place) + ' place' : ''}</p>`;
     if (g.state === 'lobby') { liveBody(`<div class="live-big">You're in, ${esc(lv.name)}!</div><p class="live-sub">Watch the TV. The game starts soon.</p>`); return; }
     if (g.state === 'question') {
       const id = g.qs[g.qi], q = liveQuestion(id);
@@ -3262,13 +3336,14 @@ const TreasureUp = (function () {
       return;
     }
     if (g.state === 'reveal') {
-      const right = me.lastRight, answered = me.lastAnswered;
-      liveBody(`<div class="live-big">${right ? 'Right! +' + fmt(me.last) : answered ? 'Not this time' : 'Too slow!'}</div>${standing}`);
+      const right = me.lastRight, answered = me.lastAnswered, id = g.qs[g.qi], q = liveQuestion(id);
+      liveBody(`<div class="live-big" style="margin-top:8vh">${right ? 'Right! +' + fmt(me.last) : answered ? 'Not this time' : 'No answer this time'}</div>${standing}
+        <div class="clue" style="margin-top:18px"><p class="quiz-why"><b class="ok">Answer:</b> ${esc(q.right)}. ${linkRefs(q.why, homeOfId(id))}</p></div>`);
       return;
     }
     if (g.state === 'final') {
       const total = players.reduce((n, p) => n + (p.score || 0), 0);
-      liveBody(`<div class="live-big">${place === 1 ? '🥇 You won!' : 'You finished ' + ord(place)}</div>
+      liveBody(`<div class="live-big">${place === 1 ? (tied ? '🥇 You tied for 1st!' : '🥇 You won!') : (tied ? 'You tied for ' : 'You finished ') + ord(place)}</div>
         <p class="live-sub">${fmt(me.score)} points · Together: ${fmt(total)}</p>`);
     }
   }
@@ -6449,7 +6524,7 @@ const TreasureUp = (function () {
     });
 
     // Live game.
-    $('liveExit').addEventListener('click', closeLive);
+    $('liveExit').addEventListener('click', liveExit);
     $('live').addEventListener('click', e => {
       const el = e.target.closest('[data-live],[data-host],[data-lpick]');
       if (!el || el.disabled) return;
@@ -6534,7 +6609,7 @@ const TreasureUp = (function () {
         if (e.key === 'Backspace') { e.preventDefault(); wordKey('back'); return; }
         if (/^[a-z]$/i.test(e.key)) { wordKey(e.key.toUpperCase()); return; }
       }
-      if (e.key === 'Escape') { closeParent(); closeBoard(); closeGames(); closeFam(); closeView(); if (!$('lesson').hidden) closeLesson(); if (!$('play').hidden) closePlay(); if (!$('live').hidden) closeLive(); }
+      if (e.key === 'Escape') { closeParent(); closeBoard(); closeGames(); closeFam(); closeView(); if (!$('lesson').hidden) closeLesson(); if (!$('play').hidden) closePlay(); if (!$('live').hidden) liveExit(); }
     });
 
     // Coming back after midnight brings the new day's warm-up without a reload.
@@ -6604,6 +6679,8 @@ const TreasureUp = (function () {
     else if (location.hash === '#babylon' && BOARD()) riskHost();
     else if (/^#babylon-join(-\d{4})?$/.test(location.hash) && BOARD()) riskJoinForm(location.hash.slice(14));
     else if (location.hash === '#babylon-here' && BOARD()) riskSoloSetup();
+    // A TV tab that was hosting a live game, reloaded: pick the game back up.
+    else if ((() => { try { return !!sessionStorage.getItem(NS + 'live.host'); } catch (e) { return false; } })()) liveResume();
 
     familyBoot();
   }
