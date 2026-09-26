@@ -244,7 +244,8 @@ window.TU_WEEKS = [
         ],
         "why": "Verse 16: “Is this the man that made the earth to tremble.” Pride looks big for a while, then it looks small.",
         "source": "Isaiah 14:16",
-        "find": "Is this the man that made the earth to tremble"
+        "find": "Is this the man that made the earth to tremble",
+        "hunt": "In Isaiah 14, what do people ask when they see the fallen one up close?"
       },
       {
         "id": "deep39-feast",
@@ -259,7 +260,8 @@ window.TU_WEEKS = [
         ],
         "why": "They say, “we will be glad and rejoice in his salvation.” The waiting was worth it.",
         "source": "Isaiah 25:9",
-        "find": "we will be glad and rejoice in his salvation"
+        "find": "we will be glad and rejoice in his salvation",
+        "hunt": "In Isaiah 25, what do the people say they will do now that their Lord has come?"
       },
       {
         "id": "deep39-wall",
@@ -274,7 +276,8 @@ window.TU_WEEKS = [
         ],
         "why": "Verse 13: its “breaking cometh suddenly at an instant.” Ignoring warnings can look safe right up until it isn't.",
         "source": "Isaiah 30:13",
-        "find": "whose breaking cometh suddenly at an instant"
+        "find": "whose breaking cometh suddenly at an instant",
+        "hunt": "In Isaiah 30, how does the cracked wall fall?"
       },
       {
         "id": "deep39-book",
@@ -289,7 +292,8 @@ window.TU_WEEKS = [
         ],
         "why": "Verse 18: “In that day shall the deaf hear the words of the book.” People who couldn't hear God's word before would understand it.",
         "source": "Isaiah 29:18",
-        "find": "shall the deaf hear the words of the book"
+        "find": "shall the deaf hear the words of the book",
+        "hunt": "In Isaiah 29, who will hear the words of the book?"
       },
       {
         "id": "deep39-kids",
@@ -393,7 +397,8 @@ window.TU_WEEKS = [
           ],
           "why": "“The LORD shall give thee rest from thy sorrow, and from thy fear” (Isaiah 14:3).",
           "source": "Isaiah 14:3",
-          "find": "rest from thy sorrow, and from thy fear"
+          "find": "rest from thy sorrow, and from thy fear",
+          "hunt": "After Babylon falls, what does Isaiah 14 say the Lord will give His people?"
         },
         "media": {
           "image": {
@@ -525,7 +530,8 @@ window.TU_WEEKS = [
             ],
             "why": "“Thou wilt keep him in perfect peace, whose mind is stayed on thee” (Isaiah 26:3). Stayed means leaning on Him.",
             "source": "Isaiah 26:3",
-            "find": "whose mind is stayed on thee"
+            "find": "whose mind is stayed on thee",
+            "hunt": "Who does Isaiah 26 say the Lord will keep in perfect peace?"
           },
           {
             "q": "The Friend explains what it means that Jesus Christ is a refuge from storms. What does it say?",
@@ -586,7 +592,8 @@ window.TU_WEEKS = [
           ],
           "why": "“Their fear toward me is taught by the precept of men” (Isaiah 29:13).",
           "source": "Isaiah 29:13",
-          "find": "taught by the precept of men"
+          "find": "taught by the precept of men",
+          "hunt": "Isaiah 29 says where the people's fear of God came from. What was it?"
         },
         "gradient": "linear-gradient(155deg,#450a0a 0%,#7f1d1d 45%,#b45309 100%)",
         "blobA": "rgba(252,165,165,.4)",
@@ -619,7 +626,8 @@ window.TU_WEEKS = [
           ],
           "why": "“Note it in a book, that it may be for the time to come for ever and ever” (Isaiah 30:8).",
           "source": "Isaiah 30:8",
-          "find": "for the time to come for ever and ever"
+          "find": "for the time to come for ever and ever",
+          "hunt": "In Isaiah 30, why does the Lord tell Isaiah to write His words in a book?"
         },
         "media": {
           "image": {
@@ -989,7 +997,8 @@ window.TU_WEEKS = [
         ],
         "why": "Verse 2: “when thou walkest through the fire, thou shalt not be burned.” He doesn't promise no fire. He promises to be with you in it.",
         "source": "Isaiah 43:2",
-        "find": "thou shalt not be burned"
+        "find": "thou shalt not be burned",
+        "hunt": "In Isaiah 43, what does the Lord promise when you walk through fire?"
       },
       {
         "id": "deep40-in-vain",
@@ -1004,7 +1013,8 @@ window.TU_WEEKS = [
         ],
         "why": "Verse 4: “yet surely my judgment is with the LORD, and my work with my God.” God sees work that nobody else notices.",
         "source": "Isaiah 49:4",
-        "find": "my work with my God"
+        "find": "my work with my God",
+        "hunt": "In Isaiah 49, the servant feels his work was in vain. What does he still believe?"
       },
       {
         "id": "deep40-grasshoppers",
@@ -1019,7 +1029,8 @@ window.TU_WEEKS = [
         ],
         "why": "Verse 22: “the inhabitants thereof are as grasshoppers.” Even the strongest rulers are small next to Him.",
         "source": "Isaiah 40:22",
-        "find": "the inhabitants thereof are as grasshoppers"
+        "find": "the inhabitants thereof are as grasshoppers",
+        "hunt": "In Isaiah 40, what do the people of the earth look like from God's throne?"
       },
       {
         "id": "deep40-springs",
@@ -1034,7 +1045,8 @@ window.TU_WEEKS = [
         ],
         "why": "Verse 10: “even by the springs of water shall he guide them.” After the furnace comes cool water.",
         "source": "Isaiah 49:10",
-        "find": "by the springs of water shall he guide them"
+        "find": "by the springs of water shall he guide them",
+        "hunt": "In Isaiah 49, where does the Lord guide the people He has mercy on?"
       },
       {
         "id": "deep40-kids",
@@ -1109,7 +1121,8 @@ window.TU_WEEKS = [
             ],
             "why": "The word of God came to “John the son of Zacharias in the wilderness” (Luke 3:2), the voice Isaiah described.",
             "source": "Luke 3:2",
-            "find": "John the son of Zacharias"
+            "find": "John the son of Zacharias",
+            "hunt": "Isaiah 40 describes a voice crying in the wilderness. In Luke 3, whose voice is it?"
           }
         ],
         "media": {
@@ -1334,7 +1347,8 @@ window.TU_WEEKS = [
           ],
           "why": "“He calleth them all by names” (Isaiah 40:26). He knows every one of them.",
           "source": "Isaiah 40:26",
-          "find": "he calleth them all by names"
+          "find": "he calleth them all by names",
+          "hunt": "In Isaiah 40, what does the Lord do with the stars?"
         },
         "media": {
           "image": {
@@ -1465,7 +1479,8 @@ window.TU_WEEKS = [
           ],
           "why": "“The LORD hath comforted his people, and will have mercy upon his afflicted” (Isaiah 49:13).",
           "source": "Isaiah 49:13",
-          "find": "will have mercy upon his afflicted"
+          "find": "will have mercy upon his afflicted",
+          "hunt": "In Isaiah 49, what does the Lord promise His afflicted people?"
         },
         "media": {
           "image": {

@@ -1,7 +1,8 @@
 rules_version = '2';
 
 // Treasure Up. Paste all of this into Firebase console → Firestore → Rules.
-// Two parts: the live game (/live) and families (/users, /families).
+// Parts: the live game (/live), the family map game (/risk), families
+// (/users, /families), and developer mode (/devs, /devSecrets).
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -50,6 +51,40 @@ service cloud.firestore {
           && game().state == 'question'
           && game().qi == request.resource.data.qi
           && request.resource.data.choice is string
+          && request.resource.data.at == request.time;
+      }
+    }
+
+    // ---------------- Babylon Falls (the family map game) ----------------
+    // Like the live game: the computer with the map made the game and is its
+    // host; only it changes the game. Phones join with the code and send
+    // moves, which only the host reads, checks, applies and deletes, so a
+    // phone can't change the map itself or see anyone else's moves.
+    match /risk/{code} {
+      function riskGame() { return get(/databases/$(database)/documents/risk/$(code)).data; }
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && code.matches('^[0-9]{4}$')
+        && request.resource.data.host == request.auth.uid
+        && request.resource.data.state == 'lobby';
+      allow update, delete: if signedIn() && resource.data.host == request.auth.uid
+        && (request.method == 'delete' || request.resource.data.host == resource.data.host);
+
+      match /players/{uid} {
+        allow read: if signedIn();
+        allow create, update: if signedIn() && request.auth.uid == uid
+          && request.resource.data.keys().hasOnly(['name'])
+          && request.resource.data.name is string
+          && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 16;
+        allow delete: if signedIn() && (request.auth.uid == uid || riskGame().host == request.auth.uid);
+      }
+
+      match /moves/{id} {
+        allow read, delete: if signedIn() && riskGame().host == request.auth.uid;
+        allow create: if signedIn()
+          && request.resource.data.keys().hasOnly(['uid', 'kind', 'a', 'b', 'n', 'at'])
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.kind is string && request.resource.data.kind.size() <= 12
           && request.resource.data.at == request.time;
       }
     }

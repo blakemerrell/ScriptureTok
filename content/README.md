@@ -87,6 +87,12 @@ Each reel:
             /study/… link). `find` is the exact words that settle it:
             they must be in the source and nowhere in the app. For a web
             page, write `why` in your own words, no “quotes”.
+  hunt      optional, on a bonus or Go deeper whose question names a verse:
+            the same question naming only the chapter, for the map game's
+            chapter hunts ("In Isaiah 14, what do people ask…"). The answer
+            (`find`) must be in that chapter just once; the checker says so.
+            A question that names a verse and has no hunt stays out of the
+            map game.
   media     optional. A picture on any reel it truly fits (a picture of
             Jesus Christ never goes on a reel about Satan); at most 2
             clips a week, only where they show something the words can't.
@@ -111,3 +117,25 @@ Each reel:
   word must be in `scripture-words.js` so it can be typed as a guess.
 - `approved` (and `wordsApproved` for the Verse Words): written by developer
   mode. Don't write these by hand.
+
+## The map game's board (content/boards.js)
+
+Babylon Falls plays on the first board in `window.TU_BOARDS`. It isn't tied
+to a week: the questions come from the weeks in weeks.js.
+
+- `lands`: `{ id, name, ring, label }`: the outline as `[x, y]` points on a
+  `size` map, and where the name and armies sit.
+- `links`: the borders, each pair once. Every land must be reachable.
+- `kingdoms`: `{ id, name, home, color }`, 2 to 5, each with its own home land.
+- `walls`: the land whose defender rolls 3 dice (Babylonia).
+- `intro`: the line on the first screen; its references must be real.
+- `hook`: the narrator's opening line when a game starts, read aloud with
+  `goal`. Each “quote” in it must be the exact words of the verse cited
+  after it, in brackets.
+- `story`: the whole story, a tap away (⋯ → The story), quoted the same way.
+- `goal`, `turn` and `dice`: how to win, each step of a turn, and how the
+  dice work (⋯ → How to play).
+
+The map outlines were drawn by a script from a hand-drawn coastline and
+seed points; to change a border, change the outline and `links` together.
+tools/verify.mjs checks all of this.
